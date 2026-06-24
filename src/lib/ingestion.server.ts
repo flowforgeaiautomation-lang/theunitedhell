@@ -530,6 +530,7 @@ type Processed = {
     quick_facts?: string[];
     timeline?: string[];
     did_you_know?: string;
+    qa?: { question: string; answer: string }[];
     people_mentioned?: string[];
     organizations_mentioned?: string[];
     countries_mentioned?: string[];
@@ -559,6 +560,13 @@ Return STRICT JSON ONLY (no markdown, no commentary):
   "country_code": "ISO alpha-2 or null",
   "story": {
     "what": "3-5 short paragraphs with names, places, dates, numbers, source-bound facts only",
+    "qa": [
+      {"question":"What is this article about?","answer":"answer only with article information from the raw item"},
+      {"question":"Who is involved?","answer":"answer only with names, organizations, or source-bound parties; if not known say what is known from the source"},
+      {"question":"Where and when did it happen?","answer":"answer only with source-bound place/date details"},
+      {"question":"Why does it matter?","answer":"answer only with article-specific importance, no generic filler"},
+      {"question":"What happens next?","answer":"answer only with source-bound next steps or say the source did not specify"}
+    ],
     "why": "Why is this important? (clear, source-bound)",
     "why_should_i_care": "Why should I care?",
     "how_affects_world": "How does this affect the world?",
