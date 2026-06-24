@@ -679,14 +679,20 @@ export async function runIngestion(opts?: { maxItems?: number; priorityCategory?
   const queryBudget = opts?.mode === "manual" ? (max >= 80 ? 12 : max >= 36 ? 6 : 3) : 1;
 
   // 1. Pull live sources in parallel. RSS keeps content flowing even when a metered API is throttled.
-  const [na, gn, rss, wiki] = await Promise.allSettled([
+  const fetched = await Promise.allSettled([
     fromNewsAPICategorical({ queryBudget, priorityCategory: opts?.priorityCategory }),
     fromGNewsTopHeadlines(),
     fromRSS(),
     fromWikipediaCurrentEvents(),
+    fromNewsData(),
+    fromCurrents(),
+    fromMediastack(),
+    fromGuardian(),
+    fromNYT(),
+    fromReddit(),
   ]);
   const all: RawItem[] = [];
-  for (const r of [na, gn, rss, wiki]) if (r.status === "fulfilled") all.push(...r.value);
+  for (const r of fetched) if (r.status === "fulfilled") all.push(...r.value);
 
   // 2. Filter: recent useful items, valid title, dedupe by title and URL.
   const cutoff = Date.now() - 8 * 86400_000;
