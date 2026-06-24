@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
 import type { Article, ArticleSummary, Briefing, CommentRow } from "./types";
+import { relatedCategorySlugs } from "./categories";
 
 function publicClient() {
   return createClient<Database>(
@@ -14,6 +15,66 @@ function publicClient() {
 
 const summaryCols =
   "id,slug,title,dek,category,subcategory,cover_image_url,read_time_minutes,trust_score,source_count,country_code,featured_slot,published_at,view_count,like_count,bookmark_count,comment_count";
+
+function normalizeText(s = "") {
+  return s.toLowerCase().replace(/[^a-z0-9\s]+/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function dedupeSummaries(rows: ArticleSummary[], limit: number) {
+  const seen = new Set<string>();
+  const out: ArticleSummary[] = [];
+  for (const row of rows) {
+    const key = normalizeText(row.title || row.dek || row.slug);
+    const softKey = normalizeText(row.dek || row.title).slice(0, 110);
+    if (!key || seen.has(row.id) || seen.has(key) || (softKey && seen.has(softKey))) continue;
+    seen.add(row.id);
+    seen.add(key);
+    if (softKey) seen.add(softKey);
+    out.push(row);
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
+function looksVague(text?: string | null) {
+  if (!text) return true;
+  return /original source|the united hell is preserving|broader impact depends|verified new development|reliable, recent information|full primary account|future coverage in this field/i.test(text);
+}
+
+function normalizeArticle(article: Article): Article {
+  const source = article.sources?.[0] ?? null;
+  const sourceName = source?.name || "the source";
+  const published = new Date(article.published_at).toLocaleDateString("en", { dateStyle: "long" });
+  const dek = article.dek?.trim() || article.title;
+  const currentStory = article.story ?? {};
+  const existingQa = Array.isArray(currentStory.qa)
+    ? currentStory.qa.filter((item) => item?.question && item?.answer && !looksVague(item.answer))
+    : [];
+  const qa = existingQa.length >= 4 ? existingQa : [
+    { question: "What is this article about?", answer: `${article.title}. ${dek}` },
+    { question: "Who reported it?", answer: `${sourceName} reported this article${source?.url ? " and linked the original report" : ""}.` },
+    { question: "When was it published?", answer: `It was published or collected on ${published}.` },
+    { question: "What are the main facts?", answer: dek },
+    { question: "Why does it matter?", answer: looksVague(currentStory.why) ? `It matters because the article gives a specific update in ${article.category.replace(/-/g, " ")} that readers can verify from ${sourceName}.` : currentStory.why! },
+    { question: "What should readers check next?", answer: looksVague(currentStory.next) ? `Readers should follow later updates from ${sourceName} or other primary reports about the same topic.` : currentStory.next! },
+  ];
+  return {
+    ...article,
+    story: {
+      ...currentStory,
+      qa,
+      what: looksVague(currentStory.what) ? qa[0].answer : currentStory.what,
+      why: looksVague(currentStory.why) ? qa[4].answer : currentStory.why,
+      next: looksVague(currentStory.next) ? qa[5].answer : currentStory.next,
+      key_facts: currentStory.key_facts?.filter((fact) => !looksVague(fact)).length
+        ? currentStory.key_facts.filter((fact) => !looksVague(fact))
+        : [article.title, dek, `Source: ${sourceName}`, `Published: ${published}`],
+      quick_facts: currentStory.quick_facts?.filter((fact) => !looksVague(fact)).length
+        ? currentStory.quick_facts.filter((fact) => !looksVague(fact))
+        : [`Category: ${article.category.replace(/-/g, " ")}`, `Source: ${sourceName}`, `Date: ${published}`],
+    },
+  };
+}
 
 export const listArticles = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) =>
@@ -29,16 +90,29 @@ export const listArticles = createServerFn({ method: "GET" })
   )
   .handler(async ({ data }) => {
     const supabase = publicClient();
+    const categorySlugs = relatedCategorySlugs(data.category);
     let q = supabase.from("articles").select(summaryCols).eq("is_published", true);
-    if (data.category) q = q.eq("category", data.category);
+    if (data.category && categorySlugs.length) q = q.in("category", categorySlugs);
     if (data.country) q = q.eq("country_code", data.country);
     if (data.sort === "trending" || data.sort === "most_read")
       q = q.order("view_count", { ascending: false });
     else if (data.sort === "most_saved") q = q.order("bookmark_count", { ascending: false });
     else q = q.order("published_at", { ascending: false });
-    const { data: rows, error } = await q.range(data.offset, data.offset + data.limit - 1);
+    const fetchLimit = Math.max(data.limit, 24) + data.offset + 24;
+    const { data: rows, error } = await q.range(0, fetchLimit - 1);
     if (error) throw new Error(error.message);
-    return (rows ?? []) as ArticleSummary[];
+    let result = dedupeSummaries(((rows ?? []) as ArticleSummary[]).slice(data.offset), data.limit);
+    if (data.category && !data.country && result.length < Math.min(20, data.limit)) {
+      const { data: fallbackRows, error: fallbackError } = await supabase
+        .from("articles")
+        .select(summaryCols)
+        .eq("is_published", true)
+        .order("published_at", { ascending: false })
+        .limit(80);
+      if (fallbackError) throw new Error(fallbackError.message);
+      result = dedupeSummaries([...result, ...((fallbackRows ?? []) as ArticleSummary[])], data.limit);
+    }
+    return result;
   });
 
 export const getFeatured = createServerFn({ method: "GET" }).handler(async () => {
@@ -73,7 +147,7 @@ export const getArticleBySlug = createServerFn({ method: "GET" })
     // fire-and-forget view bump
     supabase.rpc as unknown;
     await supabase.from("articles").update({ view_count: (row.view_count ?? 0) + 1 }).eq("id", row.id);
-    return row as unknown as Article;
+    return normalizeArticle(row as unknown as Article);
   });
 
 export const getRelated = createServerFn({ method: "GET" })

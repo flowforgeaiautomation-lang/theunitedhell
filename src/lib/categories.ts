@@ -514,6 +514,44 @@ export function categoryLabel(slug: string): string {
   return CATEGORY_BY_SLUG[slug]?.label ?? slug;
 }
 
+const HOMEPAGE_CATEGORY_ALIASES: Record<string, string[]> = {
+  success: ["success-stories", "billionaires", "entrepreneurs", "startups", "business-leaders", "wealth-creation"],
+  "technology-ai": ["technology", "artificial-intelligence", "robotics", "future-technology", "cybersecurity", "innovation"],
+  discovery: ["discovery", "world-discovery", "amazing-places", "hidden-places", "countries", "travel", "exploration", "world"],
+  future: ["future", "future-of-ai", "future-of-work", "future-of-education", "future-of-civilization", "future-predictions"],
+};
+
+const TRENDING_CATEGORY_ALIASES = new Set([
+  "trending-now",
+  "breaking-news",
+  "viral-stories",
+  "most-discussed",
+  "most-shared",
+  "most-viewed",
+  "most-saved",
+  "daily-briefing",
+  "weekly-highlights",
+  "monthly-highlights",
+  "editors-picks",
+  "most-important-today",
+  "most-important-this-week",
+  "most-important-this-month",
+  "most-important-this-year",
+  "hidden-gems",
+  "rising-trends",
+  "future-signals",
+  "global-rankings",
+  "worlds-greatest",
+]);
+
+export function relatedCategorySlugs(slug?: string): string[] {
+  if (!slug || slug === "all") return [];
+  if (TRENDING_CATEGORY_ALIASES.has(slug)) return [];
+  const section = CATEGORY_SECTIONS.find((s) => s.categories.some((c) => c.slug === slug));
+  const related = [slug, ...(HOMEPAGE_CATEGORY_ALIASES[slug] ?? []), ...(section?.categories.map((c) => c.slug) ?? [])];
+  return [...new Set(related.filter((s) => s !== "all"))];
+}
+
 export const FEATURED_SLOTS: { slot: string; label: string; kicker: string }[] = [
   { slot: "discovery", label: "Discovery of the Day", kicker: "Discovery" },
   { slot: "science", label: "Science Breakthrough", kicker: "Science" },

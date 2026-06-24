@@ -108,6 +108,32 @@ const CATEGORY_QUERIES: { slug: string; q: string }[] = [
 
 const CATEGORY_QUERY_MAP = new Map(CATEGORY_QUERIES.map((item) => [item.slug, item.q]));
 
+const TOPIC_CATEGORY_MAP: Record<string, string> = {
+  nation: "politics",
+  business: "markets",
+  sport: "football",
+  sports: "football",
+  arts: "culture",
+  books: "books",
+  environment: "climate",
+  top: "trending-now",
+  Futurology: "future",
+  UpliftingNews: "inspirational-stories",
+  todayilearned: "curiosity",
+  Damnthatsinteresting: "curiosity",
+  EarthPorn: "nature",
+  worldnews: "world",
+  news: "breaking-news",
+};
+
+function categoryFromHint(raw: RawItem): string | undefined {
+  const hint = raw.forcedCategory || raw.topicHint;
+  if (!hint) return undefined;
+  if (ALLOWED_SLUGS.includes(hint)) return hint;
+  const mapped = TOPIC_CATEGORY_MAP[hint] || TOPIC_CATEGORY_MAP[hint.toLowerCase()];
+  return mapped && ALLOWED_SLUGS.includes(mapped) ? mapped : undefined;
+}
+
 function expandedCategoryQueries(priorityCategory?: string): { slug: string; q: string }[] {
   const generated = CATEGORIES
     .filter((c) => c.slug !== "all")
@@ -410,6 +436,103 @@ async function fromWikipediaCurrentEvents(): Promise<RawItem[]> {
     .filter(Boolean) as RawItem[];
 }
 
+function gdeltDate(value?: string): string {
+  if (!value) return new Date().toISOString();
+  const normalized = String(value).replace(/(\d{4})(\d{2})(\d{2})T?(\d{2})(\d{2})(\d{2})Z?/, "$1-$2-$3T$4:$5:$6Z");
+  const d = new Date(normalized);
+  return Number.isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+}
+
+async function fromGDELTCategorical(opts?: { queryBudget?: number; priorityCategory?: string }): Promise<RawItem[]> {
+  const queryList = expandedCategoryQueries(opts?.priorityCategory);
+  const budget = Math.max(1, Math.min(opts?.queryBudget ?? 2, 14));
+  const idx = Math.floor(Date.now() / (20 * 60 * 1000)) % queryList.length;
+  const picks = opts?.priorityCategory
+    ? queryList.slice(0, budget)
+    : Array.from({ length: budget }, (_, i) => queryList[(idx + i) % queryList.length]);
+  const results = await Promise.allSettled(
+    picks.map(async ({ slug, q }) => {
+      const d = await fetchJson(
+        `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(q)}&mode=ArtList&format=json&maxrecords=12&sort=HybridRel&timespan=7d`,
+      );
+      return ((d?.articles ?? []) as any[])
+        .filter((a) => a?.title && a?.url)
+        .map((a) => ({
+          title: a.title,
+          description: a.seendate ? `GDELT indexed this article on ${a.seendate}.` : "",
+          url: a.url,
+          source: a.domain || "GDELT",
+          publishedAt: gdeltDate(a.seendate),
+          imageUrl: a.socialimage || null,
+          topicHint: slug,
+          forcedCategory: slug,
+        } as RawItem));
+    }),
+  );
+  return results.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
+}
+
+async function fromWorldNewsAPI(opts?: { priorityCategory?: string }): Promise<RawItem[]> {
+  const k = process.env.WORLDNEWS_API_KEY;
+  if (!k) return [];
+  const terms = opts?.priorityCategory
+    ? [CATEGORY_QUERY_MAP.get(opts.priorityCategory) || opts.priorityCategory.replace(/-/g, " ")]
+    : ["world", "science", "technology", "business", "health", "space", "environment"];
+  const results = await Promise.allSettled(
+    terms.map(async (term) => {
+      const d = await fetchJson(
+        `https://api.worldnewsapi.com/search-news?language=en&number=20&sort=publish-time&text=${encodeURIComponent(term)}&api-key=${k}`,
+      );
+      return ((d?.news ?? []) as any[])
+        .filter((a) => a?.title && a?.url)
+        .map((a) => ({
+          title: a.title,
+          description: a.summary || a.text || "",
+          url: a.url,
+          source: a.author || a.source_country || "World News API",
+          publishedAt: a.publish_date || new Date().toISOString(),
+          imageUrl: a.image || null,
+          topicHint: opts?.priorityCategory || term,
+          forcedCategory: opts?.priorityCategory,
+        } as RawItem));
+    }),
+  );
+  return results.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
+}
+
+async function fromSpaceflightNews(): Promise<RawItem[]> {
+  const d = await fetchJson("https://api.spaceflightnewsapi.net/v4/articles/?limit=30&ordering=-published_at");
+  return ((d?.results ?? []) as any[])
+    .filter((a) => a?.title && a?.url)
+    .map((a) => ({
+      title: a.title,
+      description: a.summary || "",
+      url: a.url,
+      source: a.news_site || "Spaceflight News API",
+      publishedAt: a.published_at || new Date().toISOString(),
+      imageUrl: a.image_url || null,
+      topicHint: "space",
+      forcedCategory: "space",
+    } as RawItem));
+}
+
+async function fromNASA(): Promise<RawItem[]> {
+  const k = process.env.NASA_API_KEY || "DEMO_KEY";
+  const d = await fetchJson(`https://api.nasa.gov/planetary/apod?api_key=${k}&count=12`);
+  return (Array.isArray(d) ? d : [])
+    .filter((a) => a?.title && a?.url)
+    .map((a) => ({
+      title: `NASA Image: ${a.title}`,
+      description: a.explanation || "",
+      url: a.hdurl || a.url,
+      source: "NASA",
+      publishedAt: a.date ? new Date(a.date).toISOString() : new Date().toISOString(),
+      imageUrl: a.media_type === "image" ? (a.hdurl || a.url) : null,
+      topicHint: "astronomy",
+      forcedCategory: "astronomy",
+    } as RawItem));
+}
+
 async function fromNewsData(): Promise<RawItem[]> {
   const k = process.env.NEWSDATA_API_KEY;
   if (!k) return [];
@@ -530,6 +653,7 @@ type Processed = {
     quick_facts?: string[];
     timeline?: string[];
     did_you_know?: string;
+    qa?: { question: string; answer: string }[];
     people_mentioned?: string[];
     organizations_mentioned?: string[];
     countries_mentioned?: string[];
@@ -559,6 +683,13 @@ Return STRICT JSON ONLY (no markdown, no commentary):
   "country_code": "ISO alpha-2 or null",
   "story": {
     "what": "3-5 short paragraphs with names, places, dates, numbers, source-bound facts only",
+    "qa": [
+      {"question":"What is this article about?","answer":"answer only with article information from the raw item"},
+      {"question":"Who is involved?","answer":"answer only with names, organizations, or source-bound parties; if not known say what is known from the source"},
+      {"question":"Where and when did it happen?","answer":"answer only with source-bound place/date details"},
+      {"question":"Why does it matter?","answer":"answer only with article-specific importance, no generic filler"},
+      {"question":"What happens next?","answer":"answer only with source-bound next steps or say the source did not specify"}
+    ],
     "why": "Why is this important? (clear, source-bound)",
     "why_should_i_care": "Why should I care?",
     "how_affects_world": "How does this affect the world?",
@@ -599,8 +730,9 @@ Process it.`,
     if (!out?.title) return null;
     // ENFORCE the forced category from the source query so every slug actually fills.
     // The AI is otherwise prone to collapsing everything into a few broad buckets.
-    if (raw.forcedCategory && ALLOWED_SLUGS.includes(raw.forcedCategory)) {
-      out.category = raw.forcedCategory;
+    const inferredCategory = categoryFromHint(raw);
+    if (inferredCategory) {
+      out.category = inferredCategory;
     } else if (!out.category || !ALLOWED_SLUGS.includes(out.category)) {
       out.category = "discovery";
     }
@@ -614,8 +746,16 @@ Process it.`,
 function fallbackProcessed(raw: RawItem): Processed {
   const category = raw.forcedCategory && ALLOWED_SLUGS.includes(raw.forcedCategory) ? raw.forcedCategory : "world";
   const title = raw.title.replace(/\s[-|–|—]\s.*$/, "").replace(/^\s*Live updates?:\s*/i, "").slice(0, 95);
-  const summary = raw.description || `A verified report from ${raw.source} published on ${new Date(raw.publishedAt).toUTCString()}.`;
-  const sourceLine = `${raw.source} reported this story on ${new Date(raw.publishedAt).toUTCString()}.`;
+  const published = new Date(raw.publishedAt).toUTCString();
+  const summary = (raw.description || raw.title).replace(/\s+/g, " ").trim();
+  const sourceLine = `${raw.source} published this article on ${published}.`;
+  const qa = [
+    { question: "What is this article about?", answer: `${title}. ${summary}` },
+    { question: "Who reported it?", answer: sourceLine },
+    { question: "Where did the information come from?", answer: `The information came from ${raw.source}${raw.url ? ` at ${raw.url}` : ""}.` },
+    { question: "Why does it matter?", answer: `It matters as a current ${category.replace(/-/g, " ")} update from ${raw.source}: ${summary}` },
+    { question: "What should readers know next?", answer: `The available article information is the title, source, date, and summary above; later updates should be checked against ${raw.source}.` },
+  ];
   return {
     title,
     dek: summary.slice(0, 150),
@@ -626,20 +766,21 @@ function fallbackProcessed(raw: RawItem): Processed {
     read_time_minutes: 5,
     country_code: category === "india" ? "IN" : null,
     story: {
-      what: `${summary}\n\n${sourceLine} The United Hell is preserving the report as a factual news brief and linking readers back to the original source for the complete primary account.`,
-      why: "This matters because it adds a verified new development to a wider public story and helps readers follow what changed, who is involved, and why the update is being reported now.",
-      why_should_i_care: "You should care because reliable, recent information helps you understand decisions, discoveries, risks, opportunities, and events that can shape daily life and the wider world.",
-      how_affects_world: "The broader impact depends on how governments, companies, researchers, communities, or markets respond next. The original source should be read for the full detail.",
-      what_can_we_learn: "The key lesson is to follow verified sources, compare new updates with context, and separate confirmed facts from claims that still need more evidence.",
-      why_interesting: "It is interesting because it captures a current real-world change rather than a generic background topic, making it useful for readers who want fresh knowledge.",
-      key_facts: [title, sourceLine, `Category: ${category}`, "This brief is based on a real external source and does not invent extra claims."],
-      key_takeaways: ["A real source published a new update.", "The story is recent and source-linked.", "Readers can open the source for full reporting."],
+      qa,
+      what: `${title}. ${summary}\n\n${sourceLine}`,
+      why: qa[3].answer,
+      why_should_i_care: `You should care if you follow ${category.replace(/-/g, " ")} because this is a fresh item from ${raw.source}.`,
+      how_affects_world: summary,
+      what_can_we_learn: `From the available article information, readers can learn this update: ${summary}`,
+      why_interesting: `${title} is interesting because it is a specific source-linked item, not a generic background page.`,
+      key_facts: [title, sourceLine, `Category: ${category}`, summary],
+      key_takeaways: [title, summary, sourceLine],
       quick_facts: [`Source: ${raw.source}`, `Published: ${new Date(raw.publishedAt).toUTCString()}`, `Topic: ${category}`],
       timeline: [`${new Date(raw.publishedAt).toUTCString()}: ${raw.source} published the report.`],
-      did_you_know: "Professional newsrooms update stories as more verified information becomes available, which is why source links and publication dates matter.",
-      insights: ["Verified source links are more important than decorative summaries.", "A concise brief should make the main update clear without adding unsupported claims."],
-      next: "The next step is to watch for follow-up reporting, official statements, data releases, or expert analysis connected to the original source.",
-      future_impact: "If the development continues, it may influence public discussion and future coverage in this field.",
+      did_you_know: `This item was categorized under ${category.replace(/-/g, " ")} from the article's own title and source information.`,
+      insights: [summary, sourceLine],
+      next: qa[4].answer,
+      future_impact: summary,
       people_mentioned: [],
       organizations_mentioned: [raw.source],
       countries_mentioned: category === "india" ? ["India"] : [],
@@ -681,9 +822,13 @@ export async function runIngestion(opts?: { maxItems?: number; priorityCategory?
   // 1. Pull live sources in parallel. RSS keeps content flowing even when a metered API is throttled.
   const fetched = await Promise.allSettled([
     fromNewsAPICategorical({ queryBudget, priorityCategory: opts?.priorityCategory }),
+    fromGDELTCategorical({ queryBudget: opts?.mode === "manual" ? queryBudget : 2, priorityCategory: opts?.priorityCategory }),
+    fromWorldNewsAPI({ priorityCategory: opts?.priorityCategory }),
     fromGNewsTopHeadlines(),
     fromRSS(),
     fromWikipediaCurrentEvents(),
+    fromSpaceflightNews(),
+    fromNASA(),
     fromNewsData(),
     fromCurrents(),
     fromMediastack(),
