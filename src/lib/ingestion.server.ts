@@ -622,8 +622,16 @@ Process it.`,
 function fallbackProcessed(raw: RawItem): Processed {
   const category = raw.forcedCategory && ALLOWED_SLUGS.includes(raw.forcedCategory) ? raw.forcedCategory : "world";
   const title = raw.title.replace(/\s[-|–|—]\s.*$/, "").replace(/^\s*Live updates?:\s*/i, "").slice(0, 95);
-  const summary = raw.description || `A verified report from ${raw.source} published on ${new Date(raw.publishedAt).toUTCString()}.`;
-  const sourceLine = `${raw.source} reported this story on ${new Date(raw.publishedAt).toUTCString()}.`;
+  const published = new Date(raw.publishedAt).toUTCString();
+  const summary = (raw.description || raw.title).replace(/\s+/g, " ").trim();
+  const sourceLine = `${raw.source} published this article on ${published}.`;
+  const qa = [
+    { question: "What is this article about?", answer: `${title}. ${summary}` },
+    { question: "Who reported it?", answer: sourceLine },
+    { question: "Where did the information come from?", answer: `The information came from ${raw.source}${raw.url ? ` at ${raw.url}` : ""}.` },
+    { question: "Why does it matter?", answer: `It matters as a current ${category.replace(/-/g, " ")} update from ${raw.source}: ${summary}` },
+    { question: "What should readers know next?", answer: `The available article information is the title, source, date, and summary above; later updates should be checked against ${raw.source}.` },
+  ];
   return {
     title,
     dek: summary.slice(0, 150),
@@ -634,20 +642,21 @@ function fallbackProcessed(raw: RawItem): Processed {
     read_time_minutes: 5,
     country_code: category === "india" ? "IN" : null,
     story: {
-      what: `${summary}\n\n${sourceLine} The United Hell is preserving the report as a factual news brief and linking readers back to the original source for the complete primary account.`,
-      why: "This matters because it adds a verified new development to a wider public story and helps readers follow what changed, who is involved, and why the update is being reported now.",
-      why_should_i_care: "You should care because reliable, recent information helps you understand decisions, discoveries, risks, opportunities, and events that can shape daily life and the wider world.",
-      how_affects_world: "The broader impact depends on how governments, companies, researchers, communities, or markets respond next. The original source should be read for the full detail.",
-      what_can_we_learn: "The key lesson is to follow verified sources, compare new updates with context, and separate confirmed facts from claims that still need more evidence.",
-      why_interesting: "It is interesting because it captures a current real-world change rather than a generic background topic, making it useful for readers who want fresh knowledge.",
-      key_facts: [title, sourceLine, `Category: ${category}`, "This brief is based on a real external source and does not invent extra claims."],
-      key_takeaways: ["A real source published a new update.", "The story is recent and source-linked.", "Readers can open the source for full reporting."],
+      qa,
+      what: `${title}. ${summary}\n\n${sourceLine}`,
+      why: qa[3].answer,
+      why_should_i_care: `You should care if you follow ${category.replace(/-/g, " ")} because this is a fresh item from ${raw.source}.`,
+      how_affects_world: summary,
+      what_can_we_learn: `From the available article information, readers can learn this update: ${summary}`,
+      why_interesting: `${title} is interesting because it is a specific source-linked item, not a generic background page.`,
+      key_facts: [title, sourceLine, `Category: ${category}`, summary],
+      key_takeaways: [title, summary, sourceLine],
       quick_facts: [`Source: ${raw.source}`, `Published: ${new Date(raw.publishedAt).toUTCString()}`, `Topic: ${category}`],
       timeline: [`${new Date(raw.publishedAt).toUTCString()}: ${raw.source} published the report.`],
-      did_you_know: "Professional newsrooms update stories as more verified information becomes available, which is why source links and publication dates matter.",
-      insights: ["Verified source links are more important than decorative summaries.", "A concise brief should make the main update clear without adding unsupported claims."],
-      next: "The next step is to watch for follow-up reporting, official statements, data releases, or expert analysis connected to the original source.",
-      future_impact: "If the development continues, it may influence public discussion and future coverage in this field.",
+      did_you_know: `This item was categorized under ${category.replace(/-/g, " ")} from the article's own title and source information.`,
+      insights: [summary, sourceLine],
+      next: qa[4].answer,
+      future_impact: summary,
       people_mentioned: [],
       organizations_mentioned: [raw.source],
       countries_mentioned: category === "india" ? ["India"] : [],
