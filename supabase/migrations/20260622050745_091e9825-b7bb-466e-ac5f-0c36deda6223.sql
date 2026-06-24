@@ -1,1 +1,2 @@
-DELETE FROM articles WHERE published_at < (now() - interval '3 days');
+-- Disabled: archive preservation policy requires articles to be append-only.
+-- Former cleanup job intentionally removed.
