@@ -387,6 +387,29 @@ async function fromRSS(): Promise<RawItem[]> {
   return results.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
 }
 
+async function fromWikipediaCurrentEvents(): Promise<RawItem[]> {
+  const d = await fetchJson("https://en.wikipedia.org/w/api.php?action=parse&page=Portal:Current_events&prop=text&format=json&origin=*");
+  const html = d?.parse?.text?.["*"] as string | undefined;
+  if (!html) return [];
+  return [...html.matchAll(/<li>([\s\S]*?)<\/li>/gi)]
+    .slice(0, 40)
+    .map((m): RawItem | null => {
+      const text = xmlDecode(m[1]).replace(/\[edit\]/gi, "").trim();
+      if (text.length < 45) return null;
+      return {
+        title: text.split(".")[0].slice(0, 120),
+        description: text.slice(0, 700),
+        url: "https://en.wikipedia.org/wiki/Portal:Current_events",
+        source: "Wikipedia Current Events",
+        publishedAt: new Date().toISOString(),
+        imageUrl: null,
+        forcedCategory: "world",
+        topicHint: "current-events",
+      };
+    })
+    .filter(Boolean) as RawItem[];
+}
+
 type Processed = {
   title: string;
   dek: string;
@@ -413,7 +436,7 @@ type Processed = {
     people_mentioned?: string[];
     organizations_mentioned?: string[];
     countries_mentioned?: string[];
-    vocabulary?: { word: string; meaning: string }[];
+    vocabulary?: { word: string; meaning: string; example?: string }[];
   };
   country_code?: string | null;
 };
@@ -455,7 +478,7 @@ Return STRICT JSON ONLY (no markdown, no commentary):
     "people_mentioned": [".."],
     "organizations_mentioned": [".."],
     "countries_mentioned": [".."],
-    "vocabulary": [{"word":"..","meaning":"simple plain-English meaning"}]
+    "vocabulary": [{"word":"..","meaning":"simple plain-English meaning","example":"short example sentence"}]
   }
 }`;
 
