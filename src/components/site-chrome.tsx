@@ -13,6 +13,8 @@ const LANGUAGES = [
   { code: "ar", label: "Arabic" },
   { code: "zh", label: "Chinese" },
   { code: "ja", label: "Japanese" },
+  { code: "ru", label: "Russian" },
+  { code: "pt", label: "Portuguese" },
 ];
 
 const LOCATIONS = [
@@ -22,9 +24,14 @@ const LOCATIONS = [
   { code: "GB", label: "United Kingdom" },
   { code: "CA", label: "Canada" },
   { code: "AU", label: "Australia" },
+  { code: "DE", label: "Germany" },
+  { code: "FR", label: "France" },
   { code: "CN", label: "China" },
   { code: "JP", label: "Japan" },
   { code: "BR", label: "Brazil" },
+  { code: "AE", label: "UAE" },
+  { code: "SG", label: "Singapore" },
+  { code: "ZA", label: "South Africa" },
 ];
 
 const NAV = [
@@ -104,6 +111,7 @@ export function SiteHeader() {
   function updateLanguage(next: string) {
     setLanguage(next);
     document.documentElement.lang = next;
+    document.documentElement.dir = next === "ar" ? "rtl" : "ltr";
     window.localStorage.setItem("tuh-language", next);
     window.dispatchEvent(new Event("tuh-preferences"));
   }

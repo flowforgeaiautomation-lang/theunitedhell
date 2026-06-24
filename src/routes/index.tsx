@@ -23,6 +23,9 @@ const COUNTRY_LABELS: Record<string, string> = {
   BR: "Brazil",
   FR: "France",
   DE: "Germany",
+  AE: "UAE",
+  SG: "Singapore",
+  ZA: "South Africa",
 };
 
 export const Route = createFileRoute("/")({
@@ -107,7 +110,7 @@ function Home() {
 
     setGenerating(true);
     try {
-      const result = await ingest({ data: { maxItems: 24 } });
+      const result = await ingest({ data: { maxItems: 60, category: active } });
       toast.success(`${result.inserted} real live stories curated`);
       q.refetch();
     } catch (error) {

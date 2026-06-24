@@ -34,7 +34,7 @@ async function lovableChat(opts: {
       model: opts.model ?? "google/gemini-2.5-flash-lite",
       messages,
       temperature: opts.temperature ?? 0.45,
-      max_tokens: 1800,
+      max_tokens: 3200,
       ...(opts.json ? { response_format: { type: "json_object" } } : {}),
     }),
   });
@@ -77,7 +77,7 @@ export async function orChat(opts: {
           model: opts.model ?? "qwen/qwen3-next-80b-a3b-instruct",
           messages,
           temperature: opts.temperature ?? 0.45,
-          max_tokens: 1800,
+          max_tokens: 3200,
           ...(opts.json ? { response_format: { type: "json_object" } } : {}),
         }),
       });
@@ -112,13 +112,14 @@ export async function pexelsImage(query: string): Promise<string | null> {
   const key = process.env.PEXELS_API_KEY;
   if (!key) return null;
   try {
+    const page = 1 + Math.floor(Math.random() * 10);
     const r = await fetch(
-      `https://api.pexels.com/v1/search?per_page=5&query=${encodeURIComponent(query)}`,
+      `https://api.pexels.com/v1/search?per_page=10&page=${page}&query=${encodeURIComponent(query)}`,
       { headers: { Authorization: key } },
     );
     if (!r.ok) return null;
     const d = await r.json();
-    const pick = d?.photos?.[Math.floor(Math.random() * Math.min(5, d?.photos?.length || 0))];
+    const pick = d?.photos?.[Math.floor(Math.random() * Math.min(10, d?.photos?.length || 0))];
     return pick?.src?.large2x || pick?.src?.large || null;
   } catch {
     return null;

@@ -13,7 +13,7 @@ import { Sparkles } from "lucide-react";
 import { CategoryModal } from "@/components/CategoryModal";
 
 const COUNTRY_LABELS: Record<string, string> = {
-  IN: "India", US: "United States", GB: "United Kingdom", CA: "Canada", AU: "Australia", CN: "China", JP: "Japan", BR: "Brazil", FR: "France", DE: "Germany",
+  IN: "India", US: "United States", GB: "United Kingdom", CA: "Canada", AU: "Australia", CN: "China", JP: "Japan", BR: "Brazil", FR: "France", DE: "Germany", AE: "UAE", SG: "Singapore", ZA: "South Africa",
 };
 
 export const Route = createFileRoute("/discover")({
@@ -77,7 +77,7 @@ function DiscoverPage() {
     }
     setGenerating(true);
     try {
-      const r = await ingest({ data: { maxItems: 24 } });
+      const r = await ingest({ data: { maxItems: 60, category: active } });
       toast.success(`${r.inserted} real live stories curated`);
       q.refetch();
     } catch (e) {
