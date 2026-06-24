@@ -410,6 +410,96 @@ async function fromWikipediaCurrentEvents(): Promise<RawItem[]> {
     .filter(Boolean) as RawItem[];
 }
 
+async function fromGDELTCategorical(opts?: { queryBudget?: number; priorityCategory?: string }): Promise<RawItem[]> {
+  const queryList = expandedCategoryQueries(opts?.priorityCategory);
+  const budget = Math.max(1, Math.min(opts?.queryBudget ?? 2, 14));
+  const idx = Math.floor(Date.now() / (20 * 60 * 1000)) % queryList.length;
+  const picks = opts?.priorityCategory
+    ? queryList.slice(0, budget)
+    : Array.from({ length: budget }, (_, i) => queryList[(idx + i) % queryList.length]);
+  const results = await Promise.allSettled(
+    picks.map(async ({ slug, q }) => {
+      const d = await fetchJson(
+        `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(q)}&mode=ArtList&format=json&maxrecords=12&sort=HybridRel&timespan=7d`,
+      );
+      return ((d?.articles ?? []) as any[])
+        .filter((a) => a?.title && a?.url)
+        .map((a) => ({
+          title: a.title,
+          description: a.seendate ? `GDELT indexed this article on ${a.seendate}.` : "",
+          url: a.url,
+          source: a.domain || "GDELT",
+          publishedAt: a.seendate ? new Date(String(a.seendate).replace(/(\d{4})(\d{2})(\d{2})T?(\d{2})(\d{2})(\d{2})Z?/, "$1-$2-$3T$4:$5:$6Z")).toISOString() : new Date().toISOString(),
+          imageUrl: a.socialimage || null,
+          topicHint: slug,
+          forcedCategory: slug,
+        } as RawItem));
+    }),
+  );
+  return results.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
+}
+
+async function fromWorldNewsAPI(opts?: { priorityCategory?: string }): Promise<RawItem[]> {
+  const k = process.env.WORLDNEWS_API_KEY;
+  if (!k) return [];
+  const terms = opts?.priorityCategory
+    ? [CATEGORY_QUERY_MAP.get(opts.priorityCategory) || opts.priorityCategory.replace(/-/g, " ")]
+    : ["world", "science", "technology", "business", "health", "space", "environment"];
+  const results = await Promise.allSettled(
+    terms.map(async (term) => {
+      const d = await fetchJson(
+        `https://api.worldnewsapi.com/search-news?language=en&number=20&sort=publish-time&text=${encodeURIComponent(term)}&api-key=${k}`,
+      );
+      return ((d?.news ?? []) as any[])
+        .filter((a) => a?.title && a?.url)
+        .map((a) => ({
+          title: a.title,
+          description: a.summary || a.text || "",
+          url: a.url,
+          source: a.author || a.source_country || "World News API",
+          publishedAt: a.publish_date || new Date().toISOString(),
+          imageUrl: a.image || null,
+          topicHint: opts?.priorityCategory || term,
+          forcedCategory: opts?.priorityCategory,
+        } as RawItem));
+    }),
+  );
+  return results.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
+}
+
+async function fromSpaceflightNews(): Promise<RawItem[]> {
+  const d = await fetchJson("https://api.spaceflightnewsapi.net/v4/articles/?limit=30&ordering=-published_at");
+  return ((d?.results ?? []) as any[])
+    .filter((a) => a?.title && a?.url)
+    .map((a) => ({
+      title: a.title,
+      description: a.summary || "",
+      url: a.url,
+      source: a.news_site || "Spaceflight News API",
+      publishedAt: a.published_at || new Date().toISOString(),
+      imageUrl: a.image_url || null,
+      topicHint: "space",
+      forcedCategory: "space",
+    } as RawItem));
+}
+
+async function fromNASA(): Promise<RawItem[]> {
+  const k = process.env.NASA_API_KEY || "DEMO_KEY";
+  const d = await fetchJson(`https://api.nasa.gov/planetary/apod?api_key=${k}&count=12`);
+  return (Array.isArray(d) ? d : [])
+    .filter((a) => a?.title && a?.url)
+    .map((a) => ({
+      title: `NASA Image: ${a.title}`,
+      description: a.explanation || "",
+      url: a.hdurl || a.url,
+      source: "NASA",
+      publishedAt: a.date ? new Date(a.date).toISOString() : new Date().toISOString(),
+      imageUrl: a.media_type === "image" ? (a.hdurl || a.url) : null,
+      topicHint: "astronomy",
+      forcedCategory: "astronomy",
+    } as RawItem));
+}
+
 async function fromNewsData(): Promise<RawItem[]> {
   const k = process.env.NEWSDATA_API_KEY;
   if (!k) return [];
@@ -698,9 +788,13 @@ export async function runIngestion(opts?: { maxItems?: number; priorityCategory?
   // 1. Pull live sources in parallel. RSS keeps content flowing even when a metered API is throttled.
   const fetched = await Promise.allSettled([
     fromNewsAPICategorical({ queryBudget, priorityCategory: opts?.priorityCategory }),
+    fromGDELTCategorical({ queryBudget: opts?.mode === "manual" ? queryBudget : 2, priorityCategory: opts?.priorityCategory }),
+    fromWorldNewsAPI({ priorityCategory: opts?.priorityCategory }),
     fromGNewsTopHeadlines(),
     fromRSS(),
     fromWikipediaCurrentEvents(),
+    fromSpaceflightNews(),
+    fromNASA(),
     fromNewsData(),
     fromCurrents(),
     fromMediastack(),
