@@ -106,6 +106,20 @@ const CATEGORY_QUERIES: { slug: string; q: string }[] = [
   { slug: "smart-cities", q: "smart city OR urban tech OR megaproject" },
 ];
 
+const CATEGORY_QUERY_MAP = new Map(CATEGORY_QUERIES.map((item) => [item.slug, item.q]));
+
+function expandedCategoryQueries(priorityCategory?: string): { slug: string; q: string }[] {
+  const generated = CATEGORIES
+    .filter((c) => c.slug !== "all")
+    .map((c) => ({
+      slug: c.slug,
+      q: CATEGORY_QUERY_MAP.get(c.slug) || `${c.label} news OR ${c.label} discovery OR ${c.label} research`,
+    }));
+  if (!priorityCategory) return generated;
+  const priority = generated.find((q) => q.slug === priorityCategory);
+  return priority ? [priority, ...generated.filter((q) => q.slug !== priorityCategory)] : generated;
+}
+
 
 const RSS_FEEDS: { source: string; url: string; topicHint?: string; forcedCategory?: string }[] = [
   // World / Geopolitics
@@ -201,6 +215,30 @@ function slugify(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80);
 }
 
+function normalizeText(s = "") {
+  return s.toLowerCase().replace(/[^a-z0-9\s]+/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function normalizeUrl(url = "") {
+  try {
+    const u = new URL(url);
+    u.hash = "";
+    u.search = "";
+    return u.toString().replace(/\/$/, "").toLowerCase();
+  } catch {
+    return url.trim().toLowerCase().replace(/[?#].*$/, "").replace(/\/$/, "");
+  }
+}
+
+function similarity(a: string, b: string) {
+  const aa = new Set(normalizeText(a).split(" ").filter((w) => w.length > 2));
+  const bb = new Set(normalizeText(b).split(" ").filter((w) => w.length > 2));
+  if (!aa.size || !bb.size) return 0;
+  let overlap = 0;
+  for (const w of aa) if (bb.has(w)) overlap++;
+  return overlap / Math.min(aa.size, bb.size);
+}
+
 async function fetchJson(url: string, init?: RequestInit, timeoutMs = 10000): Promise<any> {
   const c = new AbortController();
   const t = setTimeout(() => c.abort(), timeoutMs);
@@ -250,15 +288,19 @@ function isoDaysAgo(days: number) {
   return new Date(Date.now() - days * 86400_000).toISOString();
 }
 
-async function fromNewsAPICategorical(): Promise<RawItem[]> {
+async function fromNewsAPICategorical(opts?: { queryBudget?: number; priorityCategory?: string }): Promise<RawItem[]> {
   const k = process.env.NEWSAPI_KEY;
   if (!k) return [];
-  const from = isoDaysAgo(2).slice(0, 10);
+  const from = isoDaysAgo(8).slice(0, 10);
   const out: RawItem[] = [];
   // NewsAPI developer plan: 100 req/day. Cron runs every 20 min = 72 runs/day.
   // Rotate through CATEGORY_QUERIES so each run uses only 1 query (~72/day, well under limit).
-  const idx = Math.floor(Date.now() / (20 * 60 * 1000)) % CATEGORY_QUERIES.length;
-  const picks = [CATEGORY_QUERIES[idx]];
+  const queryList = expandedCategoryQueries(opts?.priorityCategory);
+  const budget = Math.max(1, Math.min(opts?.queryBudget ?? 1, 12));
+  const idx = Math.floor(Date.now() / (20 * 60 * 1000)) % queryList.length;
+  const picks = opts?.priorityCategory
+    ? queryList.slice(0, budget)
+    : Array.from({ length: budget }, (_, i) => queryList[(idx + i) % queryList.length]);
   const results = await Promise.allSettled(
     picks.map(async ({ slug, q }) => {
       const d = await fetchJson(
