@@ -2,6 +2,7 @@
 export type ArticleSource = { name: string; url: string };
 
 export type ArticleStory = {
+  qa?: { question?: string; answer?: string }[];
   what?: string;
   who?: string;
   where?: string;
