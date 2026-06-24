@@ -109,19 +109,59 @@ export async function orJson<T = unknown>(opts: {
 
 
 export async function pexelsImage(query: string): Promise<string | null> {
-  const key = process.env.PEXELS_API_KEY;
-  if (!key) return null;
-  try {
-    const page = 1 + Math.floor(Math.random() * 10);
-    const r = await fetch(
-      `https://api.pexels.com/v1/search?per_page=10&page=${page}&query=${encodeURIComponent(query)}`,
-      { headers: { Authorization: key } },
-    );
-    if (!r.ok) return null;
-    const d = await r.json();
-    const pick = d?.photos?.[Math.floor(Math.random() * Math.min(10, d?.photos?.length || 0))];
-    return pick?.src?.large2x || pick?.src?.large || null;
-  } catch {
-    return null;
+  // Try Pexels → Unsplash → Pixabay so categories always get a unique cover.
+  const pk = process.env.PEXELS_API_KEY;
+  if (pk) {
+    try {
+      const page = 1 + Math.floor(Math.random() * 10);
+      const r = await fetch(
+        `https://api.pexels.com/v1/search?per_page=15&page=${page}&query=${encodeURIComponent(query)}`,
+        { headers: { Authorization: pk } },
+      );
+      if (r.ok) {
+        const d = await r.json();
+        const photos = d?.photos ?? [];
+        if (photos.length) {
+          const pick = photos[Math.floor(Math.random() * photos.length)];
+          const url = pick?.src?.large2x || pick?.src?.large;
+          if (url) return url;
+        }
+      }
+    } catch {}
   }
+  const uk = process.env.UNSPLASH_ACCESS_KEY;
+  if (uk) {
+    try {
+      const r = await fetch(
+        `https://api.unsplash.com/search/photos?per_page=20&query=${encodeURIComponent(query)}`,
+        { headers: { Authorization: `Client-ID ${uk}` } },
+      );
+      if (r.ok) {
+        const d = await r.json();
+        const results = d?.results ?? [];
+        if (results.length) {
+          const pick = results[Math.floor(Math.random() * results.length)];
+          const url = pick?.urls?.regular || pick?.urls?.full;
+          if (url) return url;
+        }
+      }
+    } catch {}
+  }
+  const px = process.env.PIXABAY_API_KEY;
+  if (px) {
+    try {
+      const r = await fetch(
+        `https://pixabay.com/api/?key=${px}&q=${encodeURIComponent(query)}&image_type=photo&per_page=30&safesearch=true`,
+      );
+      if (r.ok) {
+        const d = await r.json();
+        const hits = d?.hits ?? [];
+        if (hits.length) {
+          const pick = hits[Math.floor(Math.random() * hits.length)];
+          return pick?.largeImageURL || pick?.webformatURL || null;
+        }
+      }
+    } catch {}
+  }
+  return null;
 }

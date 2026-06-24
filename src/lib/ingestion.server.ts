@@ -410,6 +410,103 @@ async function fromWikipediaCurrentEvents(): Promise<RawItem[]> {
     .filter(Boolean) as RawItem[];
 }
 
+async function fromNewsData(): Promise<RawItem[]> {
+  const k = process.env.NEWSDATA_API_KEY;
+  if (!k) return [];
+  const cats = ["top", "world", "business", "technology", "science", "sports", "entertainment", "health", "politics", "environment"];
+  const out: RawItem[] = [];
+  const results = await Promise.allSettled(cats.map(async (c) => {
+    const d = await fetchJson(`https://newsdata.io/api/1/latest?apikey=${k}&language=en&category=${c}&size=10`);
+    return ((d?.results ?? []) as any[]).filter((a) => a?.title && a?.link).map((a) => ({
+      title: a.title, description: a.description || a.content || "", url: a.link,
+      source: a.source_id || "NewsData", publishedAt: a.pubDate || new Date().toISOString(),
+      imageUrl: a.image_url || null, topicHint: c,
+    } as RawItem));
+  }));
+  for (const r of results) if (r.status === "fulfilled") out.push(...r.value);
+  return out;
+}
+
+async function fromCurrents(): Promise<RawItem[]> {
+  const k = process.env.CURRENTS_API_KEY;
+  if (!k) return [];
+  const cats = ["world", "business", "technology", "science", "sports", "entertainment", "health", "politics"];
+  const out: RawItem[] = [];
+  const results = await Promise.allSettled(cats.map(async (c) => {
+    const d = await fetchJson(`https://api.currentsapi.services/v1/latest-news?language=en&category=${c}&apiKey=${k}`);
+    return ((d?.news ?? []) as any[]).slice(0, 10).filter((a) => a?.title && a?.url).map((a) => ({
+      title: a.title, description: a.description || "", url: a.url, source: a.author || "Currents",
+      publishedAt: a.published || new Date().toISOString(),
+      imageUrl: a.image && a.image !== "None" ? a.image : null, topicHint: c,
+    } as RawItem));
+  }));
+  for (const r of results) if (r.status === "fulfilled") out.push(...r.value);
+  return out;
+}
+
+async function fromMediastack(): Promise<RawItem[]> {
+  const k = process.env.MEDIASTACK_API_KEY;
+  if (!k) return [];
+  const d = await fetchJson(`http://api.mediastack.com/v1/news?access_key=${k}&languages=en&limit=50&sort=published_desc`);
+  return ((d?.data ?? []) as any[]).filter((a) => a?.title && a?.url).map((a) => ({
+    title: a.title, description: a.description || "", url: a.url, source: a.source || "Mediastack",
+    publishedAt: a.published_at || new Date().toISOString(), imageUrl: a.image || null, topicHint: a.category,
+  } as RawItem));
+}
+
+async function fromGuardian(): Promise<RawItem[]> {
+  const k = process.env.GUARDIAN_API_KEY;
+  if (!k) return [];
+  const sections = ["world", "politics", "business", "technology", "science", "environment", "sport", "culture", "books"];
+  const out: RawItem[] = [];
+  const results = await Promise.allSettled(sections.map(async (s) => {
+    const d = await fetchJson(`https://content.guardianapis.com/search?section=${s}&order-by=newest&page-size=8&show-fields=thumbnail,trailText&api-key=${k}`);
+    return ((d?.response?.results ?? []) as any[]).map((a) => ({
+      title: a.webTitle, description: a.fields?.trailText || "", url: a.webUrl, source: "The Guardian",
+      publishedAt: a.webPublicationDate || new Date().toISOString(),
+      imageUrl: a.fields?.thumbnail || null, topicHint: s,
+    } as RawItem));
+  }));
+  for (const r of results) if (r.status === "fulfilled") out.push(...r.value);
+  return out;
+}
+
+async function fromNYT(): Promise<RawItem[]> {
+  const k = process.env.NYT_API_KEY;
+  if (!k) return [];
+  const sections = ["world", "politics", "business", "technology", "science", "health", "sports", "arts", "books"];
+  const out: RawItem[] = [];
+  const results = await Promise.allSettled(sections.map(async (s) => {
+    const d = await fetchJson(`https://api.nytimes.com/svc/topstories/v2/${s}.json?api-key=${k}`);
+    return ((d?.results ?? []) as any[]).slice(0, 8).filter((a) => a?.title && a?.url).map((a) => ({
+      title: a.title, description: a.abstract || "", url: a.url, source: "The New York Times",
+      publishedAt: a.published_date || new Date().toISOString(),
+      imageUrl: a.multimedia?.[0]?.url || null, topicHint: s,
+    } as RawItem));
+  }));
+  for (const r of results) if (r.status === "fulfilled") out.push(...r.value);
+  return out;
+}
+
+async function fromReddit(): Promise<RawItem[]> {
+  const subs = ["worldnews", "news", "science", "technology", "space", "Futurology", "UpliftingNews", "todayilearned", "Damnthatsinteresting", "EarthPorn"];
+  const out: RawItem[] = [];
+  const results = await Promise.allSettled(subs.map(async (sub) => {
+    const d = await fetchJson(`https://www.reddit.com/r/${sub}/hot.json?limit=15`, {
+      headers: { "user-agent": "TheUnitedHell/1.0 (news aggregator)" },
+    });
+    return ((d?.data?.children ?? []) as any[]).map((c) => c?.data).filter((p: any) => p?.title && p?.url && !p.over_18).slice(0, 6).map((p: any) => ({
+      title: p.title, description: (p.selftext || "").slice(0, 600),
+      url: p.url_overridden_by_dest || `https://reddit.com${p.permalink}`,
+      source: `r/${sub}`, publishedAt: new Date((p.created_utc || Date.now()/1000) * 1000).toISOString(),
+      imageUrl: p.preview?.images?.[0]?.source?.url?.replace(/&amp;/g, "&") || (p.thumbnail?.startsWith("http") ? p.thumbnail : null),
+      topicHint: sub,
+    } as RawItem));
+  }));
+  for (const r of results) if (r.status === "fulfilled") out.push(...r.value);
+  return out;
+}
+
 type Processed = {
   title: string;
   dek: string;
@@ -582,14 +679,20 @@ export async function runIngestion(opts?: { maxItems?: number; priorityCategory?
   const queryBudget = opts?.mode === "manual" ? (max >= 80 ? 12 : max >= 36 ? 6 : 3) : 1;
 
   // 1. Pull live sources in parallel. RSS keeps content flowing even when a metered API is throttled.
-  const [na, gn, rss, wiki] = await Promise.allSettled([
+  const fetched = await Promise.allSettled([
     fromNewsAPICategorical({ queryBudget, priorityCategory: opts?.priorityCategory }),
     fromGNewsTopHeadlines(),
     fromRSS(),
     fromWikipediaCurrentEvents(),
+    fromNewsData(),
+    fromCurrents(),
+    fromMediastack(),
+    fromGuardian(),
+    fromNYT(),
+    fromReddit(),
   ]);
   const all: RawItem[] = [];
-  for (const r of [na, gn, rss, wiki]) if (r.status === "fulfilled") all.push(...r.value);
+  for (const r of fetched) if (r.status === "fulfilled") all.push(...r.value);
 
   // 2. Filter: recent useful items, valid title, dedupe by title and URL.
   const cutoff = Date.now() - 8 * 86400_000;
