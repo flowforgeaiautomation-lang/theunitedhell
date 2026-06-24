@@ -34,7 +34,7 @@ async function lovableChat(opts: {
       model: opts.model ?? "google/gemini-2.5-flash-lite",
       messages,
       temperature: opts.temperature ?? 0.45,
-      max_tokens: 3200,
+      max_tokens: 4200,
       ...(opts.json ? { response_format: { type: "json_object" } } : {}),
     }),
   });
@@ -77,7 +77,7 @@ export async function orChat(opts: {
           model: opts.model ?? "qwen/qwen3-next-80b-a3b-instruct",
           messages,
           temperature: opts.temperature ?? 0.45,
-          max_tokens: 3200,
+          max_tokens: 4200,
           ...(opts.json ? { response_format: { type: "json_object" } } : {}),
         }),
       });
@@ -98,12 +98,40 @@ export async function orJson<T = unknown>(opts: {
   temperature?: number;
 }): Promise<T> {
   const txt = await orChat({ ...opts, json: true });
+  return extractJsonFromResponse(txt) as T;
+}
+
+function detectTruncation(response: string): boolean {
+  const text = response.trim();
+  const openBraces = (text.match(/\{/g) || []).length;
+  const closeBraces = (text.match(/}/g) || []).length;
+  const openBrackets = (text.match(/\[/g) || []).length;
+  const closeBrackets = (text.match(/]/g) || []).length;
+  return (
+    openBraces !== closeBraces ||
+    openBrackets !== closeBrackets ||
+    /\.\.\.$|…$|\[truncated\]|\[continued\]/i.test(text)
+  );
+}
+
+function extractJsonFromResponse(response: string): unknown {
+  if (detectTruncation(response)) throw new Error("AI returned truncated JSON");
+  let cleaned = response.replace(/```json\s*/gi, "").replace(/```/g, "").trim();
+  const jsonStart = cleaned.search(/[\[{]/);
+  if (jsonStart === -1) throw new Error("AI returned non-JSON");
+  const closer = cleaned[jsonStart] === "[" ? "]" : "}";
+  const jsonEnd = cleaned.lastIndexOf(closer);
+  if (jsonEnd === -1 || jsonEnd <= jsonStart) throw new Error("AI returned incomplete JSON");
+  cleaned = cleaned.slice(jsonStart, jsonEnd + 1);
   try {
-    return JSON.parse(txt) as T;
+    return JSON.parse(cleaned);
   } catch {
-    const m = txt.match(/\{[\s\S]*\}/);
-    if (m) return JSON.parse(m[0]) as T;
-    throw new Error("AI returned non-JSON");
+    return JSON.parse(
+      cleaned
+        .replace(/,\s*}/g, "}")
+        .replace(/,\s*]/g, "]")
+        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, ""),
+    );
   }
 }
 
