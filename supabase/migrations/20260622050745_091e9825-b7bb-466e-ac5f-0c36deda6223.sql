@@ -1,0 +1,1 @@
+DELETE FROM articles WHERE published_at < (now() - interval '3 days');

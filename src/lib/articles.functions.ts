@@ -1,0 +1,166 @@
+import { createServerFn } from "@tanstack/react-start";
+import { createClient } from "@supabase/supabase-js";
+import { z } from "zod";
+import type { Database } from "@/integrations/supabase/types";
+import type { Article, ArticleSummary, Briefing, CommentRow } from "./types";
+
+function publicClient() {
+  return createClient<Database>(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_PUBLISHABLE_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false, storage: undefined } },
+  );
+}
+
+const summaryCols =
+  "id,slug,title,dek,category,subcategory,cover_image_url,read_time_minutes,trust_score,source_count,country_code,featured_slot,published_at,view_count,like_count,bookmark_count,comment_count";
+
+export const listArticles = createServerFn({ method: "GET" })
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        category: z.string().optional(),
+        country: z.string().optional(),
+        limit: z.number().int().min(1).max(60).default(24),
+        offset: z.number().int().min(0).default(0),
+        sort: z.enum(["recent", "trending", "most_read", "most_saved"]).default("recent"),
+      })
+      .parse(d ?? {}),
+  )
+  .handler(async ({ data }) => {
+    const supabase = publicClient();
+    let q = supabase.from("articles").select(summaryCols).eq("is_published", true);
+    if (data.category) q = q.eq("category", data.category);
+    if (data.country) q = q.eq("country_code", data.country);
+    if (data.sort === "trending" || data.sort === "most_read")
+      q = q.order("view_count", { ascending: false });
+    else if (data.sort === "most_saved") q = q.order("bookmark_count", { ascending: false });
+    else q = q.order("published_at", { ascending: false });
+    const { data: rows, error } = await q.range(data.offset, data.offset + data.limit - 1);
+    if (error) throw new Error(error.message);
+    return (rows ?? []) as ArticleSummary[];
+  });
+
+export const getFeatured = createServerFn({ method: "GET" }).handler(async () => {
+  const supabase = publicClient();
+  const { data, error } = await supabase
+    .from("articles")
+    .select(summaryCols)
+    .eq("is_published", true)
+    .not("featured_slot", "is", null)
+    .order("published_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  // Keep latest per slot.
+  const bySlot = new Map<string, ArticleSummary>();
+  for (const a of (data ?? []) as ArticleSummary[]) {
+    if (a.featured_slot && !bySlot.has(a.featured_slot)) bySlot.set(a.featured_slot, a);
+  }
+  return Object.fromEntries(bySlot) as Record<string, ArticleSummary>;
+});
+
+export const getArticleBySlug = createServerFn({ method: "GET" })
+  .inputValidator((d: unknown) => z.object({ slug: z.string().min(1) }).parse(d))
+  .handler(async ({ data }) => {
+    const supabase = publicClient();
+    const { data: row, error } = await supabase
+      .from("articles")
+      .select("*")
+      .eq("slug", data.slug)
+      .eq("is_published", true)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!row) return null;
+    // fire-and-forget view bump
+    supabase.rpc as unknown;
+    await supabase.from("articles").update({ view_count: (row.view_count ?? 0) + 1 }).eq("id", row.id);
+    return row as unknown as Article;
+  });
+
+export const getRelated = createServerFn({ method: "GET" })
+  .inputValidator((d: unknown) =>
+    z.object({ category: z.string(), excludeSlug: z.string(), limit: z.number().default(4) }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    const supabase = publicClient();
+    const { data: rows, error } = await supabase
+      .from("articles")
+      .select(summaryCols)
+      .eq("is_published", true)
+      .eq("category", data.category)
+      .neq("slug", data.excludeSlug)
+      .order("published_at", { ascending: false })
+      .limit(data.limit);
+    if (error) throw new Error(error.message);
+    return (rows ?? []) as ArticleSummary[];
+  });
+
+export const searchArticles = createServerFn({ method: "GET" })
+  .inputValidator((d: unknown) => z.object({ q: z.string().min(1).max(120) }).parse(d))
+  .handler(async ({ data }) => {
+    const supabase = publicClient();
+    const term = `%${data.q.replace(/[%_]/g, " ")}%`;
+    const { data: rows, error } = await supabase
+      .from("articles")
+      .select(summaryCols)
+      .eq("is_published", true)
+      .or(`title.ilike.${term},dek.ilike.${term},category.ilike.${term}`)
+      .order("published_at", { ascending: false })
+      .limit(40);
+    if (error) throw new Error(error.message);
+    return (rows ?? []) as ArticleSummary[];
+  });
+
+export const getCountryStats = createServerFn({ method: "GET" }).handler(async () => {
+  const supabase = publicClient();
+  const { data, error } = await supabase
+    .from("articles")
+    .select("country_code")
+    .eq("is_published", true)
+    .not("country_code", "is", null);
+  if (error) throw new Error(error.message);
+  const counts: Record<string, number> = {};
+  for (const r of (data ?? []) as { country_code: string }[]) {
+    counts[r.country_code] = (counts[r.country_code] ?? 0) + 1;
+  }
+  return counts;
+});
+
+export const getBriefingToday = createServerFn({ method: "GET" }).handler(async () => {
+  const supabase = publicClient();
+  const { data, error } = await supabase
+    .from("briefings")
+    .select("*")
+    .order("briefing_date", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return (data ?? null) as Briefing | null;
+});
+
+export const listComments = createServerFn({ method: "GET" })
+  .inputValidator((d: unknown) => z.object({ articleId: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const supabase = publicClient();
+    const { data: rows, error } = await supabase
+      .from("comments")
+      .select("id,article_id,user_id,parent_id,prompt_type,body,like_count,created_at,profiles!comments_user_id_fkey(username,display_name,avatar_url)")
+      .eq("article_id", data.articleId)
+      .eq("is_hidden", false)
+      .order("created_at", { ascending: true })
+      .limit(200);
+    if (error) {
+      // join hint may differ; fall back without profile join
+      const { data: alt } = await supabase
+        .from("comments")
+        .select("id,article_id,user_id,parent_id,prompt_type,body,like_count,created_at")
+        .eq("article_id", data.articleId)
+        .eq("is_hidden", false)
+        .order("created_at", { ascending: true })
+        .limit(200);
+      return (alt ?? []) as CommentRow[];
+    }
+    return (rows ?? []).map((r: Record<string, unknown>) => ({
+      ...(r as object),
+      author: (r as { profiles?: CommentRow["author"] }).profiles ?? null,
+    })) as CommentRow[];
+  });
