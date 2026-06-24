@@ -410,6 +410,13 @@ async function fromWikipediaCurrentEvents(): Promise<RawItem[]> {
     .filter(Boolean) as RawItem[];
 }
 
+function gdeltDate(value?: string): string {
+  if (!value) return new Date().toISOString();
+  const normalized = String(value).replace(/(\d{4})(\d{2})(\d{2})T?(\d{2})(\d{2})(\d{2})Z?/, "$1-$2-$3T$4:$5:$6Z");
+  const d = new Date(normalized);
+  return Number.isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+}
+
 async function fromGDELTCategorical(opts?: { queryBudget?: number; priorityCategory?: string }): Promise<RawItem[]> {
   const queryList = expandedCategoryQueries(opts?.priorityCategory);
   const budget = Math.max(1, Math.min(opts?.queryBudget ?? 2, 14));
@@ -429,7 +436,7 @@ async function fromGDELTCategorical(opts?: { queryBudget?: number; priorityCateg
           description: a.seendate ? `GDELT indexed this article on ${a.seendate}.` : "",
           url: a.url,
           source: a.domain || "GDELT",
-          publishedAt: a.seendate ? new Date(String(a.seendate).replace(/(\d{4})(\d{2})(\d{2})T?(\d{2})(\d{2})(\d{2})Z?/, "$1-$2-$3T$4:$5:$6Z")).toISOString() : new Date().toISOString(),
+          publishedAt: gdeltDate(a.seendate),
           imageUrl: a.socialimage || null,
           topicHint: slug,
           forcedCategory: slug,
