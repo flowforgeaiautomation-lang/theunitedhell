@@ -9,38 +9,300 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WorldRouteImport } from './routes/world'
+import { Route as TrendingRouteImport } from './routes/trending'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as SearchRouteImport } from './routes/search'
+import { Route as MapRouteImport } from './routes/map'
+import { Route as InformationRouteImport } from './routes/information'
+import { Route as DiscoverRouteImport } from './routes/discover'
+import { Route as BriefingRouteImport } from './routes/briefing'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ArticleSlugRouteImport } from './routes/article.$slug'
+import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
+import { Route as AuthenticatedBookmarksRouteImport } from './routes/_authenticated/bookmarks'
+import { Route as ApiPublicHooksIngestRouteImport } from './routes/api/public/hooks/ingest'
+import { Route as ApiPublicHooksDebugEnvRouteImport } from './routes/api/public/hooks/debug-env'
 
+const WorldRoute = WorldRouteImport.update({
+  id: '/world',
+  path: '/world',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TrendingRoute = TrendingRouteImport.update({
+  id: '/trending',
+  path: '/trending',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SearchRoute = SearchRouteImport.update({
+  id: '/search',
+  path: '/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MapRoute = MapRouteImport.update({
+  id: '/map',
+  path: '/map',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InformationRoute = InformationRouteImport.update({
+  id: '/information',
+  path: '/information',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DiscoverRoute = DiscoverRouteImport.update({
+  id: '/discover',
+  path: '/discover',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BriefingRoute = BriefingRouteImport.update({
+  id: '/briefing',
+  path: '/briefing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ArticleSlugRoute = ArticleSlugRouteImport.update({
+  id: '/article/$slug',
+  path: '/article/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedBookmarksRoute = AuthenticatedBookmarksRouteImport.update({
+  id: '/bookmarks',
+  path: '/bookmarks',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const ApiPublicHooksIngestRoute = ApiPublicHooksIngestRouteImport.update({
+  id: '/api/public/hooks/ingest',
+  path: '/api/public/hooks/ingest',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicHooksDebugEnvRoute = ApiPublicHooksDebugEnvRouteImport.update({
+  id: '/api/public/hooks/debug-env',
+  path: '/api/public/hooks/debug-env',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/briefing': typeof BriefingRoute
+  '/discover': typeof DiscoverRoute
+  '/information': typeof InformationRoute
+  '/map': typeof MapRoute
+  '/search': typeof SearchRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/trending': typeof TrendingRoute
+  '/world': typeof WorldRoute
+  '/bookmarks': typeof AuthenticatedBookmarksRoute
+  '/profile': typeof AuthenticatedProfileRoute
+  '/article/$slug': typeof ArticleSlugRoute
+  '/api/public/hooks/debug-env': typeof ApiPublicHooksDebugEnvRoute
+  '/api/public/hooks/ingest': typeof ApiPublicHooksIngestRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/briefing': typeof BriefingRoute
+  '/discover': typeof DiscoverRoute
+  '/information': typeof InformationRoute
+  '/map': typeof MapRoute
+  '/search': typeof SearchRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/trending': typeof TrendingRoute
+  '/world': typeof WorldRoute
+  '/bookmarks': typeof AuthenticatedBookmarksRoute
+  '/profile': typeof AuthenticatedProfileRoute
+  '/article/$slug': typeof ArticleSlugRoute
+  '/api/public/hooks/debug-env': typeof ApiPublicHooksDebugEnvRoute
+  '/api/public/hooks/ingest': typeof ApiPublicHooksIngestRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/briefing': typeof BriefingRoute
+  '/discover': typeof DiscoverRoute
+  '/information': typeof InformationRoute
+  '/map': typeof MapRoute
+  '/search': typeof SearchRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/trending': typeof TrendingRoute
+  '/world': typeof WorldRoute
+  '/_authenticated/bookmarks': typeof AuthenticatedBookmarksRoute
+  '/_authenticated/profile': typeof AuthenticatedProfileRoute
+  '/article/$slug': typeof ArticleSlugRoute
+  '/api/public/hooks/debug-env': typeof ApiPublicHooksDebugEnvRoute
+  '/api/public/hooks/ingest': typeof ApiPublicHooksIngestRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/briefing'
+    | '/discover'
+    | '/information'
+    | '/map'
+    | '/search'
+    | '/sitemap.xml'
+    | '/trending'
+    | '/world'
+    | '/bookmarks'
+    | '/profile'
+    | '/article/$slug'
+    | '/api/public/hooks/debug-env'
+    | '/api/public/hooks/ingest'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/auth'
+    | '/briefing'
+    | '/discover'
+    | '/information'
+    | '/map'
+    | '/search'
+    | '/sitemap.xml'
+    | '/trending'
+    | '/world'
+    | '/bookmarks'
+    | '/profile'
+    | '/article/$slug'
+    | '/api/public/hooks/debug-env'
+    | '/api/public/hooks/ingest'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/auth'
+    | '/briefing'
+    | '/discover'
+    | '/information'
+    | '/map'
+    | '/search'
+    | '/sitemap.xml'
+    | '/trending'
+    | '/world'
+    | '/_authenticated/bookmarks'
+    | '/_authenticated/profile'
+    | '/article/$slug'
+    | '/api/public/hooks/debug-env'
+    | '/api/public/hooks/ingest'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
+  BriefingRoute: typeof BriefingRoute
+  DiscoverRoute: typeof DiscoverRoute
+  InformationRoute: typeof InformationRoute
+  MapRoute: typeof MapRoute
+  SearchRoute: typeof SearchRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  TrendingRoute: typeof TrendingRoute
+  WorldRoute: typeof WorldRoute
+  ArticleSlugRoute: typeof ArticleSlugRoute
+  ApiPublicHooksDebugEnvRoute: typeof ApiPublicHooksDebugEnvRoute
+  ApiPublicHooksIngestRoute: typeof ApiPublicHooksIngestRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/world': {
+      id: '/world'
+      path: '/world'
+      fullPath: '/world'
+      preLoaderRoute: typeof WorldRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/trending': {
+      id: '/trending'
+      path: '/trending'
+      fullPath: '/trending'
+      preLoaderRoute: typeof TrendingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/search': {
+      id: '/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof SearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/map': {
+      id: '/map'
+      path: '/map'
+      fullPath: '/map'
+      preLoaderRoute: typeof MapRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/information': {
+      id: '/information'
+      path: '/information'
+      fullPath: '/information'
+      preLoaderRoute: typeof InformationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/discover': {
+      id: '/discover'
+      path: '/discover'
+      fullPath: '/discover'
+      preLoaderRoute: typeof DiscoverRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/briefing': {
+      id: '/briefing'
+      path: '/briefing'
+      fullPath: '/briefing'
+      preLoaderRoute: typeof BriefingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +310,73 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/article/$slug': {
+      id: '/article/$slug'
+      path: '/article/$slug'
+      fullPath: '/article/$slug'
+      preLoaderRoute: typeof ArticleSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/profile': {
+      id: '/_authenticated/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof AuthenticatedProfileRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/bookmarks': {
+      id: '/_authenticated/bookmarks'
+      path: '/bookmarks'
+      fullPath: '/bookmarks'
+      preLoaderRoute: typeof AuthenticatedBookmarksRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/public/hooks/ingest': {
+      id: '/api/public/hooks/ingest'
+      path: '/api/public/hooks/ingest'
+      fullPath: '/api/public/hooks/ingest'
+      preLoaderRoute: typeof ApiPublicHooksIngestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/debug-env': {
+      id: '/api/public/hooks/debug-env'
+      path: '/api/public/hooks/debug-env'
+      fullPath: '/api/public/hooks/debug-env'
+      preLoaderRoute: typeof ApiPublicHooksDebugEnvRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedBookmarksRoute: typeof AuthenticatedBookmarksRoute
+  AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedBookmarksRoute: AuthenticatedBookmarksRoute,
+  AuthenticatedProfileRoute: AuthenticatedProfileRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
+  BriefingRoute: BriefingRoute,
+  DiscoverRoute: DiscoverRoute,
+  InformationRoute: InformationRoute,
+  MapRoute: MapRoute,
+  SearchRoute: SearchRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
+  TrendingRoute: TrendingRoute,
+  WorldRoute: WorldRoute,
+  ArticleSlugRoute: ArticleSlugRoute,
+  ApiPublicHooksDebugEnvRoute: ApiPublicHooksDebugEnvRoute,
+  ApiPublicHooksIngestRoute: ApiPublicHooksIngestRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
