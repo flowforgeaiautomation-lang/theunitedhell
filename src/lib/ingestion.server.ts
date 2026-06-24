@@ -108,6 +108,32 @@ const CATEGORY_QUERIES: { slug: string; q: string }[] = [
 
 const CATEGORY_QUERY_MAP = new Map(CATEGORY_QUERIES.map((item) => [item.slug, item.q]));
 
+const TOPIC_CATEGORY_MAP: Record<string, string> = {
+  nation: "politics",
+  business: "markets",
+  sport: "football",
+  sports: "football",
+  arts: "culture",
+  books: "books",
+  environment: "climate",
+  top: "trending-now",
+  Futurology: "future",
+  UpliftingNews: "inspirational-stories",
+  todayilearned: "curiosity",
+  Damnthatsinteresting: "curiosity",
+  EarthPorn: "nature",
+  worldnews: "world",
+  news: "breaking-news",
+};
+
+function categoryFromHint(raw: RawItem): string | undefined {
+  const hint = raw.forcedCategory || raw.topicHint;
+  if (!hint) return undefined;
+  if (ALLOWED_SLUGS.includes(hint)) return hint;
+  const mapped = TOPIC_CATEGORY_MAP[hint] || TOPIC_CATEGORY_MAP[hint.toLowerCase()];
+  return mapped && ALLOWED_SLUGS.includes(mapped) ? mapped : undefined;
+}
+
 function expandedCategoryQueries(priorityCategory?: string): { slug: string; q: string }[] {
   const generated = CATEGORIES
     .filter((c) => c.slug !== "all")
@@ -704,8 +730,9 @@ Process it.`,
     if (!out?.title) return null;
     // ENFORCE the forced category from the source query so every slug actually fills.
     // The AI is otherwise prone to collapsing everything into a few broad buckets.
-    if (raw.forcedCategory && ALLOWED_SLUGS.includes(raw.forcedCategory)) {
-      out.category = raw.forcedCategory;
+    const inferredCategory = categoryFromHint(raw);
+    if (inferredCategory) {
+      out.category = inferredCategory;
     } else if (!out.category || !ALLOWED_SLUGS.includes(out.category)) {
       out.category = "discovery";
     }
