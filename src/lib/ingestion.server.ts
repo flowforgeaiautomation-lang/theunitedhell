@@ -570,7 +570,7 @@ async function pMap<T, R>(arr: T[], n: number, fn: (x: T) => Promise<R>): Promis
   return out;
 }
 
-export async function runIngestion(opts?: { maxItems?: number }): Promise<{
+export async function runIngestion(opts?: { maxItems?: number; priorityCategory?: string; mode?: "cron" | "manual" }): Promise<{
   fetched: number;
   inserted: number;
   skipped: number;
@@ -579,22 +579,24 @@ export async function runIngestion(opts?: { maxItems?: number }): Promise<{
 }> {
   const supabase = adminClient();
   const max = opts?.maxItems ?? 30;
+  const queryBudget = opts?.mode === "manual" ? (max >= 80 ? 12 : max >= 36 ? 6 : 3) : 1;
 
   // 1. Pull live sources in parallel. RSS keeps content flowing even when a metered API is throttled.
-  const [na, gn, rss] = await Promise.allSettled([
-    fromNewsAPICategorical(),
+  const [na, gn, rss, wiki] = await Promise.allSettled([
+    fromNewsAPICategorical({ queryBudget, priorityCategory: opts?.priorityCategory }),
     fromGNewsTopHeadlines(),
     fromRSS(),
+    fromWikipediaCurrentEvents(),
   ]);
   const all: RawItem[] = [];
-  for (const r of [na, gn, rss]) if (r.status === "fulfilled") all.push(...r.value);
+  for (const r of [na, gn, rss, wiki]) if (r.status === "fulfilled") all.push(...r.value);
 
   // 2. Filter: recent useful items, valid title, dedupe by title and URL.
   const cutoff = Date.now() - 8 * 86400_000;
   const seen = new Set<string>();
   const queue = all.filter((i) => {
-    const k = i.title?.trim().toLowerCase().replace(/\s+/g, " ");
-    const u = i.url?.trim().toLowerCase();
+    const k = normalizeText(i.title);
+    const u = normalizeUrl(i.url);
     if (!k || !u || seen.has(k) || seen.has(u)) return false;
     const ts = new Date(i.publishedAt).getTime();
     if (isNaN(ts) || ts < cutoff) return false;
@@ -603,35 +605,62 @@ export async function runIngestion(opts?: { maxItems?: number }): Promise<{
   });
 
   // 3. Skip those already in DB
-  const titles = queue.map((q) => q.title);
   const { data: existing } = await supabase
     .from("articles")
-    .select("title,sources")
-    .in("title", titles.length ? titles : ["__none__"]);
+    .select("title,dek,sources,cover_image_url")
+    .order("published_at", { ascending: false })
+    .limit(2500);
   const existingSet = new Set<string>();
-  for (const e of (existing ?? []) as { title: string; sources?: { url?: string }[] }[]) {
-    existingSet.add(e.title?.toLowerCase().replace(/\s+/g, " "));
-    for (const s of e.sources ?? []) if (s?.url) existingSet.add(s.url.toLowerCase());
+  const existingTitles: string[] = [];
+  const existingImages = new Set<string>();
+  for (const e of (existing ?? []) as { title: string; dek?: string | null; sources?: { url?: string }[]; cover_image_url?: string | null }[]) {
+    const t = normalizeText(e.title);
+    if (t) {
+      existingSet.add(t);
+      existingTitles.push(e.title);
+    }
+    if (e.dek) existingSet.add(normalizeText(e.dek));
+    if (e.cover_image_url) existingImages.add(e.cover_image_url);
+    for (const s of e.sources ?? []) if (s?.url) existingSet.add(normalizeUrl(s.url));
   }
-  const fresh = queue.filter((q) => !existingSet.has(q.title.toLowerCase().replace(/\s+/g, " ")) && !existingSet.has(q.url.toLowerCase())).slice(0, max);
+  const fresh = queue
+    .filter((q) => {
+      const titleKey = normalizeText(q.title);
+      if (existingSet.has(titleKey) || existingSet.has(normalizeUrl(q.url)) || existingSet.has(normalizeText(q.description))) return false;
+      return !existingTitles.some((t) => similarity(t, q.title) >= 0.86);
+    })
+    .slice(0, max);
 
   // 4. Process in parallel (concurrency 6)
   const processed = await pMap(fresh, 6, async (raw) => {
     const p = await processItem(raw);
     if (!p) return null;
     let cover = raw.imageUrl || null;
+    if (cover && existingImages.has(cover)) cover = null;
     if (!cover) {
       cover = await pexelsImage(p.tags?.[0] || p.category || raw.topicHint || "news");
     }
+    if (cover && existingImages.has(cover)) cover = null;
     return { raw, p, cover };
   });
 
   let inserted = 0;
   let errors = 0;
   const rows: Database["public"]["Tables"]["articles"]["Insert"][] = [];
+  const batchTitles = new Set<string>();
+  const batchUrls = new Set<string>();
+  const batchImages = new Set<string>();
   for (const item of processed) {
     if (!item) { errors++; continue; }
-    const { raw, p, cover } = item;
+    const { raw, p } = item;
+    let cover = item.cover;
+    const titleKey = normalizeText(p.title);
+    const urlKey = normalizeUrl(raw.url);
+    if (batchTitles.has(titleKey) || batchUrls.has(urlKey)) { errors++; continue; }
+    if (cover && batchImages.has(cover)) cover = null;
+    batchTitles.add(titleKey);
+    batchUrls.add(urlKey);
+    if (cover) batchImages.add(cover);
     rows.push({
       slug: `${slugify(p.title)}-${Math.random().toString(36).slice(2, 6)}`,
       title: p.title,
@@ -649,13 +678,13 @@ export async function runIngestion(opts?: { maxItems?: number }): Promise<{
       is_published: true,
     });
   }
-  if (rows.length) {
-    const { error, count } = await supabase.from("articles").insert(rows, { count: "exact" });
+  for (const row of rows) {
+    const { error } = await supabase.from("articles").insert(row);
     if (error) {
-      console.error("[ingest] batch insert failed:", error.message);
-      errors += rows.length;
+      if (!/duplicate|unique|already/i.test(error.message)) console.error("[ingest] insert failed:", error.message);
+      errors++;
     } else {
-      inserted = count ?? rows.length;
+      inserted++;
     }
   }
 
