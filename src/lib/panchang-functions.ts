@@ -1,23 +1,22 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-// Prokerala OAuth2 credentials (server-only)
-const PROKERALA_CLIENT_ID = "d0236a06-47f5-4500-9a45-740cdb8e4c55";
-const PROKERALA_CLIENT_SECRET = "q96ztifezJaD94heZdYdhtLiuGoKHMYYXENdQ7k7";
-
 // In-memory token cache (per worker instance)
 let cachedToken: { token: string; exp: number } | null = null;
 
 async function getProkeralaToken(): Promise<string | null> {
   if (cachedToken && cachedToken.exp > Date.now() + 30_000) return cachedToken.token;
+  const clientId = process.env.PROKERALA_CLIENT_ID;
+  const clientSecret = process.env.PROKERALA_CLIENT_SECRET;
+  if (!clientId || !clientSecret) return null;
   try {
     const r = await fetch("https://api.prokerala.com/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
         grant_type: "client_credentials",
-        client_id: PROKERALA_CLIENT_ID,
-        client_secret: PROKERALA_CLIENT_SECRET,
+        client_id: clientId,
+        client_secret: clientSecret,
       }),
     });
     if (!r.ok) {
@@ -61,10 +60,37 @@ function fallbackPanchang() {
   };
 }
 
+async function getVedicPanchang(now: Date) {
+  const key = process.env.VEDIC_ASTRO_API_KEY;
+  if (!key) return null;
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  const url = `https://api.vedicastroapi.com/v3/json/panchang/panchang?api_key=${encodeURIComponent(key)}&date=${d}/${m}/${y}&lat=28.6139&lon=77.2090&tz=5.5`;
+  const r = await fetch(url);
+  if (!r.ok) return null;
+  const apiData = await r.json();
+  const tithi = Array.isArray(apiData.response?.tithi) ? apiData.response.tithi[0] : apiData.response?.tithi;
+  const tithiName = tithi?.name || tithi?.details?.tithi_name || "Tithi";
+  const paksha = String(tithi?.paksha ?? "").toLowerCase().includes("krishna") || tithi?.paksha === 2 ? "Krishna" : "Shukla";
+  const sakaYear = apiData.response?.saka?.year || apiData.response?.advanced_details?.saka_year || getSakaYear(now);
+  const weekdayEn = now.toLocaleDateString("en-US", { weekday: "long" });
+  const monthName = now.toLocaleDateString("en-US", { month: "long" });
+  const hinduWeekdays = ["Ravivaar","Somvaar","Mangalvaar","Budhvaar","Guruvaar","Shukravaar","Shanivaar"];
+  return {
+    line1: `${weekdayEn}, ${String(now.getDate())} ${monthName} ${now.getFullYear()}`,
+    line2: `${paksha} ${tithiName}`,
+    line3: `${sakaYear} Saka · ${hinduWeekdays[now.getDay()]}`,
+    source: "vedicastro" as const,
+  };
+}
+
 export const getCurrentPanchang = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({}).parse(d ?? {}))
   .handler(async () => {
     const now = nowInIndia();
+    const vedic = await getVedicPanchang(now).catch(() => null);
+    if (vedic) return vedic;
     const token = await getProkeralaToken();
     if (!token) return fallbackPanchang();
     // Prokerala expects ISO 8601 with timezone offset; use IST +05:30 noon today

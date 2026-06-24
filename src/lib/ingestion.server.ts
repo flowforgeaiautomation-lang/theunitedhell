@@ -106,6 +106,20 @@ const CATEGORY_QUERIES: { slug: string; q: string }[] = [
   { slug: "smart-cities", q: "smart city OR urban tech OR megaproject" },
 ];
 
+const CATEGORY_QUERY_MAP = new Map(CATEGORY_QUERIES.map((item) => [item.slug, item.q]));
+
+function expandedCategoryQueries(priorityCategory?: string): { slug: string; q: string }[] {
+  const generated = CATEGORIES
+    .filter((c) => c.slug !== "all")
+    .map((c) => ({
+      slug: c.slug,
+      q: CATEGORY_QUERY_MAP.get(c.slug) || `${c.label} news OR ${c.label} discovery OR ${c.label} research`,
+    }));
+  if (!priorityCategory) return generated;
+  const priority = generated.find((q) => q.slug === priorityCategory);
+  return priority ? [priority, ...generated.filter((q) => q.slug !== priorityCategory)] : generated;
+}
+
 
 const RSS_FEEDS: { source: string; url: string; topicHint?: string; forcedCategory?: string }[] = [
   // World / Geopolitics
@@ -201,6 +215,30 @@ function slugify(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80);
 }
 
+function normalizeText(s = "") {
+  return s.toLowerCase().replace(/[^a-z0-9\s]+/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function normalizeUrl(url = "") {
+  try {
+    const u = new URL(url);
+    u.hash = "";
+    u.search = "";
+    return u.toString().replace(/\/$/, "").toLowerCase();
+  } catch {
+    return url.trim().toLowerCase().replace(/[?#].*$/, "").replace(/\/$/, "");
+  }
+}
+
+function similarity(a: string, b: string) {
+  const aa = new Set(normalizeText(a).split(" ").filter((w) => w.length > 2));
+  const bb = new Set(normalizeText(b).split(" ").filter((w) => w.length > 2));
+  if (!aa.size || !bb.size) return 0;
+  let overlap = 0;
+  for (const w of aa) if (bb.has(w)) overlap++;
+  return overlap / Math.min(aa.size, bb.size);
+}
+
 async function fetchJson(url: string, init?: RequestInit, timeoutMs = 10000): Promise<any> {
   const c = new AbortController();
   const t = setTimeout(() => c.abort(), timeoutMs);
@@ -250,15 +288,19 @@ function isoDaysAgo(days: number) {
   return new Date(Date.now() - days * 86400_000).toISOString();
 }
 
-async function fromNewsAPICategorical(): Promise<RawItem[]> {
+async function fromNewsAPICategorical(opts?: { queryBudget?: number; priorityCategory?: string }): Promise<RawItem[]> {
   const k = process.env.NEWSAPI_KEY;
   if (!k) return [];
-  const from = isoDaysAgo(2).slice(0, 10);
+  const from = isoDaysAgo(8).slice(0, 10);
   const out: RawItem[] = [];
   // NewsAPI developer plan: 100 req/day. Cron runs every 20 min = 72 runs/day.
   // Rotate through CATEGORY_QUERIES so each run uses only 1 query (~72/day, well under limit).
-  const idx = Math.floor(Date.now() / (20 * 60 * 1000)) % CATEGORY_QUERIES.length;
-  const picks = [CATEGORY_QUERIES[idx]];
+  const queryList = expandedCategoryQueries(opts?.priorityCategory);
+  const budget = Math.max(1, Math.min(opts?.queryBudget ?? 1, 12));
+  const idx = Math.floor(Date.now() / (20 * 60 * 1000)) % queryList.length;
+  const picks = opts?.priorityCategory
+    ? queryList.slice(0, budget)
+    : Array.from({ length: budget }, (_, i) => queryList[(idx + i) % queryList.length]);
   const results = await Promise.allSettled(
     picks.map(async ({ slug, q }) => {
       const d = await fetchJson(
@@ -345,6 +387,29 @@ async function fromRSS(): Promise<RawItem[]> {
   return results.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
 }
 
+async function fromWikipediaCurrentEvents(): Promise<RawItem[]> {
+  const d = await fetchJson("https://en.wikipedia.org/w/api.php?action=parse&page=Portal:Current_events&prop=text&format=json&origin=*");
+  const html = d?.parse?.text?.["*"] as string | undefined;
+  if (!html) return [];
+  return [...html.matchAll(/<li>([\s\S]*?)<\/li>/gi)]
+    .slice(0, 40)
+    .map((m): RawItem | null => {
+      const text = xmlDecode(m[1]).replace(/\[edit\]/gi, "").trim();
+      if (text.length < 45) return null;
+      return {
+        title: text.split(".")[0].slice(0, 120),
+        description: text.slice(0, 700),
+        url: "https://en.wikipedia.org/wiki/Portal:Current_events",
+        source: "Wikipedia Current Events",
+        publishedAt: new Date().toISOString(),
+        imageUrl: null,
+        forcedCategory: "world",
+        topicHint: "current-events",
+      };
+    })
+    .filter(Boolean) as RawItem[];
+}
+
 type Processed = {
   title: string;
   dek: string;
@@ -371,7 +436,7 @@ type Processed = {
     people_mentioned?: string[];
     organizations_mentioned?: string[];
     countries_mentioned?: string[];
-    vocabulary?: { word: string; meaning: string }[];
+    vocabulary?: { word: string; meaning: string; example?: string }[];
   };
   country_code?: string | null;
 };
@@ -413,7 +478,7 @@ Return STRICT JSON ONLY (no markdown, no commentary):
     "people_mentioned": [".."],
     "organizations_mentioned": [".."],
     "countries_mentioned": [".."],
-    "vocabulary": [{"word":"..","meaning":"simple plain-English meaning"}]
+    "vocabulary": [{"word":"..","meaning":"simple plain-English meaning","example":"short example sentence"}]
   }
 }`;
 
@@ -505,7 +570,7 @@ async function pMap<T, R>(arr: T[], n: number, fn: (x: T) => Promise<R>): Promis
   return out;
 }
 
-export async function runIngestion(opts?: { maxItems?: number }): Promise<{
+export async function runIngestion(opts?: { maxItems?: number; priorityCategory?: string; mode?: "cron" | "manual" }): Promise<{
   fetched: number;
   inserted: number;
   skipped: number;
@@ -514,22 +579,24 @@ export async function runIngestion(opts?: { maxItems?: number }): Promise<{
 }> {
   const supabase = adminClient();
   const max = opts?.maxItems ?? 30;
+  const queryBudget = opts?.mode === "manual" ? (max >= 80 ? 12 : max >= 36 ? 6 : 3) : 1;
 
   // 1. Pull live sources in parallel. RSS keeps content flowing even when a metered API is throttled.
-  const [na, gn, rss] = await Promise.allSettled([
-    fromNewsAPICategorical(),
+  const [na, gn, rss, wiki] = await Promise.allSettled([
+    fromNewsAPICategorical({ queryBudget, priorityCategory: opts?.priorityCategory }),
     fromGNewsTopHeadlines(),
     fromRSS(),
+    fromWikipediaCurrentEvents(),
   ]);
   const all: RawItem[] = [];
-  for (const r of [na, gn, rss]) if (r.status === "fulfilled") all.push(...r.value);
+  for (const r of [na, gn, rss, wiki]) if (r.status === "fulfilled") all.push(...r.value);
 
   // 2. Filter: recent useful items, valid title, dedupe by title and URL.
   const cutoff = Date.now() - 8 * 86400_000;
   const seen = new Set<string>();
   const queue = all.filter((i) => {
-    const k = i.title?.trim().toLowerCase().replace(/\s+/g, " ");
-    const u = i.url?.trim().toLowerCase();
+    const k = normalizeText(i.title);
+    const u = normalizeUrl(i.url);
     if (!k || !u || seen.has(k) || seen.has(u)) return false;
     const ts = new Date(i.publishedAt).getTime();
     if (isNaN(ts) || ts < cutoff) return false;
@@ -538,35 +605,62 @@ export async function runIngestion(opts?: { maxItems?: number }): Promise<{
   });
 
   // 3. Skip those already in DB
-  const titles = queue.map((q) => q.title);
   const { data: existing } = await supabase
     .from("articles")
-    .select("title,sources")
-    .in("title", titles.length ? titles : ["__none__"]);
+    .select("title,dek,sources,cover_image_url")
+    .order("published_at", { ascending: false })
+    .limit(2500);
   const existingSet = new Set<string>();
-  for (const e of (existing ?? []) as { title: string; sources?: { url?: string }[] }[]) {
-    existingSet.add(e.title?.toLowerCase().replace(/\s+/g, " "));
-    for (const s of e.sources ?? []) if (s?.url) existingSet.add(s.url.toLowerCase());
+  const existingTitles: string[] = [];
+  const existingImages = new Set<string>();
+  for (const e of (existing ?? []) as { title: string; dek?: string | null; sources?: { url?: string }[]; cover_image_url?: string | null }[]) {
+    const t = normalizeText(e.title);
+    if (t) {
+      existingSet.add(t);
+      existingTitles.push(e.title);
+    }
+    if (e.dek) existingSet.add(normalizeText(e.dek));
+    if (e.cover_image_url) existingImages.add(e.cover_image_url);
+    for (const s of e.sources ?? []) if (s?.url) existingSet.add(normalizeUrl(s.url));
   }
-  const fresh = queue.filter((q) => !existingSet.has(q.title.toLowerCase().replace(/\s+/g, " ")) && !existingSet.has(q.url.toLowerCase())).slice(0, max);
+  const fresh = queue
+    .filter((q) => {
+      const titleKey = normalizeText(q.title);
+      if (existingSet.has(titleKey) || existingSet.has(normalizeUrl(q.url)) || existingSet.has(normalizeText(q.description))) return false;
+      return !existingTitles.some((t) => similarity(t, q.title) >= 0.86);
+    })
+    .slice(0, max);
 
   // 4. Process in parallel (concurrency 6)
   const processed = await pMap(fresh, 6, async (raw) => {
     const p = await processItem(raw);
     if (!p) return null;
     let cover = raw.imageUrl || null;
+    if (cover && existingImages.has(cover)) cover = null;
     if (!cover) {
       cover = await pexelsImage(p.tags?.[0] || p.category || raw.topicHint || "news");
     }
+    if (cover && existingImages.has(cover)) cover = null;
     return { raw, p, cover };
   });
 
   let inserted = 0;
   let errors = 0;
   const rows: Database["public"]["Tables"]["articles"]["Insert"][] = [];
+  const batchTitles = new Set<string>();
+  const batchUrls = new Set<string>();
+  const batchImages = new Set<string>();
   for (const item of processed) {
     if (!item) { errors++; continue; }
-    const { raw, p, cover } = item;
+    const { raw, p } = item;
+    let cover = item.cover;
+    const titleKey = normalizeText(p.title);
+    const urlKey = normalizeUrl(raw.url);
+    if (batchTitles.has(titleKey) || batchUrls.has(urlKey)) { errors++; continue; }
+    if (cover && batchImages.has(cover)) cover = null;
+    batchTitles.add(titleKey);
+    batchUrls.add(urlKey);
+    if (cover) batchImages.add(cover);
     rows.push({
       slug: `${slugify(p.title)}-${Math.random().toString(36).slice(2, 6)}`,
       title: p.title,
@@ -584,13 +678,13 @@ export async function runIngestion(opts?: { maxItems?: number }): Promise<{
       is_published: true,
     });
   }
-  if (rows.length) {
-    const { error, count } = await supabase.from("articles").insert(rows, { count: "exact" });
+  for (const row of rows) {
+    const { error } = await supabase.from("articles").insert(row);
     if (error) {
-      console.error("[ingest] batch insert failed:", error.message);
-      errors += rows.length;
+      if (!/duplicate|unique|already/i.test(error.message)) console.error("[ingest] insert failed:", error.message);
+      errors++;
     } else {
-      inserted = count ?? rows.length;
+      inserted++;
     }
   }
 

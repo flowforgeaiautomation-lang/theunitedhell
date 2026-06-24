@@ -15,7 +15,7 @@ export const generateArticles = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const { runIngestion } = await import("./ingestion.server");
-    const result = await runIngestion({ maxItems: Math.max(6, data.count * 6) });
+    const result = await runIngestion({ maxItems: Math.max(6, data.count * 6), priorityCategory: data.category, mode: "manual" });
     return { inserted: result.inserted };
   });
 
@@ -25,9 +25,9 @@ export const generateArticles = createServerFn({ method: "POST" })
 export const curateNow = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({ maxItems: z.number().int().min(1).max(80).default(24) }).parse(d ?? {}),
+    z.object({ maxItems: z.number().int().min(1).max(120).default(36), category: z.string().optional() }).parse(d ?? {}),
   )
   .handler(async ({ data }) => {
     const { runIngestion } = await import("./ingestion.server");
-    return await runIngestion({ maxItems: data.maxItems });
+    return await runIngestion({ maxItems: data.maxItems, priorityCategory: data.category, mode: "manual" });
   });
