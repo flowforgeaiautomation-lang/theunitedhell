@@ -209,7 +209,70 @@ export const getBriefingToday = createServerFn({ method: "GET" }).handler(async 
     .limit(1)
     .maybeSingle();
   if (error) throw new Error(error.message);
-  return (data ?? null) as Briefing | null;
+  const briefing = (data ?? null) as Briefing | null;
+
+  // Always return a populated briefing, even when none has been generated yet.
+  // We assemble it on the fly from the latest published articles so the section is
+  // never empty for the reader.
+  const pickItems = (rows: ArticleSummary[]) =>
+    rows.map((r) => ({ slug: r.slug, title: r.title }));
+
+  const buildFromArticles = async (): Promise<Briefing> => {
+    const today = new Date().toISOString().slice(0, 10);
+    const fetchCat = async (cats: string[], limit: number) => {
+      const { data: rows } = await supabase
+        .from("articles")
+        .select(summaryCols)
+        .eq("is_published", true)
+        .in("category", cats)
+        .order("published_at", { ascending: false })
+        .limit(limit);
+      return dedupeSummaries((rows ?? []) as ArticleSummary[], limit);
+    };
+    const { data: latest } = await supabase
+      .from("articles")
+      .select(summaryCols)
+      .eq("is_published", true)
+      .order("published_at", { ascending: false })
+      .limit(80);
+    const latestRows = dedupeSummaries((latest ?? []) as ArticleSummary[], 60);
+
+    const top = latestRows.slice(0, 8);
+    const [discoveries, science, success, tech] = await Promise.all([
+      fetchCat(["discovery", "world-discovery", "exploration", "amazing-places"], 6),
+      fetchCat(["science", "scientific-discoveries", "physics", "biology", "medicine", "breakthroughs"], 6),
+      fetchCat(["success-stories", "entrepreneurs", "startups", "billionaires", "business-leaders"], 6),
+      fetchCat(["technology", "artificial-intelligence", "innovation", "future-technology", "robotics"], 6),
+    ]);
+
+    return {
+      id: "live",
+      briefing_date: today,
+      intro:
+        briefing?.intro ??
+        "Today's most important stories, drawn from the latest published articles.",
+      sections: {
+        top_stories: pickItems(top),
+        discoveries: pickItems(discoveries.length ? discoveries : latestRows.slice(8, 14)),
+        science: pickItems(science.length ? science : latestRows.slice(14, 20)),
+        success: pickItems(success.length ? success : latestRows.slice(20, 26)),
+        tech: pickItems(tech.length ? tech : latestRows.slice(26, 32)),
+        facts: briefing?.sections?.facts,
+      },
+    } as Briefing;
+  };
+
+  if (!briefing) return buildFromArticles();
+
+  const sections = briefing.sections ?? ({} as Briefing["sections"]);
+  const isEmpty =
+    !sections.top_stories?.length &&
+    !sections.discoveries?.length &&
+    !sections.science?.length &&
+    !sections.success?.length &&
+    !sections.tech?.length;
+  if (isEmpty) return buildFromArticles();
+  return briefing;
 });
 
 export const listComments = createServerFn({ method: "GET" })
