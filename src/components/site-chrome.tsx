@@ -134,14 +134,6 @@ export function SiteHeader() {
           {/* Right: Icons */}
           <div className="flex items-center gap-2 flex-1 justify-end">
             <select
-              aria-label="Language"
-              value={language}
-              onChange={(e) => updateLanguage(e.target.value)}
-              className="hidden lg:block bg-background border rule px-2 py-1 text-[0.65rem] uppercase tracking-widest"
-            >
-              {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
-            </select>
-            <select
               aria-label="Location"
               value={location}
               onChange={(e) => updateLocation(e.target.value)}
