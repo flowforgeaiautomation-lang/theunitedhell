@@ -4,18 +4,9 @@ import { Search, Moon, Sun, Menu, X, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PanchangDisplay } from "./PanchangDisplay";
 
-const LANGUAGES = [
-  { code: "en", label: "English" },
-  { code: "hi", label: "Hindi" },
-  { code: "es", label: "Spanish" },
-  { code: "fr", label: "French" },
-  { code: "de", label: "German" },
-  { code: "ar", label: "Arabic" },
-  { code: "zh", label: "Chinese" },
-  { code: "ja", label: "Japanese" },
-  { code: "ru", label: "Russian" },
-  { code: "pt", label: "Portuguese" },
-];
+// Translation has been removed from the website. Users should use their browser's built-in
+// translate option (three-dot menu → "Translate page") for reliable translation on every device.
+
 
 const LOCATIONS = [
   { code: "WORLD", label: "World" },
@@ -47,9 +38,9 @@ export function SiteHeader() {
   const [dark, setDark] = useState(false);
   const [open, setOpen] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
-  const [language, setLanguage] = useState("en");
   const [location, setLocation] = useState("WORLD");
   const router = useRouter();
+  const [lastScrollY, setLastScrollY] = useState(0);
   const [lastScrollY, setLastScrollY] = useState(0);
   const [isHidden, setIsHidden] = useState(false);
   const ticking = useRef(false);
