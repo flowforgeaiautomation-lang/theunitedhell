@@ -90,6 +90,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "The United Hell — Beyond comfort. Beyond headlines." },
+      { name: "description", content: "Global Insight Hub delivers continuously updated, journalist-quality news and discovery articles." },
+      { property: "og:description", content: "Global Insight Hub delivers continuously updated, journalist-quality news and discovery articles." },
+      { name: "twitter:description", content: "Global Insight Hub delivers continuously updated, journalist-quality news and discovery articles." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/26064541-ea86-4f86-8c33-e06d2af5defd/id-preview-7b8da711--8976fc18-b87e-4c0b-b991-9aea76df5b96.lovable.app-1782369186247.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/26064541-ea86-4f86-8c33-e06d2af5defd/id-preview-7b8da711--8976fc18-b87e-4c0b-b991-9aea76df5b96.lovable.app-1782369186247.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
