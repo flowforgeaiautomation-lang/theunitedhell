@@ -41,37 +41,38 @@ function looksVague(text?: string | null) {
   return /original source|the united hell is preserving|broader impact depends|verified new development|reliable, recent information|full primary account|future coverage in this field/i.test(text);
 }
 
+function cleanList(items?: (string | null | undefined)[] | null): string[] | undefined {
+  if (!Array.isArray(items)) return undefined;
+  const cleaned = items
+    .map((s) => (typeof s === "string" ? s.trim() : ""))
+    .filter((s) => s.length > 0 && !looksVague(s));
+  return cleaned.length ? cleaned : undefined;
+}
+
 function normalizeArticle(article: Article): Article {
-  const source = article.sources?.[0] ?? null;
-  const sourceName = source?.name || "the source";
-  const published = new Date(article.published_at).toLocaleDateString("en", { dateStyle: "long" });
-  const dek = article.dek?.trim() || article.title;
   const currentStory = article.story ?? {};
-  const existingQa = Array.isArray(currentStory.qa)
-    ? currentStory.qa.filter((item) => item?.question && item?.answer && !looksVague(item.answer))
-    : [];
-  const qa = existingQa.length >= 4 ? existingQa : [
-    { question: "What is this article about?", answer: `${article.title}. ${dek}` },
-    { question: "Who reported it?", answer: `${sourceName} reported this article${source?.url ? " and linked the original report" : ""}.` },
-    { question: "When was it published?", answer: `It was published or collected on ${published}.` },
-    { question: "What are the main facts?", answer: dek },
-    { question: "Why does it matter?", answer: looksVague(currentStory.why) ? `It matters because the article gives a specific update in ${article.category.replace(/-/g, " ")} that readers can verify from ${sourceName}.` : currentStory.why! },
-    { question: "What should readers check next?", answer: looksVague(currentStory.next) ? `Readers should follow later updates from ${sourceName} or other primary reports about the same topic.` : currentStory.next! },
-  ];
   return {
     ...article,
     story: {
       ...currentStory,
-      qa,
-      what: looksVague(currentStory.what) ? qa[0].answer : currentStory.what,
-      why: looksVague(currentStory.why) ? qa[4].answer : currentStory.why,
-      next: looksVague(currentStory.next) ? qa[5].answer : currentStory.next,
-      key_facts: currentStory.key_facts?.filter((fact) => !looksVague(fact)).length
-        ? currentStory.key_facts.filter((fact) => !looksVague(fact))
-        : [article.title, dek, `Source: ${sourceName}`, `Published: ${published}`],
-      quick_facts: currentStory.quick_facts?.filter((fact) => !looksVague(fact)).length
-        ? currentStory.quick_facts.filter((fact) => !looksVague(fact))
-        : [`Category: ${article.category.replace(/-/g, " ")}`, `Source: ${sourceName}`, `Date: ${published}`],
+      // Q&A is intentionally suppressed — articles show direct information only.
+      qa: undefined,
+      what: looksVague(currentStory.what) ? undefined : currentStory.what,
+      why: looksVague(currentStory.why) ? undefined : currentStory.why,
+      next: looksVague(currentStory.next) ? undefined : currentStory.next,
+      why_should_i_care: looksVague(currentStory.why_should_i_care) ? undefined : currentStory.why_should_i_care,
+      how_affects_world: looksVague(currentStory.how_affects_world) ? undefined : currentStory.how_affects_world,
+      what_can_we_learn: looksVague(currentStory.what_can_we_learn) ? undefined : currentStory.what_can_we_learn,
+      why_interesting: looksVague(currentStory.why_interesting) ? undefined : currentStory.why_interesting,
+      how: looksVague(currentStory.how) ? undefined : currentStory.how,
+      before: looksVague(currentStory.before) ? undefined : currentStory.before,
+      did_you_know: looksVague(currentStory.did_you_know) ? undefined : currentStory.did_you_know,
+      future_impact: looksVague(currentStory.future_impact) ? undefined : currentStory.future_impact,
+      key_facts: cleanList(currentStory.key_facts),
+      quick_facts: cleanList(currentStory.quick_facts),
+      key_takeaways: cleanList(currentStory.key_takeaways),
+      timeline: cleanList(currentStory.timeline),
+      insights: cleanList(currentStory.insights),
     },
   };
 }
