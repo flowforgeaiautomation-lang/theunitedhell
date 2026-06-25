@@ -104,7 +104,6 @@ function ArticlePage() {
       <section className="container-read py-12 md:py-16">
         <div className="grid gap-10">
           <StoryBlock label="What happened" body={story.what} />
-          <QABlock items={story.qa} />
           <StoryBlock label="Why it matters" body={story.why} />
           <StoryBlock label="Why should I care?" body={story.why_should_i_care} />
           <StoryBlock label="How does this affect the world?" body={story.how_affects_world} />
@@ -236,23 +235,8 @@ function StoryBlock({ label, body }: { label: string; body?: string }) {
   );
 }
 
-function QABlock({ items }: { items?: { question?: string; answer?: string }[] }) {
-  const qa = items?.filter((item) => item.question && item.answer) ?? [];
-  if (!qa.length) return null;
-  return (
-    <div className="border-y rule py-10">
-      <div className="kicker mb-6">Article information — question and answer</div>
-      <div className="grid gap-6">
-        {qa.map((item, i) => (
-          <div key={`${item.question}-${i}`}>
-            <h2 className="font-serif text-xl md:text-2xl leading-snug">{item.question}</h2>
-            <p className="mt-2 text-base md:text-lg leading-relaxed text-muted-foreground">{item.answer}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+
+
 
 function ListBlock({ label, items }: { label: string; items?: string[] }) {
   if (!items?.length) return null;
