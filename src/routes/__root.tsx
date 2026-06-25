@@ -14,7 +14,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { SiteHeader, SiteFooter } from "@/components/site-chrome";
 import { supabase } from "@/integrations/supabase/client";
-import { useLiveTranslation } from "@/hooks/use-live-translation";
+// Translation is handled by the user's browser (Chrome/Edge "Translate page" in the ⋮ menu).
 
 function NotFoundComponent() {
   return (
@@ -124,7 +124,7 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
-  useLiveTranslation();
+  
 
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {

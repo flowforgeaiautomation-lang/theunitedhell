@@ -41,37 +41,38 @@ function looksVague(text?: string | null) {
   return /original source|the united hell is preserving|broader impact depends|verified new development|reliable, recent information|full primary account|future coverage in this field/i.test(text);
 }
 
+function cleanList(items?: (string | null | undefined)[] | null): string[] | undefined {
+  if (!Array.isArray(items)) return undefined;
+  const cleaned = items
+    .map((s) => (typeof s === "string" ? s.trim() : ""))
+    .filter((s) => s.length > 0 && !looksVague(s));
+  return cleaned.length ? cleaned : undefined;
+}
+
 function normalizeArticle(article: Article): Article {
-  const source = article.sources?.[0] ?? null;
-  const sourceName = source?.name || "the source";
-  const published = new Date(article.published_at).toLocaleDateString("en", { dateStyle: "long" });
-  const dek = article.dek?.trim() || article.title;
   const currentStory = article.story ?? {};
-  const existingQa = Array.isArray(currentStory.qa)
-    ? currentStory.qa.filter((item) => item?.question && item?.answer && !looksVague(item.answer))
-    : [];
-  const qa = existingQa.length >= 4 ? existingQa : [
-    { question: "What is this article about?", answer: `${article.title}. ${dek}` },
-    { question: "Who reported it?", answer: `${sourceName} reported this article${source?.url ? " and linked the original report" : ""}.` },
-    { question: "When was it published?", answer: `It was published or collected on ${published}.` },
-    { question: "What are the main facts?", answer: dek },
-    { question: "Why does it matter?", answer: looksVague(currentStory.why) ? `It matters because the article gives a specific update in ${article.category.replace(/-/g, " ")} that readers can verify from ${sourceName}.` : currentStory.why! },
-    { question: "What should readers check next?", answer: looksVague(currentStory.next) ? `Readers should follow later updates from ${sourceName} or other primary reports about the same topic.` : currentStory.next! },
-  ];
   return {
     ...article,
     story: {
       ...currentStory,
-      qa,
-      what: looksVague(currentStory.what) ? qa[0].answer : currentStory.what,
-      why: looksVague(currentStory.why) ? qa[4].answer : currentStory.why,
-      next: looksVague(currentStory.next) ? qa[5].answer : currentStory.next,
-      key_facts: currentStory.key_facts?.filter((fact) => !looksVague(fact)).length
-        ? currentStory.key_facts.filter((fact) => !looksVague(fact))
-        : [article.title, dek, `Source: ${sourceName}`, `Published: ${published}`],
-      quick_facts: currentStory.quick_facts?.filter((fact) => !looksVague(fact)).length
-        ? currentStory.quick_facts.filter((fact) => !looksVague(fact))
-        : [`Category: ${article.category.replace(/-/g, " ")}`, `Source: ${sourceName}`, `Date: ${published}`],
+      // Q&A is intentionally suppressed — articles show direct information only.
+      qa: undefined,
+      what: looksVague(currentStory.what) ? undefined : currentStory.what,
+      why: looksVague(currentStory.why) ? undefined : currentStory.why,
+      next: looksVague(currentStory.next) ? undefined : currentStory.next,
+      why_should_i_care: looksVague(currentStory.why_should_i_care) ? undefined : currentStory.why_should_i_care,
+      how_affects_world: looksVague(currentStory.how_affects_world) ? undefined : currentStory.how_affects_world,
+      what_can_we_learn: looksVague(currentStory.what_can_we_learn) ? undefined : currentStory.what_can_we_learn,
+      why_interesting: looksVague(currentStory.why_interesting) ? undefined : currentStory.why_interesting,
+      how: looksVague(currentStory.how) ? undefined : currentStory.how,
+      before: looksVague(currentStory.before) ? undefined : currentStory.before,
+      did_you_know: looksVague(currentStory.did_you_know) ? undefined : currentStory.did_you_know,
+      future_impact: looksVague(currentStory.future_impact) ? undefined : currentStory.future_impact,
+      key_facts: cleanList(currentStory.key_facts),
+      quick_facts: cleanList(currentStory.quick_facts),
+      key_takeaways: cleanList(currentStory.key_takeaways),
+      timeline: cleanList(currentStory.timeline),
+      insights: cleanList(currentStory.insights),
     },
   };
 }
@@ -208,7 +209,70 @@ export const getBriefingToday = createServerFn({ method: "GET" }).handler(async 
     .limit(1)
     .maybeSingle();
   if (error) throw new Error(error.message);
-  return (data ?? null) as Briefing | null;
+  const briefing = (data ?? null) as Briefing | null;
+
+  // Always return a populated briefing, even when none has been generated yet.
+  // We assemble it on the fly from the latest published articles so the section is
+  // never empty for the reader.
+  const pickItems = (rows: ArticleSummary[]) =>
+    rows.map((r) => ({ slug: r.slug, title: r.title }));
+
+  const buildFromArticles = async (): Promise<Briefing> => {
+    const today = new Date().toISOString().slice(0, 10);
+    const fetchCat = async (cats: string[], limit: number) => {
+      const { data: rows } = await supabase
+        .from("articles")
+        .select(summaryCols)
+        .eq("is_published", true)
+        .in("category", cats)
+        .order("published_at", { ascending: false })
+        .limit(limit);
+      return dedupeSummaries((rows ?? []) as ArticleSummary[], limit);
+    };
+    const { data: latest } = await supabase
+      .from("articles")
+      .select(summaryCols)
+      .eq("is_published", true)
+      .order("published_at", { ascending: false })
+      .limit(80);
+    const latestRows = dedupeSummaries((latest ?? []) as ArticleSummary[], 60);
+
+    const top = latestRows.slice(0, 8);
+    const [discoveries, science, success, tech] = await Promise.all([
+      fetchCat(["discovery", "world-discovery", "exploration", "amazing-places"], 6),
+      fetchCat(["science", "scientific-discoveries", "physics", "biology", "medicine", "breakthroughs"], 6),
+      fetchCat(["success-stories", "entrepreneurs", "startups", "billionaires", "business-leaders"], 6),
+      fetchCat(["technology", "artificial-intelligence", "innovation", "future-technology", "robotics"], 6),
+    ]);
+
+    return {
+      id: "live",
+      briefing_date: today,
+      intro:
+        briefing?.intro ??
+        "Today's most important stories, drawn from the latest published articles.",
+      sections: {
+        top_stories: pickItems(top),
+        discoveries: pickItems(discoveries.length ? discoveries : latestRows.slice(8, 14)),
+        science: pickItems(science.length ? science : latestRows.slice(14, 20)),
+        success: pickItems(success.length ? success : latestRows.slice(20, 26)),
+        tech: pickItems(tech.length ? tech : latestRows.slice(26, 32)),
+        facts: briefing?.sections?.facts,
+      },
+    } as Briefing;
+  };
+
+  if (!briefing) return buildFromArticles();
+
+  const sections = briefing.sections ?? ({} as Briefing["sections"]);
+  const isEmpty =
+    !sections.top_stories?.length &&
+    !sections.discoveries?.length &&
+    !sections.science?.length &&
+    !sections.success?.length &&
+    !sections.tech?.length;
+  if (isEmpty) return buildFromArticles();
+  return briefing;
 });
 
 export const listComments = createServerFn({ method: "GET" })

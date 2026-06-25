@@ -17,6 +17,7 @@ export const Route = createFileRoute("/information")({
 
 const sections = [
   { id: "about", title: "About The United Hell" },
+  { id: "translation", title: "Translation & Languages" },
   { id: "editorial", title: "Editorial Principles" },
   { id: "sources", title: "Sources & Methodology" },
   { id: "ai", title: "AI Disclosure" },
@@ -97,6 +98,30 @@ function InformationPage() {
             </p>
             <p className="font-serif text-lg leading-relaxed">
               Email: <a href="mailto:theunitedhell@gmail.com" className="text-foreground underline hover:no-underline">theunitedhell@gmail.com</a>
+            </p>
+          </Section>
+
+          {/* Translation */}
+          <Section
+            id="translation"
+            title="Translation & Languages"
+            isOpen={openSections.has("translation")}
+            onToggle={() => toggleSection("translation")}
+          >
+            <p className="font-serif text-lg leading-relaxed mb-4">
+              The United Hell uses your browser's built-in translation so every article works on every device — phone, tablet, or computer — without any extra setup, API keys, or sign-in.
+            </p>
+            <p className="font-serif text-lg leading-relaxed mb-4">
+              To read the site in your own language:
+            </p>
+            <ul className="font-serif text-lg leading-relaxed space-y-3 mb-6 list-decimal pl-6">
+              <li>Open the browser menu — the three dots (⋮) in the top-right corner of Chrome, Edge, Brave, or Samsung Internet (in Safari, tap the <strong>aA</strong> icon in the address bar).</li>
+              <li>Tap <strong>"Translate"</strong> or <strong>"Translate page…"</strong>.</li>
+              <li>Choose the language you want — Hindi, Spanish, Arabic, Chinese, French, German, Japanese, Portuguese, Russian, or any other supported language.</li>
+              <li>The entire page, including every article, will be translated instantly. Your choice is remembered for future visits.</li>
+            </ul>
+            <p className="font-serif text-lg leading-relaxed">
+              This approach is faster, more accurate, and works offline-first — there is no in-site translate button because your browser already does it better.
             </p>
           </Section>
 

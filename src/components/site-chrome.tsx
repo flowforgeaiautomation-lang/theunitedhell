@@ -4,18 +4,9 @@ import { Search, Moon, Sun, Menu, X, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PanchangDisplay } from "./PanchangDisplay";
 
-const LANGUAGES = [
-  { code: "en", label: "English" },
-  { code: "hi", label: "Hindi" },
-  { code: "es", label: "Spanish" },
-  { code: "fr", label: "French" },
-  { code: "de", label: "German" },
-  { code: "ar", label: "Arabic" },
-  { code: "zh", label: "Chinese" },
-  { code: "ja", label: "Japanese" },
-  { code: "ru", label: "Russian" },
-  { code: "pt", label: "Portuguese" },
-];
+// Translation has been removed from the website. Users should use their browser's built-in
+// translate option (three-dot menu → "Translate page") for reliable translation on every device.
+
 
 const LOCATIONS = [
   { code: "WORLD", label: "World" },
@@ -47,7 +38,6 @@ export function SiteHeader() {
   const [dark, setDark] = useState(false);
   const [open, setOpen] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
-  const [language, setLanguage] = useState("en");
   const [location, setLocation] = useState("WORLD");
   const router = useRouter();
   const [lastScrollY, setLastScrollY] = useState(0);
@@ -60,11 +50,8 @@ export function SiteHeader() {
       document.documentElement.classList.add("dark");
       setDark(true);
     }
-    const lang = window.localStorage.getItem("tuh-language") || "en";
     const loc = window.localStorage.getItem("tuh-country") || "WORLD";
-    setLanguage(lang);
     setLocation(loc);
-    document.documentElement.lang = lang;
   }, []);
   useEffect(() => {
     let mounted = true;
@@ -108,19 +95,14 @@ export function SiteHeader() {
     window.localStorage.setItem("tuh-theme", next ? "dark" : "light");
   }
 
-  function updateLanguage(next: string) {
-    setLanguage(next);
-    document.documentElement.lang = next;
-    document.documentElement.dir = next === "ar" ? "rtl" : "ltr";
-    window.localStorage.setItem("tuh-language", next);
-    window.dispatchEvent(new Event("tuh-preferences"));
-  }
-
   function updateLocation(next: string) {
     setLocation(next);
     window.localStorage.setItem("tuh-country", next);
     window.dispatchEvent(new Event("tuh-preferences"));
   }
+
+
+
 
   async function handleSignOut() {
     await supabase.auth.signOut();
@@ -151,14 +133,6 @@ export function SiteHeader() {
       </div>
           {/* Right: Icons */}
           <div className="flex items-center gap-2 flex-1 justify-end">
-            <select
-              aria-label="Language"
-              value={language}
-              onChange={(e) => updateLanguage(e.target.value)}
-              className="hidden lg:block bg-background border rule px-2 py-1 text-[0.65rem] uppercase tracking-widest"
-            >
-              {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
-            </select>
             <select
               aria-label="Location"
               value={location}
