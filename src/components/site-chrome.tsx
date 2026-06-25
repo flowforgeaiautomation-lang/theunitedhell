@@ -41,7 +41,6 @@ export function SiteHeader() {
   const [location, setLocation] = useState("WORLD");
   const router = useRouter();
   const [lastScrollY, setLastScrollY] = useState(0);
-  const [lastScrollY, setLastScrollY] = useState(0);
   const [isHidden, setIsHidden] = useState(false);
   const ticking = useRef(false);
 
@@ -51,11 +50,8 @@ export function SiteHeader() {
       document.documentElement.classList.add("dark");
       setDark(true);
     }
-    const lang = window.localStorage.getItem("tuh-language") || "en";
     const loc = window.localStorage.getItem("tuh-country") || "WORLD";
-    setLanguage(lang);
     setLocation(loc);
-    document.documentElement.lang = lang;
   }, []);
   useEffect(() => {
     let mounted = true;
@@ -99,19 +95,14 @@ export function SiteHeader() {
     window.localStorage.setItem("tuh-theme", next ? "dark" : "light");
   }
 
-  function updateLanguage(next: string) {
-    setLanguage(next);
-    document.documentElement.lang = next;
-    document.documentElement.dir = next === "ar" ? "rtl" : "ltr";
-    window.localStorage.setItem("tuh-language", next);
-    window.dispatchEvent(new Event("tuh-preferences"));
-  }
-
   function updateLocation(next: string) {
     setLocation(next);
     window.localStorage.setItem("tuh-country", next);
     window.dispatchEvent(new Event("tuh-preferences"));
   }
+
+
+
 
   async function handleSignOut() {
     await supabase.auth.signOut();
