@@ -92,10 +92,6 @@ function DiscoverPage() {
       <header className="border-b rule pb-6 mb-10">
         <div className="kicker">The Discovery Engine</div>
         <h1 className="display-1 mt-3">Explore beyond what you came for.</h1>
-        <p className="dek mt-3 max-w-2xl">
-          Twenty-five intellectual fields, curated daily. Browse by category, or ask the AI to find
-          something new.
-        </p>
       </header>
 
       {/* Homepage Nav */}
