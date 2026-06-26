@@ -16,6 +16,40 @@ function publicClient() {
 const summaryCols =
   "id,slug,title,dek,category,subcategory,cover_image_url,read_time_minutes,trust_score,source_count,country_code,featured_slot,published_at,view_count,like_count,bookmark_count,comment_count";
 
+const NAMED_ENTITIES: Record<string, string> = {
+  amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ",
+  ldquo: "\u201C", rdquo: "\u201D", lsquo: "\u2018", rsquo: "\u2019",
+  hellip: "\u2026", mdash: "\u2014", ndash: "\u2013", trade: "\u2122",
+  copy: "\u00A9", reg: "\u00AE", deg: "\u00B0", middot: "\u00B7",
+};
+
+function decodeEntities(input: unknown): string {
+  if (typeof input !== "string" || !input) return (input as string) ?? "";
+  return input
+    .replace(/&#(\d+);/g, (_, n) => {
+      const code = parseInt(n, 10);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : "";
+    })
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => {
+      const code = parseInt(h, 16);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : "";
+    })
+    .replace(/&([a-zA-Z]+);/g, (m, name) => NAMED_ENTITIES[name] ?? m);
+}
+
+function decodeListMaybe<T>(items: T): T {
+  if (!Array.isArray(items)) return items;
+  return items.map((s) => (typeof s === "string" ? decodeEntities(s) : s)) as unknown as T;
+}
+
+function decodeSummary<T extends { title?: string | null; dek?: string | null }>(row: T): T {
+  return {
+    ...row,
+    title: row.title ? decodeEntities(row.title) : row.title,
+    dek: row.dek ? decodeEntities(row.dek) : row.dek,
+  };
+}
+
 function normalizeText(s = "") {
   return s.toLowerCase().replace(/[^a-z0-9\s]+/g, " ").replace(/\s+/g, " ").trim();
 }
@@ -23,7 +57,8 @@ function normalizeText(s = "") {
 function dedupeSummaries(rows: ArticleSummary[], limit: number) {
   const seen = new Set<string>();
   const out: ArticleSummary[] = [];
-  for (const row of rows) {
+  for (const raw of rows) {
+    const row = decodeSummary(raw);
     const key = normalizeText(row.title || row.dek || row.slug);
     const softKey = normalizeText(row.dek || row.title).slice(0, 110);
     if (!key || seen.has(row.id) || seen.has(key) || (softKey && seen.has(softKey))) continue;
@@ -51,28 +86,31 @@ function cleanList(items?: (string | null | undefined)[] | null): string[] | und
 
 function normalizeArticle(article: Article): Article {
   const currentStory = article.story ?? {};
+  const dec = (s?: string | null) => (s ? decodeEntities(s) : s);
+  const decClean = (s?: string | null) => (looksVague(s) ? undefined : dec(s) ?? undefined);
   return {
     ...article,
+    title: dec(article.title) ?? article.title,
+    dek: dec(article.dek) ?? article.dek,
     story: {
       ...currentStory,
-      // Q&A is intentionally suppressed — articles show direct information only.
       qa: undefined,
-      what: looksVague(currentStory.what) ? undefined : currentStory.what,
-      why: looksVague(currentStory.why) ? undefined : currentStory.why,
-      next: looksVague(currentStory.next) ? undefined : currentStory.next,
-      why_should_i_care: looksVague(currentStory.why_should_i_care) ? undefined : currentStory.why_should_i_care,
-      how_affects_world: looksVague(currentStory.how_affects_world) ? undefined : currentStory.how_affects_world,
-      what_can_we_learn: looksVague(currentStory.what_can_we_learn) ? undefined : currentStory.what_can_we_learn,
-      why_interesting: looksVague(currentStory.why_interesting) ? undefined : currentStory.why_interesting,
-      how: looksVague(currentStory.how) ? undefined : currentStory.how,
-      before: looksVague(currentStory.before) ? undefined : currentStory.before,
-      did_you_know: looksVague(currentStory.did_you_know) ? undefined : currentStory.did_you_know,
-      future_impact: looksVague(currentStory.future_impact) ? undefined : currentStory.future_impact,
-      key_facts: cleanList(currentStory.key_facts),
-      quick_facts: cleanList(currentStory.quick_facts),
-      key_takeaways: cleanList(currentStory.key_takeaways),
-      timeline: cleanList(currentStory.timeline),
-      insights: cleanList(currentStory.insights),
+      what: decClean(currentStory.what),
+      why: decClean(currentStory.why),
+      next: decClean(currentStory.next),
+      why_should_i_care: decClean(currentStory.why_should_i_care),
+      how_affects_world: decClean(currentStory.how_affects_world),
+      what_can_we_learn: decClean(currentStory.what_can_we_learn),
+      why_interesting: decClean(currentStory.why_interesting),
+      how: decClean(currentStory.how),
+      before: decClean(currentStory.before),
+      did_you_know: decClean(currentStory.did_you_know),
+      future_impact: decClean(currentStory.future_impact),
+      key_facts: decodeListMaybe(cleanList(currentStory.key_facts)),
+      quick_facts: decodeListMaybe(cleanList(currentStory.quick_facts)),
+      key_takeaways: decodeListMaybe(cleanList(currentStory.key_takeaways)),
+      timeline: decodeListMaybe(cleanList(currentStory.timeline)),
+      insights: decodeListMaybe(cleanList(currentStory.insights)),
     },
   };
 }

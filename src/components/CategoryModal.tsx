@@ -94,7 +94,7 @@ export function CategoryModal({ isOpen, onClose }: CategoryModalProps) {
         <div className="sticky top-0 bg-background border-b rule p-4 sm:p-6 flex items-center justify-between">
           <div>
             <h2 className="font-serif text-xl sm:text-2xl">Explore All Fields</h2>
-            <p className="dek text-muted-foreground">Twenty-five intellectual fields, curated daily. Browse by category, or ask the AI to find something new.</p>
+            
           </div>
           <button onClick={onClose} className="p-2 hover:opacity-70 transition">
             <Icons.X className="h-5 w-5" />
