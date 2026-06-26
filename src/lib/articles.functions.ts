@@ -57,7 +57,8 @@ function normalizeText(s = "") {
 function dedupeSummaries(rows: ArticleSummary[], limit: number) {
   const seen = new Set<string>();
   const out: ArticleSummary[] = [];
-  for (const row of rows) {
+  for (const raw of rows) {
+    const row = decodeSummary(raw);
     const key = normalizeText(row.title || row.dek || row.slug);
     const softKey = normalizeText(row.dek || row.title).slice(0, 110);
     if (!key || seen.has(row.id) || seen.has(key) || (softKey && seen.has(softKey))) continue;
@@ -85,28 +86,31 @@ function cleanList(items?: (string | null | undefined)[] | null): string[] | und
 
 function normalizeArticle(article: Article): Article {
   const currentStory = article.story ?? {};
+  const dec = (s?: string | null) => (s ? decodeEntities(s) : s);
+  const decClean = (s?: string | null) => (looksVague(s) ? undefined : dec(s) ?? undefined);
   return {
     ...article,
+    title: dec(article.title) ?? article.title,
+    dek: dec(article.dek) ?? article.dek,
     story: {
       ...currentStory,
-      // Q&A is intentionally suppressed — articles show direct information only.
       qa: undefined,
-      what: looksVague(currentStory.what) ? undefined : currentStory.what,
-      why: looksVague(currentStory.why) ? undefined : currentStory.why,
-      next: looksVague(currentStory.next) ? undefined : currentStory.next,
-      why_should_i_care: looksVague(currentStory.why_should_i_care) ? undefined : currentStory.why_should_i_care,
-      how_affects_world: looksVague(currentStory.how_affects_world) ? undefined : currentStory.how_affects_world,
-      what_can_we_learn: looksVague(currentStory.what_can_we_learn) ? undefined : currentStory.what_can_we_learn,
-      why_interesting: looksVague(currentStory.why_interesting) ? undefined : currentStory.why_interesting,
-      how: looksVague(currentStory.how) ? undefined : currentStory.how,
-      before: looksVague(currentStory.before) ? undefined : currentStory.before,
-      did_you_know: looksVague(currentStory.did_you_know) ? undefined : currentStory.did_you_know,
-      future_impact: looksVague(currentStory.future_impact) ? undefined : currentStory.future_impact,
-      key_facts: cleanList(currentStory.key_facts),
-      quick_facts: cleanList(currentStory.quick_facts),
-      key_takeaways: cleanList(currentStory.key_takeaways),
-      timeline: cleanList(currentStory.timeline),
-      insights: cleanList(currentStory.insights),
+      what: decClean(currentStory.what),
+      why: decClean(currentStory.why),
+      next: decClean(currentStory.next),
+      why_should_i_care: decClean(currentStory.why_should_i_care),
+      how_affects_world: decClean(currentStory.how_affects_world),
+      what_can_we_learn: decClean(currentStory.what_can_we_learn),
+      why_interesting: decClean(currentStory.why_interesting),
+      how: decClean(currentStory.how),
+      before: decClean(currentStory.before),
+      did_you_know: decClean(currentStory.did_you_know),
+      future_impact: decClean(currentStory.future_impact),
+      key_facts: decodeListMaybe(cleanList(currentStory.key_facts)),
+      quick_facts: decodeListMaybe(cleanList(currentStory.quick_facts)),
+      key_takeaways: decodeListMaybe(cleanList(currentStory.key_takeaways)),
+      timeline: decodeListMaybe(cleanList(currentStory.timeline)),
+      insights: decodeListMaybe(cleanList(currentStory.insights)),
     },
   };
 }
