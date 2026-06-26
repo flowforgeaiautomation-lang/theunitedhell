@@ -251,9 +251,15 @@ function WorldPage() {
               {selectedContinent.countries.length > 0 ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                   {selectedContinent.countries.map((country) => (
-                    <div key={country} className="font-serif text-lg">
+                    <Link
+                      key={country}
+                      to="/search"
+                      search={{ q: country }}
+                      onClick={() => setSelectedContinent(null)}
+                      className="font-serif text-lg border border-rule px-3 py-2 hover:bg-foreground hover:text-background transition"
+                    >
                       {country}
-                    </div>
+                    </Link>
                   ))}
                 </div>
               ) : (
