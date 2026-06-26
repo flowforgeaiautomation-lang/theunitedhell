@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Search, X, Globe2 } from "lucide-react";
 
@@ -128,9 +128,14 @@ function WorldPage() {
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
             {filteredCountries.map((country) => (
-              <button key={country} className="border border-rule p-4 text-left font-serif hover:bg-foreground hover:text-background transition">
+              <Link
+                key={country}
+                to="/search"
+                search={{ q: country }}
+                className="border border-rule p-4 text-left font-serif hover:bg-foreground hover:text-background transition"
+              >
                 {country}
-              </button>
+              </Link>
             ))}
           </div>
         </section>
@@ -246,9 +251,15 @@ function WorldPage() {
               {selectedContinent.countries.length > 0 ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                   {selectedContinent.countries.map((country) => (
-                    <div key={country} className="font-serif text-lg">
+                    <Link
+                      key={country}
+                      to="/search"
+                      search={{ q: country }}
+                      onClick={() => setSelectedContinent(null)}
+                      className="font-serif text-lg border border-rule px-3 py-2 hover:bg-foreground hover:text-background transition"
+                    >
                       {country}
-                    </div>
+                    </Link>
                   ))}
                 </div>
               ) : (
