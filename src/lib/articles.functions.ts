@@ -16,6 +16,40 @@ function publicClient() {
 const summaryCols =
   "id,slug,title,dek,category,subcategory,cover_image_url,read_time_minutes,trust_score,source_count,country_code,featured_slot,published_at,view_count,like_count,bookmark_count,comment_count";
 
+const NAMED_ENTITIES: Record<string, string> = {
+  amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ",
+  ldquo: "\u201C", rdquo: "\u201D", lsquo: "\u2018", rsquo: "\u2019",
+  hellip: "\u2026", mdash: "\u2014", ndash: "\u2013", trade: "\u2122",
+  copy: "\u00A9", reg: "\u00AE", deg: "\u00B0", middot: "\u00B7",
+};
+
+function decodeEntities(input: unknown): string {
+  if (typeof input !== "string" || !input) return (input as string) ?? "";
+  return input
+    .replace(/&#(\d+);/g, (_, n) => {
+      const code = parseInt(n, 10);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : "";
+    })
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => {
+      const code = parseInt(h, 16);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : "";
+    })
+    .replace(/&([a-zA-Z]+);/g, (m, name) => NAMED_ENTITIES[name] ?? m);
+}
+
+function decodeListMaybe<T>(items: T): T {
+  if (!Array.isArray(items)) return items;
+  return items.map((s) => (typeof s === "string" ? decodeEntities(s) : s)) as unknown as T;
+}
+
+function decodeSummary<T extends { title?: string | null; dek?: string | null }>(row: T): T {
+  return {
+    ...row,
+    title: row.title ? decodeEntities(row.title) : row.title,
+    dek: row.dek ? decodeEntities(row.dek) : row.dek,
+  };
+}
+
 function normalizeText(s = "") {
   return s.toLowerCase().replace(/[^a-z0-9\s]+/g, " ").replace(/\s+/g, " ").trim();
 }
