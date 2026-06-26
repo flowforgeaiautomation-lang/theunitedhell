@@ -94,6 +94,21 @@ function normalizeArticle(article: Article): Article {
     dek: dec(article.dek) ?? article.dek,
     story: {
       ...currentStory,
+      // New fields
+      summary: decClean((currentStory as any).summary),
+      main_story: decClean((currentStory as any).main_story),
+      background: decClean((currentStory as any).background),
+      key_developments: decodeListMaybe(cleanList((currentStory as any).key_developments)),
+      expert_analysis: decClean((currentStory as any).expert_analysis),
+      timeline: decodeListMaybe(cleanList((currentStory as any).timeline)),
+      what_happens_next: decClean((currentStory as any).what_happens_next),
+      vocabulary: (currentStory as any).vocabulary?.map((v: any) => ({
+        word: dec(v.word) || undefined,
+        meaning: dec(v.meaning) || undefined,
+        example: v.example ? dec(v.example) : undefined,
+      })),
+      sources: decodeListMaybe(cleanList((currentStory as any).sources)),
+      // Legacy fields
       qa: undefined,
       what: decClean(currentStory.what),
       why: decClean(currentStory.why),
@@ -109,7 +124,6 @@ function normalizeArticle(article: Article): Article {
       key_facts: decodeListMaybe(cleanList(currentStory.key_facts)),
       quick_facts: decodeListMaybe(cleanList(currentStory.quick_facts)),
       key_takeaways: decodeListMaybe(cleanList(currentStory.key_takeaways)),
-      timeline: decodeListMaybe(cleanList(currentStory.timeline)),
       insights: decodeListMaybe(cleanList(currentStory.insights)),
     },
   };

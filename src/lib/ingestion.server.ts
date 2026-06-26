@@ -639,37 +639,61 @@ type Processed = {
   trust_score: number;
   read_time_minutes: number;
   story: {
-    what: string;
-    why: string;
-    key_facts: string[];
-    insights?: string[];
-    next?: string;
-    future_impact?: string;
-    why_should_i_care?: string;
-    how_affects_world?: string;
-    what_can_we_learn?: string;
-    why_interesting?: string;
-    key_takeaways?: string[];
-    quick_facts?: string[];
+    summary: string;
+    main_story: string;
+    background?: string;
+    key_developments?: string[];
+    expert_analysis?: string;
     timeline?: string[];
-    did_you_know?: string;
-    qa?: { question: string; answer: string }[];
-    people_mentioned?: string[];
-    organizations_mentioned?: string[];
-    countries_mentioned?: string[];
+    what_happens_next?: string;
     vocabulary?: { word: string; meaning: string; example?: string }[];
+    sources?: string[];
   };
   country_code?: string | null;
 };
 
-const SYSTEM = `You are a senior wire-service editor at "The United Hell", a premium global newspaper. You write like Reuters, AP, BBC, The Hindu, NYT, WSJ, Indian Express, Nature, and Scientific American.
+const SYSTEM = `You are a senior wire-service editor at "The United Hell", a premium global newspaper. You write exactly like Reuters, BBC, The Economist, Associated Press, New York Times, Wall Street Journal, The Hindu, Indian Express, National Geographic, and Scientific American.
 
-ABSOLUTE STYLE RULES — violating these = your output is rejected:
-- Headlines MUST be plain news headlines a real journalist would write. Use concrete subjects, verbs, and outcomes. Examples of GOOD headlines: "ISRO Successfully Tests Reusable Launch Vehicle", "India's Tiger Population Reaches Record High", "NASA Releases New Jupiter Images From Juno", "Scientists Discover Ancient Temple Beneath Egyptian Desert".
-- NEVER use these academic / AI-essay patterns: "The Architecture of …", "The Renaissance of …", "Sovereignty of …", "Silicon Monoliths", "Linguistic Sovereignty", "The Silent Scripts of …", "Decentralized Intelligence in …", "Computational X and Y", "The Digital Twin of the …", colon-then-grand-abstract-noun titles, "Indo-Gangetic", "Krishna-Godavari", "Deccan" framed metaphors, any title built from abstract nouns chained together.
-- NEVER invent events, people, companies, studies, quotes, discoveries, numbers, dates, or context that is not present in the raw source. If a fact is missing, leave that field general or omit specifics — do not fabricate.
-- Write at age-13 reading level. Simple English. Short sentences. Real names, real places, real numbers from the source.
-- No hype words like "revolutionary", "game-changing", "unprecedented" unless the source itself uses them.
+CRITICAL REQUIREMENTS — violating these means your output is rejected:
+
+1. STOP WRITING QUESTION–ANSWER ARTICLES. Never output sections like:
+   - What happened
+   - Why it matters
+   - Why should I care
+   - What can we learn
+   - Why is it interesting
+   - Future impact
+   These are AI prompts, NOT article sections. The article itself should naturally answer these through storytelling.
+
+2. NEVER repeat the headline inside paragraphs. Never repeat the summary. Never repeat identical sentences in multiple sections. Every paragraph must provide NEW information.
+
+3. NEVER invent events, people, companies, studies, quotes, discoveries, numbers, dates, or context that is not present in the raw source. If a fact is missing, leave that field general or omit specifics — do not fabricate.
+
+4. Write at age-13 reading level. Simple English. Short sentences. Real names, real places, real numbers from the source. Natural, professional, human, interesting, engaging.
+
+5. No hype words like "revolutionary", "game-changing", "unprecedented" unless the source itself uses them.
+
+6. The article must feel like a journalist investigated the story, not like AI summarized it. Readers should understand everything after reading, not leave with more questions.
+
+ARTICLE STRUCTURE — follow this exact structure:
+
+- Summary: A concise introduction (2-3 sentences). This should immediately tell readers what happened. No fluff.
+
+- Main Story: This is the most important section. It should explain everything. Include what happened, where, when, why, who is involved, background, important numbers, timeline, official statements, latest developments, current status. Everything must flow naturally. No bullet points unless appropriate. No repeating sentences. No filler.
+
+- Background: If the story depends on previous events, explain them. What is the context? Why does today's update matter?
+
+- Key Developments: After the main story, create concise bullets. Example: "Six soldiers officially identified. Indian Army released confirmation." No repeated information.
+
+- Expert Analysis: Explain significance, consequences, broader context, economic/scientific/political/environmental impact depending on the article. Write naturally.
+
+- Timeline: If appropriate. Show the sequence of events chronologically.
+
+- What Happens Next: Only if relevant. Explain likely future developments based on available facts. Do NOT invent predictions.
+
+- Vocabulary Builder: At the end. Choose only words actually used inside the article. Generate new words every time.
+
+- Sources: At the very end. Include the source name and URL if available.
 
 Return STRICT JSON ONLY (no markdown, no commentary):
 {
@@ -682,31 +706,15 @@ Return STRICT JSON ONLY (no markdown, no commentary):
   "read_time_minutes": 5-10,
   "country_code": "ISO alpha-2 or null",
   "story": {
-    "what": "3-5 short paragraphs with names, places, dates, numbers, source-bound facts only",
-    "qa": [
-      {"question":"What is this article about?","answer":"answer only with article information from the raw item"},
-      {"question":"Who is involved?","answer":"answer only with names, organizations, or source-bound parties; if not known say what is known from the source"},
-      {"question":"Where and when did it happen?","answer":"answer only with source-bound place/date details"},
-      {"question":"Why does it matter?","answer":"answer only with article-specific importance, no generic filler"},
-      {"question":"What happens next?","answer":"answer only with source-bound next steps or say the source did not specify"}
-    ],
-    "why": "Why is this important? (clear, source-bound)",
-    "why_should_i_care": "Why should I care?",
-    "how_affects_world": "How does this affect the world?",
-    "what_can_we_learn": "What can we learn from it?",
-    "why_interesting": "Why is it interesting?",
-    "key_facts": ["..","..","..",".."],
-    "key_takeaways": ["..","..",".."],
-    "quick_facts": ["..","..",".."],
-    "timeline": ["..",".."],
-    "did_you_know": "one verified educational fact related to the topic",
-    "insights": ["expert-style context with NO fabricated quotes", "another useful insight"],
-    "next": "what likely happens next, based ONLY on the source",
-    "future_impact": "1-2 sentences",
-    "people_mentioned": [".."],
-    "organizations_mentioned": [".."],
-    "countries_mentioned": [".."],
-    "vocabulary": [{"word":"..","meaning":"simple plain-English meaning","example":"short example sentence"}]
+    "summary": "2-3 sentences concise introduction",
+    "main_story": "Complete story with what, where, when, why, who, background, numbers, timeline, statements, developments, status. 4-8 paragraphs flowing naturally.",
+    "background": "Context and previous events if relevant, otherwise omit",
+    "key_developments": ["concise bullet point", "another bullet"],
+    "expert_analysis": "Significance, consequences, broader context, impact analysis",
+    "timeline": ["chronological event 1", "chronological event 2"],
+    "what_happens_next": "likely future developments based on facts",
+    "vocabulary": [{"word":"actual word from article","meaning":"simple plain-English meaning","example":"short example sentence"}],
+    "sources": ["source name", "another source"]
   }
 }`;
 
@@ -749,13 +757,7 @@ function fallbackProcessed(raw: RawItem): Processed {
   const published = new Date(raw.publishedAt).toUTCString();
   const summary = (raw.description || raw.title).replace(/\s+/g, " ").trim();
   const sourceLine = `${raw.source} published this article on ${published}.`;
-  const qa = [
-    { question: "What is this article about?", answer: `${title}. ${summary}` },
-    { question: "Who reported it?", answer: sourceLine },
-    { question: "Where did the information come from?", answer: `The information came from ${raw.source}${raw.url ? ` at ${raw.url}` : ""}.` },
-    { question: "Why does it matter?", answer: `It matters as a current ${category.replace(/-/g, " ")} update from ${raw.source}: ${summary}` },
-    { question: "What should readers know next?", answer: `The available article information is the title, source, date, and summary above; later updates should be checked against ${raw.source}.` },
-  ];
+  
   return {
     title,
     dek: summary.slice(0, 150),
@@ -766,29 +768,19 @@ function fallbackProcessed(raw: RawItem): Processed {
     read_time_minutes: 5,
     country_code: category === "india" ? "IN" : null,
     story: {
-      qa,
-      what: `${title}. ${summary}\n\n${sourceLine}`,
-      why: qa[3].answer,
-      why_should_i_care: `You should care if you follow ${category.replace(/-/g, " ")} because this is a fresh item from ${raw.source}.`,
-      how_affects_world: summary,
-      what_can_we_learn: `From the available article information, readers can learn this update: ${summary}`,
-      why_interesting: `${title} is interesting because it is a specific source-linked item, not a generic background page.`,
-      key_facts: [title, sourceLine, `Category: ${category}`, summary],
-      key_takeaways: [title, summary, sourceLine],
-      quick_facts: [`Source: ${raw.source}`, `Published: ${new Date(raw.publishedAt).toUTCString()}`, `Topic: ${category}`],
+      summary: `${title}. ${summary}`,
+      main_story: `${title}. ${summary}\n\n${sourceLine}\n\nThis article was categorized under ${category.replace(/-/g, " ")} based on the title and source information. The publication date is ${published}.`,
+      background: undefined,
+      key_developments: [title, sourceLine, `Category: ${category}`],
+      expert_analysis: `This is a current ${category.replace(/-/g, " ")} update from ${raw.source}. The information provides context on recent developments in this area.`,
       timeline: [`${new Date(raw.publishedAt).toUTCString()}: ${raw.source} published the report.`],
-      did_you_know: `This item was categorized under ${category.replace(/-/g, " ")} from the article's own title and source information.`,
-      insights: [summary, sourceLine],
-      next: qa[4].answer,
-      future_impact: summary,
-      people_mentioned: [],
-      organizations_mentioned: [raw.source],
-      countries_mentioned: category === "india" ? ["India"] : [],
+      what_happens_next: `Readers should check ${raw.source} for future updates on this story.`,
       vocabulary: [
         { word: "Verified", meaning: "Checked against a real source or reliable evidence." },
         { word: "Context", meaning: "Background information that helps explain why a story matters." },
         { word: "Source", meaning: "The publication, institution, or record where information comes from." },
       ],
+      sources: [raw.source],
     },
   };
 }

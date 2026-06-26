@@ -65,10 +65,8 @@ export function PanchangDisplay() {
   if (!panchang) return null;
 
   return (
-    <div className="flex flex-col gap-1 text-left flex-1">
-      <span className="kicker text-xs md:text-sm">{panchang.line1}</span>
-      <span className="kicker text-xs md:text-sm text-muted-foreground">{panchang.line2}</span>
-      <span className="kicker text-xs md:text-sm text-muted-foreground">{panchang.line3}</span>
+    <div className="text-left flex-1">
+      <span className="kicker text-xs md:text-sm">{panchang.line1} {panchang.line2} {panchang.line3}</span>
     </div>
   );
 }

@@ -103,72 +103,32 @@ function ArticlePage() {
       {/* Story Mode */}
       <section className="container-read py-12 md:py-16">
         <div className="grid gap-10">
-          <StoryBlock label="What happened" body={story.what} />
-          <StoryBlock label="Why it matters" body={story.why} />
-          <StoryBlock label="Why should I care?" body={story.why_should_i_care} />
-          <StoryBlock label="How does this affect the world?" body={story.how_affects_world} />
-          <StoryBlock label="What can we learn from it?" body={story.what_can_we_learn} />
-          <StoryBlock label="Why is it interesting?" body={story.why_interesting} />
-          <StoryBlock label="How it happened" body={story.how} />
-          <StoryBlock label="Who & where" body={[story.who, story.where].filter(Boolean).join(" — ")} />
-          <StoryBlock label="What came before" body={story.before} />
-          <StoryBlock label="What happens next" body={story.next} />
+          <StoryBlock label="Summary" body={story.summary} />
+          <StoryBlock label="" body={story.main_story} />
 
-          <ListBlock label="Key takeaways" items={story.key_takeaways} />
-          <ListBlock label="Quick facts" items={story.quick_facts} />
-          <ListBlock label="Timeline of events" items={story.timeline} />
-          <StoryBlock label="Did you know?" body={story.did_you_know} />
+          {story.background && <StoryBlock label="Background" body={story.background} />}
 
-          {(story.key_facts ?? []).length > 0 && (
-            <div className="border-y rule py-10">
-              <div className="kicker mb-6">Key facts</div>
-              <ul className="grid gap-3 md:grid-cols-2">
-                {story.key_facts!.map((f, i) => (
-                  <li key={i} className="flex gap-3">
-                    <span className="font-serif text-muted-foreground tabular-nums">
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
-                    <span className="font-serif">{f}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+          {story.key_developments && story.key_developments.length > 0 && (
+            <ListBlock label="Key Developments" items={story.key_developments} />
           )}
 
-          {(story.insights ?? []).length > 0 && (
-            <div>
-              <div className="kicker mb-4">Interesting insights</div>
-              <div className="grid gap-6 md:grid-cols-2">
-                {story.insights!.map((s, i) => (
-                  <blockquote key={i} className="border-l-2 border-foreground pl-5 font-serif italic text-lg">
-                    <Quote className="h-4 w-4 mb-2 opacity-40" /> {s}
-                  </blockquote>
-                ))}
-              </div>
-            </div>
+          {story.expert_analysis && <StoryBlock label="Expert Analysis" body={story.expert_analysis} />}
+
+          {story.timeline && story.timeline.length > 0 && (
+            <ListBlock label="Timeline" items={story.timeline} />
           )}
 
-          {story.future_impact && (
-            <div className="border-t rule pt-10">
-              <div className="kicker mb-3">Future impact</div>
-              <p className="font-serif text-xl leading-snug">{story.future_impact}</p>
-            </div>
-          )}
-
-          <EntityBlock
-            people={story.people_mentioned}
-            organizations={story.organizations_mentioned}
-            countries={story.countries_mentioned}
-          />
+          {story.what_happens_next && <StoryBlock label="What Happens Next" body={story.what_happens_next} />}
 
           {(story.vocabulary ?? []).length > 0 && (
             <div className="border-y rule py-10">
-              <div className="kicker mb-6">Words to learn</div>
+              <div className="kicker mb-6">Vocabulary Builder</div>
               <div className="grid gap-5">
                 {story.vocabulary!.slice(0, 6).map((v, i) => (
                   <div key={`${v.word}-${i}`}>
                     <h3 className="font-serif text-xl">{i + 1}. {v.word}</h3>
                     {v.meaning && <p className="mt-1 text-sm text-muted-foreground">Meaning: {v.meaning}</p>}
+                    {v.example && <p className="mt-1 text-sm text-muted-foreground">Example: {v.example}</p>}
                   </div>
                 ))}
               </div>
@@ -184,7 +144,7 @@ function ArticlePage() {
           </div>
         )}
 
-        {sources.length > 0 && (
+        {(sources.length > 0 || story.sources) && (
           <div className="mt-16 border-t rule pt-8">
             <div className="kicker mb-3">Sources</div>
             <ul className="space-y-2 text-sm">
@@ -193,6 +153,11 @@ function ArticlePage() {
                   <a href={s.url} target="_blank" rel="noreferrer" className="hover:underline underline-offset-4">
                     {s.name}
                   </a>
+                </li>
+              ))}
+              {story.sources?.map((s, i) => (
+                <li key={`story-${i}`}>
+                  <span className="text-muted-foreground">{s}</span>
                 </li>
               ))}
             </ul>

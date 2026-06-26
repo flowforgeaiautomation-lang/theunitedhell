@@ -2,6 +2,16 @@
 export type ArticleSource = { name: string; url: string };
 
 export type ArticleStory = {
+  summary?: string;
+  main_story?: string;
+  background?: string;
+  key_developments?: string[];
+  expert_analysis?: string;
+  timeline?: string[];
+  what_happens_next?: string;
+  vocabulary?: { word?: string; meaning?: string; example?: string }[];
+  sources?: string[];
+  // Legacy fields for backward compatibility
   qa?: { question?: string; answer?: string }[];
   what?: string;
   who?: string;
@@ -20,12 +30,10 @@ export type ArticleStory = {
   why_interesting?: string;
   key_takeaways?: string[];
   quick_facts?: string[];
-  timeline?: string[];
   did_you_know?: string;
   people_mentioned?: string[];
   organizations_mentioned?: string[];
   countries_mentioned?: string[];
-  vocabulary?: { word?: string; meaning?: string }[];
 };
 
 export type ArticleSummary = {
