@@ -167,14 +167,23 @@ export function SiteHeader() {
           className={`${open ? "block" : "hidden"} md:block border-t rule`}
           onClick={() => setOpen(false)}
         >
-          <ul className="flex flex-col md:flex-row md:justify-center md:gap-10 gap-3 py-3 md:py-3 text-[0.78rem] uppercase tracking-[0.18em] font-medium">
+          {/* Mobile-only date row inside the hamburger panel */}
+          <div className="md:hidden px-1 pt-4 pb-2 text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground">
+            {new Date().toLocaleDateString(undefined, {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}
+          </div>
+          <ul className="flex flex-col md:flex-row md:justify-center md:gap-10 gap-4 py-4 md:py-3 text-[0.82rem] uppercase tracking-[0.18em] font-medium">
             {NAV.map((n) => {
               const active = router.state.location.pathname === n.to;
               return (
                 <li key={n.to}>
                   <Link
                     to={n.to}
-                    className={`hover:opacity-60 ${active ? "underline underline-offset-8 decoration-1" : ""}`}
+                    className={`block py-1 hover:opacity-60 ${active ? "underline underline-offset-8 decoration-1" : ""}`}
                   >
                     {n.label}
                   </Link>
@@ -182,13 +191,11 @@ export function SiteHeader() {
               );
             })}
             {signedIn && (
-              <>
-                <li>
-                  <Link to="/bookmarks" className="hover:opacity-60">
-                    Library
-                  </Link>
-                </li>
-              </>
+              <li>
+                <Link to="/bookmarks" className="block py-1 hover:opacity-60">
+                  Library
+                </Link>
+              </li>
             )}
           </ul>
         </nav>
