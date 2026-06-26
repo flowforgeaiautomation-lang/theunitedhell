@@ -1,12 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { searchArticles } from "@/lib/articles.functions";
 import { ArticleCard } from "@/components/article-card";
 import { Search as SearchIcon } from "lucide-react";
 
 export const Route = createFileRoute("/search")({
+  validateSearch: (s: Record<string, unknown>) => ({
+    q: typeof s.q === "string" ? s.q : "",
+  }),
   head: () => ({
     meta: [
       { title: "Search — The United Hell" },
@@ -19,8 +22,13 @@ export const Route = createFileRoute("/search")({
 });
 
 function SearchPage() {
-  const [q, setQ] = useState("");
-  const [submitted, setSubmitted] = useState("");
+  const initial = Route.useSearch().q ?? "";
+  const [q, setQ] = useState(initial);
+  const [submitted, setSubmitted] = useState(initial);
+  useEffect(() => {
+    setQ(initial);
+    setSubmitted(initial);
+  }, [initial]);
   const fn = useServerFn(searchArticles);
   const query = useQuery({
     queryKey: ["search", submitted],
