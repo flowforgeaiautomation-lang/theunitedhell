@@ -718,9 +718,39 @@ Return STRICT JSON ONLY (no markdown, no commentary):
   }
 }`;
 
+async function fetchArticleFullText(url: string): Promise<string> {
+  // Lightweight extraction: fetch the source page and pull readable text from
+  // <article> / <main> / repeated <p> blocks. No deps, fails silently on errors
+  // so the pipeline never stops on a single bad source.
+  try {
+    const html = await fetchText(url, 8000);
+    if (!html) return "";
+    let region = html;
+    const article = html.match(/<article\b[^>]*>([\s\S]*?)<\/article>/i);
+    if (article) region = article[1];
+    else {
+      const main = html.match(/<main\b[^>]*>([\s\S]*?)<\/main>/i);
+      if (main) region = main[1];
+    }
+    const paras = Array.from(region.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi))
+      .map((m) => xmlDecode(m[1]))
+      .map((s) => s.replace(/\s+/g, " ").trim())
+      .filter((s) => s.length >= 40 && !/cookie|subscribe|newsletter|advert/i.test(s));
+    const joined = paras.join("\n\n");
+    return joined.slice(0, 6000);
+  } catch {
+    return "";
+  }
+}
+
 async function processItem(raw: RawItem): Promise<Processed | null> {
   try {
     const allowed = ALLOWED_SLUGS.join(", ");
+    const fullText = await fetchArticleFullText(raw.url);
+    const sourceBody =
+      fullText.length > 400
+        ? fullText
+        : (raw.description || "").slice(0, 1800) || "(none)";
     const out = await orJson<Processed>({
       system: SYSTEM,
       prompt: `Allowed category slugs (pick the single best match): ${allowed}
@@ -731,13 +761,13 @@ TITLE: ${raw.title}
 SOURCE: ${raw.source}
 PUBLISHED: ${raw.publishedAt}
 URL: ${raw.url}
-DESCRIPTION: ${(raw.description || "").slice(0, 1400) || "(none)"}
 
-Process it.`,
+FULL SOURCE TEXT (use ONLY facts present here — never invent people, numbers, quotes, dates, or events that are not in this text):
+${sourceBody}
+
+Write a complete premium news article based strictly on the facts above. Follow the structure in the system prompt. Do NOT label paragraphs with "What happened" / "Why it matters" / "Why should I care" / "What can we learn". Use natural section headings only where the article structure requires them (Background, Key Developments, Expert Analysis, Timeline, What Happens Next, Vocabulary Builder, Sources). Every paragraph must add NEW information. Never repeat the headline or summary inside paragraphs.`,
     });
     if (!out?.title) return null;
-    // ENFORCE the forced category from the source query so every slug actually fills.
-    // The AI is otherwise prone to collapsing everything into a few broad buckets.
     const inferredCategory = categoryFromHint(raw);
     if (inferredCategory) {
       out.category = inferredCategory;
@@ -750,6 +780,7 @@ Process it.`,
     return fallbackProcessed(raw);
   }
 }
+
 
 function fallbackProcessed(raw: RawItem): Processed {
   const category = raw.forcedCategory && ALLOWED_SLUGS.includes(raw.forcedCategory) ? raw.forcedCategory : "world";
