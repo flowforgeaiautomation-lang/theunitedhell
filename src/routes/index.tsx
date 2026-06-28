@@ -8,7 +8,7 @@ import { listArticles } from "@/lib/articles.functions";
 import { curateNow } from "@/lib/ai.functions";
 import { ArticleCard } from "@/components/article-card";
 import { CategoryModal } from "@/components/CategoryModal";
-import { HomepageNav } from "@/components/HomepageNav";
+
 import { categoryLabel } from "@/lib/categories";
 import { supabase } from "@/integrations/supabase/client";
 
