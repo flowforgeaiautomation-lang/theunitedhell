@@ -110,10 +110,10 @@ export function SiteHeader() {
     >
       <div className="container-edit">
         {/* Masthead */}
-        <div className="flex items-center justify-between py-4 md:py-6 gap-3">
+        <div className="flex items-center justify-between py-4 md:py-6 gap-2 md:gap-3">
           {/* Left side */}
-          <div className="flex items-center gap-2 flex-1 md:flex-none">
-            {/* Desktop date */}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Desktop date (3-line Panchang) */}
             <div className="hidden md:block">
               <PanchangDisplay />
             </div>
@@ -121,31 +121,31 @@ export function SiteHeader() {
             <button
               aria-label="menu"
               onClick={() => setOpen((v) => !v)}
-              className="md:hidden p-2 border border-foreground/30 hover:bg-foreground hover:text-background transition"
+              className="md:hidden p-1.5 border border-foreground/30 hover:bg-foreground hover:text-background transition"
             >
-              {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              {open ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
             </button>
           </div>
 
-          {/* Center: Title */}
-          <div className="flex-1 flex items-center justify-center text-center">
-            <Link to="/" className="inline-block">
-              <div className="font-serif text-2xl md:text-5xl font-semibold tracking-tight leading-tight uppercase whitespace-nowrap">
+          {/* Center: Title (takes remaining space) */}
+          <div className="flex-1 min-w-0 flex items-center justify-center text-center px-1">
+            <Link to="/" className="inline-block max-w-full">
+              <div className="font-serif text-[1.05rem] sm:text-xl md:text-5xl font-semibold tracking-tight leading-tight uppercase truncate">
                 THE UNITED HELL
               </div>
-              <div className="dek text-[0.65rem] md:text-sm mt-1 not-italic font-sans tracking-wide text-muted-foreground">
+              <div className="dek text-[0.55rem] sm:text-[0.65rem] md:text-sm mt-0.5 md:mt-1 not-italic font-sans tracking-wide text-muted-foreground truncate">
                 Beyond comfort. Beyond headlines.
               </div>
             </Link>
           </div>
 
           {/* Right: Icons */}
-          <div className="flex items-center gap-1.5 md:gap-2 flex-1 justify-end min-w-0">
+          <div className="flex items-center gap-1 md:gap-2 shrink-0 justify-end">
             <select
               aria-label="Location"
               value={location}
               onChange={(e) => updateLocation(e.target.value)}
-              className="bg-background border rule px-1.5 md:px-2 py-1 text-[0.6rem] md:text-[0.65rem] uppercase tracking-wider md:tracking-widest max-w-[5.5rem] md:max-w-none shrink-0"
+              className="bg-background border rule px-1 md:px-2 py-0.5 md:py-1 text-[0.55rem] md:text-[0.65rem] uppercase tracking-wide md:tracking-widest max-w-[4.5rem] md:max-w-none shrink-0"
             >
               {LOCATIONS.map((l) => (
                 <option key={l.code} value={l.code}>
@@ -206,10 +206,10 @@ export function SiteHeader() {
 
         {/* Mobile / tablet hamburger panel */}
         {open && (
-          <div className="md:hidden border-t rule py-5">
-            {/* Full date (wraps on narrow widths) */}
-            <div className="text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground mb-5 break-words leading-relaxed">
-              {dateLabel}
+          <div className="md:hidden border-t rule py-5 max-h-[75vh] overflow-y-auto">
+            {/* 3-line Panchang date, same as desktop */}
+            <div className="mb-5">
+              <PanchangDisplay />
             </div>
             <ul className="flex flex-col gap-4 text-[0.82rem] uppercase tracking-[0.18em] font-medium">
               {NAV.map((n) => (
