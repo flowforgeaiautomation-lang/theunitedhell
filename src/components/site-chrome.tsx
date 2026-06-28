@@ -140,12 +140,12 @@ export function SiteHeader() {
           </div>
 
           {/* Right: Icons */}
-          <div className="flex items-center gap-2 flex-1 justify-end">
+          <div className="flex items-center gap-1.5 md:gap-2 flex-1 justify-end min-w-0">
             <select
               aria-label="Location"
               value={location}
               onChange={(e) => updateLocation(e.target.value)}
-              className="bg-background border rule px-2 py-1 text-[0.65rem] uppercase tracking-widest"
+              className="bg-background border rule px-1.5 md:px-2 py-1 text-[0.6rem] md:text-[0.65rem] uppercase tracking-wider md:tracking-widest max-w-[5.5rem] md:max-w-none shrink-0"
             >
               {LOCATIONS.map((l) => (
                 <option key={l.code} value={l.code}>
@@ -207,8 +207,8 @@ export function SiteHeader() {
         {/* Mobile / tablet hamburger panel */}
         {open && (
           <div className="md:hidden border-t rule py-5">
-            {/* Date */}
-            <div className="text-[0.7rem] uppercase tracking-[0.2em] text-muted-foreground mb-5">
+            {/* Full date (wraps on narrow widths) */}
+            <div className="text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground mb-5 break-words leading-relaxed">
               {dateLabel}
             </div>
             <ul className="flex flex-col gap-4 text-[0.82rem] uppercase tracking-[0.18em] font-medium">
@@ -258,8 +258,10 @@ export function SiteHeader() {
         )}
       </div>
 
-      {/* Site-wide subnav (Menu dropdown + Categories popup) on every page */}
-      <SubNav />
+      {/* Mobile/tablet only: secondary nav (Today menu + Categories popup). Desktop unchanged. */}
+      <div className="md:hidden">
+        <SubNav />
+      </div>
     </header>
   );
 }
