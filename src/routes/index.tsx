@@ -8,7 +8,7 @@ import { listArticles } from "@/lib/articles.functions";
 import { curateNow } from "@/lib/ai.functions";
 import { ArticleCard } from "@/components/article-card";
 import { CategoryModal } from "@/components/CategoryModal";
-import { HomepageNav } from "@/components/HomepageNav";
+
 import { categoryLabel } from "@/lib/categories";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -122,19 +122,7 @@ function Home() {
 
   return (
     <div className="container-edit py-10 md:py-14">
-      <header className="border-b rule pb-6 mb-10">
-        <div className="kicker">The Discovery Engine</div>
-        <h1 className="display-1 mt-3">Explore beyond what you came for.</h1>
-      </header>
 
-      <HomepageNav
-        activeCategory={active}
-        onCategoryChange={(category) => {
-          setActive(category);
-          navigate({ to: "/", search: { category } });
-        }}
-        onExploreAllClick={() => setShowModal(true)}
-      />
 
       {country !== "WORLD" && (
         <div className="mb-8 flex justify-center">
