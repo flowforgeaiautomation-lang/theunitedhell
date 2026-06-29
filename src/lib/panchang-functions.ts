@@ -67,6 +67,7 @@ async function getVedicPanchang(now: Date) {
   const m = String(now.getMonth() + 1).padStart(2, "0");
   const d = String(now.getDate()).padStart(2, "0");
   const url = `https://api.vedicastroapi.com/v3/json/panchang/panchang?api_key=${encodeURIComponent(key)}&date=${d}/${m}/${y}&lat=28.6139&lon=77.2090&tz=5.5`;
+  console.log("VEDIC URL:", url);
   const r = await fetch(url);
   
 const apiData = await r.json();
