@@ -802,6 +802,13 @@ function sanitizeProcessed(out: Processed, raw: RawItem): Processed {
     .filter((v) => v?.word && !GENERIC_VOCAB.has(v.word.toLowerCase().trim()))
     .filter((v) => normalizeText(`${story.summary} ${story.main_story} ${story.background || ""}`).includes(normalizeText(v.word)))
     .slice(0, 6);
+  const sourceNames = Array.from(
+    new Set(
+      [...(story.sources || []), raw.source]
+        .map((source) => source.replace(/^https?:\/\/\S+$/i, "").trim())
+        .filter((source) => source && source.length <= 80),
+    ),
+  );
   return {
     ...out,
     title: cleanEditorialText(out.title) || raw.title,
@@ -817,7 +824,7 @@ function sanitizeProcessed(out: Processed, raw: RawItem): Processed {
       timeline: cleanListValues(story.timeline).length ? cleanListValues(story.timeline) : undefined,
       what_happens_next: cleanEditorialText(story.what_happens_next),
       vocabulary,
-      sources: cleanListValues(story.sources || [raw.source]).map((s) => s.replace(/^https?:\/\/\S+$/i, raw.source)),
+      sources: sourceNames.length ? sourceNames : [raw.source],
     },
   };
 }
@@ -845,7 +852,8 @@ async function processItem(raw: RawItem): Promise<Processed | null> {
     const allowed = ALLOWED_SLUGS.join(", ");
     const fullText = await fetchArticleFullText(raw.url);
     const sourceBody = fullText.length > 700 ? fullText : (raw.description || "").slice(0, 5000);
-    if (wordCount(sourceBody) < 120) return null;
+    const hasCompleteSource = fullText.length > 700 || wordCount(raw.description) >= 250;
+    if (!hasCompleteSource || wordCount(sourceBody) < 120) return null;
     const out = await orJson<Processed>({
       system: SYSTEM,
       prompt: `Allowed category slugs (pick the single best match): ${allowed}
