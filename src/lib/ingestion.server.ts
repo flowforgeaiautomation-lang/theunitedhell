@@ -487,7 +487,7 @@ async function fromWorldNewsAPI(opts?: { priorityCategory?: string }): Promise<R
         .filter((a) => a?.title && a?.url)
         .map((a) => ({
           title: a.title,
-          description: a.summary || a.text || "",
+          description: a.text || a.summary || "",
           url: a.url,
           source: a.author || a.source_country || "World News API",
           publishedAt: a.publish_date || new Date().toISOString(),
@@ -541,7 +541,7 @@ async function fromNewsData(): Promise<RawItem[]> {
   const results = await Promise.allSettled(cats.map(async (c) => {
     const d = await fetchJson(`https://newsdata.io/api/1/latest?apikey=${k}&language=en&category=${c}&size=10`);
     return ((d?.results ?? []) as any[]).filter((a) => a?.title && a?.link).map((a) => ({
-      title: a.title, description: a.description || a.content || "", url: a.link,
+      title: a.title, description: a.content || a.description || "", url: a.link,
       source: a.source_id || "NewsData", publishedAt: a.pubDate || new Date().toISOString(),
       imageUrl: a.image_url || null, topicHint: c,
     } as RawItem));
@@ -833,11 +833,11 @@ function qualityPass(out: Processed, sourceBody: string) {
   const story = out.story;
   const combined = `${out.title}\n${out.dek}\n${story.summary}\n${story.main_story}\n${story.background || ""}\n${story.expert_analysis || ""}`;
   if (wordCount(sourceBody) < 120) return false;
-  if (wordCount(story.main_story) < 220) return false;
+  if (wordCount(story.main_story) < 180) return false;
   if (wordCount(story.summary) < 25) return false;
   if (FORBIDDEN_ARTICLE_PATTERNS.some((rx) => rx.test(combined))) return false;
   const paragraphs = story.main_story.split(/\n{2,}/).filter((p) => wordCount(p) >= 18);
-  if (paragraphs.length < 3) return false;
+  if (paragraphs.length < 2) return false;
   const seen = new Set<string>();
   for (const paragraph of paragraphs) {
     const key = normalizeText(paragraph).slice(0, 120);
@@ -852,7 +852,7 @@ async function processItem(raw: RawItem): Promise<Processed | null> {
     const allowed = ALLOWED_SLUGS.join(", ");
     const fullText = await fetchArticleFullText(raw.url);
     const sourceBody = fullText.length > 700 ? fullText : (raw.description || "").slice(0, 5000);
-    const hasCompleteSource = fullText.length > 700 || wordCount(raw.description) >= 250;
+    const hasCompleteSource = fullText.length > 700 || wordCount(raw.description) >= 120;
     if (!hasCompleteSource || wordCount(sourceBody) < 120) return null;
     const out = await orJson<Processed>({
       system: SYSTEM,
@@ -977,7 +977,7 @@ export async function runIngestion(opts?: { maxItems?: number; priorityCategory?
       if (existingSet.has(titleKey) || existingSet.has(normalizeUrl(q.url)) || existingSet.has(normalizeText(q.description))) return false;
       return !existingTitles.some((t) => similarity(t, q.title) >= 0.86);
     })
-    .slice(0, Math.min(queue.length, Math.max(max, max * 5)));
+    .slice(0, Math.min(queue.length, Math.max(max, max * 25)));
 
   // 4. Process in parallel (concurrency 6)
   const processed = await pMap(fresh, 6, async (raw) => {
