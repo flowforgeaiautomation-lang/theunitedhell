@@ -73,24 +73,49 @@ export function PanchangDisplay() {
   );
 }
 
+// Known reference: June 14, 2026 at noon IST was Amavasya transitioning to Shukla Pratipada
+const KNOWN_AMAVASYA_END = new Date("2026-06-14T12:00:00+05:30");
+const LUNAR_MONTH_DAYS = 29.53058867; // Synodic month in days
+
+function calculateTithi(date: Date): { paksha: string; tithiName: string } {
+  const daysSinceAmavasya = (date.getTime() - KNOWN_AMAVASYA_END.getTime()) / (1000 * 60 * 60 * 24);
+  let lunarDay = daysSinceAmavasya % LUNAR_MONTH_DAYS;
+  if (lunarDay < 0) lunarDay += LUNAR_MONTH_DAYS;
+
+  const tithis = [
+    "Pratipada", "Dwitiya", "Tritiya", "Chaturthi", "Panchami",
+    "Shashthi", "Saptami", "Ashtami", "Navami", "Dashami",
+    "Ekadashi", "Dwadashi", "Trayodashi", "Chaturdashi", "Purnima"
+  ];
+
+  if (lunarDay < 15) {
+    const tithiNumber = Math.floor(lunarDay) + 1;
+    const tithiName = tithis[tithiNumber - 1];
+    return { paksha: "Shukla", tithiName };
+  } else if (lunarDay < 16) {
+    return { paksha: "Shukla", tithiName: "Purnima" };
+  } else {
+    const krishnaDay = lunarDay - 15;
+    const tithiNumber = Math.min(15, Math.floor(krishnaDay) + 1);
+    const tithiName = tithiNumber === 15 ? "Amavasya" : tithis[tithiNumber - 1];
+    return { paksha: "Krishna", tithiName };
+  }
+}
+
 function getFallbackPanchang() {
   const now = nowInIndia();
-  
+
   const weekdayEn = now.toLocaleDateString('en-US', { weekday: 'long' });
   const day = String(now.getDate());
   const month = now.toLocaleDateString('en-US', { month: 'long' });
   const year = now.getFullYear();
-  
-  const tithis = ["Pratipada", "Dwitiya", "Tritiya", "Chaturthi", "Panchami", "Shashthi", "Saptami", "Ashtami", "Navami", "Dashami", "Ekadashi", "Dwadashi", "Trayodashi", "Chaturdashi", "Purnima", "Pratipada", "Dwitiya", "Tritiya", "Chaturthi", "Panchami", "Shashthi", "Saptami", "Ashtami", "Navami", "Dashami", "Ekadashi", "Dwadashi", "Trayodashi", "Chaturdashi", "Amavasya"];
-  const tithiIndex = (now.getDate() - 1) % 30;
-  const paksha = tithiIndex < 15 ? "Shukla" : "Krishna";
-  const tithiName = tithis[tithiIndex];
-  
+
+  const { paksha, tithiName } = calculateTithi(now);
   const sakaYear = getSakaYear(now);
-  
+
   const hinduWeekdays = ["Ravivaar", "Somvaar", "Mangalvaar", "Budhvaar", "Guruvaar", "Shukravaar", "Shanivaar"];
   const hinduWeekday = hinduWeekdays[now.getDay()];
-  
+
   return {
     line1: `${weekdayEn}, ${day} ${month} ${year}`,
     line2: `${paksha} ${tithiName}`,
