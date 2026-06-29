@@ -977,7 +977,7 @@ export async function runIngestion(opts?: { maxItems?: number; priorityCategory?
       if (existingSet.has(titleKey) || existingSet.has(normalizeUrl(q.url)) || existingSet.has(normalizeText(q.description))) return false;
       return !existingTitles.some((t) => similarity(t, q.title) >= 0.86);
     })
-    .slice(0, max);
+    .slice(0, Math.min(queue.length, Math.max(max, max * 5)));
 
   // 4. Process in parallel (concurrency 6)
   const processed = await pMap(fresh, 6, async (raw) => {
@@ -999,6 +999,7 @@ export async function runIngestion(opts?: { maxItems?: number; priorityCategory?
   const batchUrls = new Set<string>();
   const batchImages = new Set<string>();
   for (const item of processed) {
+    if (rows.length >= max) break;
     if (!item) { errors++; continue; }
     const { raw, p } = item;
     let cover = item.cover;
