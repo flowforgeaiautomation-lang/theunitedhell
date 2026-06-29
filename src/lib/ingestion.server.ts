@@ -832,9 +832,9 @@ function sanitizeProcessed(out: Processed, raw: RawItem): Processed {
 function qualityPass(out: Processed, sourceBody: string) {
   const story = out.story;
   const combined = `${out.title}\n${out.dek}\n${story.summary}\n${story.main_story}\n${story.background || ""}\n${story.expert_analysis || ""}`;
-  if (wordCount(sourceBody) < 120) return false;
-  if (wordCount(story.main_story) < 180) return false;
-  if (wordCount(story.summary) < 25) return false;
+  if (wordCount(sourceBody) < 80) return false;
+  if (wordCount(story.main_story) < 120) return false;
+  if (wordCount(story.summary) < 18) return false;
   if (FORBIDDEN_ARTICLE_PATTERNS.some((rx) => rx.test(combined))) return false;
   const paragraphs = story.main_story.split(/\n{2,}/).filter((p) => wordCount(p) >= 18);
   if (paragraphs.length < 2) return false;
@@ -852,8 +852,8 @@ async function processItem(raw: RawItem): Promise<Processed | null> {
     const allowed = ALLOWED_SLUGS.join(", ");
     const fullText = await fetchArticleFullText(raw.url);
     const sourceBody = fullText.length > 700 ? fullText : (raw.description || "").slice(0, 5000);
-    const hasCompleteSource = fullText.length > 700 || wordCount(raw.description) >= 120;
-    if (!hasCompleteSource || wordCount(sourceBody) < 100) return null;
+    const hasCompleteSource = fullText.length > 700 || wordCount(raw.description) >= 80;
+    if (!hasCompleteSource || wordCount(sourceBody) < 80) return null;
     const out = await orJson<Processed>({
       system: SYSTEM,
       prompt: `Allowed category slugs (pick the single best match): ${allowed}
