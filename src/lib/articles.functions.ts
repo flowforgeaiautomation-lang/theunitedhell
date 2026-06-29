@@ -73,7 +73,21 @@ function dedupeSummaries(rows: ArticleSummary[], limit: number) {
 
 function looksVague(text?: string | null) {
   if (!text) return true;
-  return /original source|the united hell is preserving|broader impact depends|verified new development|reliable, recent information|full primary account|future coverage in this field/i.test(text);
+  return /original source|the united hell is preserving|broader impact depends|verified new development|reliable, recent information|full primary account|future coverage in this field|published this article|this is a current|readers should check|category:/i.test(text);
+}
+
+function cleanStoryText(text?: string | null) {
+  if (!text) return undefined;
+  const decoded = decodeEntities(text);
+  const cleaned = decoded
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter((line) => line && !/published this article|published by|source says|readers should check|category:/i.test(line))
+    .join("\n\n")
+    .replace(/\bAccording to\s+(Reuters|BBC|GNews|NewsAPI|The Hindu|Times of India|Associated Press|AP|The Guardian|New York Times),?\s*/gi, "")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+  return cleaned && !looksVague(cleaned) ? cleaned : undefined;
 }
 
 function cleanList(items?: (string | null | undefined)[] | null): string[] | undefined {
@@ -87,7 +101,7 @@ function cleanList(items?: (string | null | undefined)[] | null): string[] | und
 function normalizeArticle(article: Article): Article {
   const currentStory = article.story ?? {};
   const dec = (s?: string | null) => (s ? decodeEntities(s) : s);
-  const decClean = (s?: string | null) => (looksVague(s) ? undefined : dec(s) ?? undefined);
+  const decClean = (s?: string | null) => cleanStoryText(s);
   return {
     ...article,
     title: dec(article.title) ?? article.title,
@@ -99,6 +113,7 @@ function normalizeArticle(article: Article): Article {
       main_story: decClean((currentStory as any).main_story),
       background: decClean((currentStory as any).background),
       key_developments: decodeListMaybe(cleanList((currentStory as any).key_developments)),
+      quick_insights: decodeListMaybe(cleanList((currentStory as any).quick_insights)),
       expert_analysis: decClean((currentStory as any).expert_analysis),
       timeline: decodeListMaybe(cleanList((currentStory as any).timeline)),
       what_happens_next: decClean((currentStory as any).what_happens_next),

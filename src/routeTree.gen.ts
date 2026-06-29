@@ -13,6 +13,7 @@ import { Route as WorldRouteImport } from './routes/world'
 import { Route as TrendingRouteImport } from './routes/trending'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SearchRouteImport } from './routes/search'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as MapRouteImport } from './routes/map'
 import { Route as InformationRouteImport } from './routes/information'
 import { Route as DiscoverRouteImport } from './routes/discover'
@@ -44,6 +45,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const SearchRoute = SearchRouteImport.update({
   id: '/search',
   path: '/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MapRoute = MapRouteImport.update({
@@ -113,6 +119,7 @@ export interface FileRoutesByFullPath {
   '/discover': typeof DiscoverRoute
   '/information': typeof InformationRoute
   '/map': typeof MapRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/trending': typeof TrendingRoute
@@ -130,6 +137,7 @@ export interface FileRoutesByTo {
   '/discover': typeof DiscoverRoute
   '/information': typeof InformationRoute
   '/map': typeof MapRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/trending': typeof TrendingRoute
@@ -149,6 +157,7 @@ export interface FileRoutesById {
   '/discover': typeof DiscoverRoute
   '/information': typeof InformationRoute
   '/map': typeof MapRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/trending': typeof TrendingRoute
@@ -168,6 +177,7 @@ export interface FileRouteTypes {
     | '/discover'
     | '/information'
     | '/map'
+    | '/reset-password'
     | '/search'
     | '/sitemap.xml'
     | '/trending'
@@ -185,6 +195,7 @@ export interface FileRouteTypes {
     | '/discover'
     | '/information'
     | '/map'
+    | '/reset-password'
     | '/search'
     | '/sitemap.xml'
     | '/trending'
@@ -203,6 +214,7 @@ export interface FileRouteTypes {
     | '/discover'
     | '/information'
     | '/map'
+    | '/reset-password'
     | '/search'
     | '/sitemap.xml'
     | '/trending'
@@ -222,6 +234,7 @@ export interface RootRouteChildren {
   DiscoverRoute: typeof DiscoverRoute
   InformationRoute: typeof InformationRoute
   MapRoute: typeof MapRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   SearchRoute: typeof SearchRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TrendingRoute: typeof TrendingRoute
@@ -259,6 +272,13 @@ declare module '@tanstack/react-router' {
       path: '/search'
       fullPath: '/search'
       preLoaderRoute: typeof SearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/map': {
@@ -369,6 +389,7 @@ const rootRouteChildren: RootRouteChildren = {
   DiscoverRoute: DiscoverRoute,
   InformationRoute: InformationRoute,
   MapRoute: MapRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   SearchRoute: SearchRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TrendingRoute: TrendingRoute,

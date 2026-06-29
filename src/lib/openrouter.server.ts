@@ -34,7 +34,7 @@ async function lovableChat(opts: {
       model: opts.model ?? "google/gemini-2.5-flash-lite",
       messages,
       temperature: opts.temperature ?? 0.45,
-      max_tokens: 4200,
+      max_tokens: 8000,
       ...(opts.json ? { response_format: { type: "json_object" } } : {}),
     }),
   });
@@ -77,7 +77,7 @@ export async function orChat(opts: {
           model: opts.model ?? "qwen/qwen3-next-80b-a3b-instruct",
           messages,
           temperature: opts.temperature ?? 0.45,
-          max_tokens: 4200,
+          max_tokens: 8000,
           ...(opts.json ? { response_format: { type: "json_object" } } : {}),
         }),
       });

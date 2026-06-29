@@ -6,6 +6,7 @@ export type ArticleStory = {
   main_story?: string;
   background?: string;
   key_developments?: string[];
+  quick_insights?: string[];
   expert_analysis?: string;
   timeline?: string[];
   what_happens_next?: string;

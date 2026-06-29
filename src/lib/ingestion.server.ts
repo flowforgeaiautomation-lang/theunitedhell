@@ -487,7 +487,7 @@ async function fromWorldNewsAPI(opts?: { priorityCategory?: string }): Promise<R
         .filter((a) => a?.title && a?.url)
         .map((a) => ({
           title: a.title,
-          description: a.summary || a.text || "",
+          description: a.text || a.summary || "",
           url: a.url,
           source: a.author || a.source_country || "World News API",
           publishedAt: a.publish_date || new Date().toISOString(),
@@ -541,7 +541,7 @@ async function fromNewsData(): Promise<RawItem[]> {
   const results = await Promise.allSettled(cats.map(async (c) => {
     const d = await fetchJson(`https://newsdata.io/api/1/latest?apikey=${k}&language=en&category=${c}&size=10`);
     return ((d?.results ?? []) as any[]).filter((a) => a?.title && a?.link).map((a) => ({
-      title: a.title, description: a.description || a.content || "", url: a.link,
+      title: a.title, description: a.content || a.description || "", url: a.link,
       source: a.source_id || "NewsData", publishedAt: a.pubDate || new Date().toISOString(),
       imageUrl: a.image_url || null, topicHint: c,
     } as RawItem));
@@ -643,6 +643,7 @@ type Processed = {
     main_story: string;
     background?: string;
     key_developments?: string[];
+    quick_insights?: string[];
     expert_analysis?: string;
     timeline?: string[];
     what_happens_next?: string;
@@ -652,11 +653,11 @@ type Processed = {
   country_code?: string | null;
 };
 
-const SYSTEM = `You are a senior wire-service editor at "The United Hell", a premium global newspaper. You write exactly like Reuters, BBC, The Economist, Associated Press, New York Times, Wall Street Journal, The Hindu, Indian Express, National Geographic, and Scientific American.
+const SYSTEM = `You are the permanent editorial engine for "The United Hell", a premium global newspaper. You are not an assistant, tutor, explainer, blogger, or exam writer. You produce only newsroom-quality articles based on verified source facts.
 
 CRITICAL REQUIREMENTS — violating these means your output is rejected:
 
-1. STOP WRITING QUESTION–ANSWER ARTICLES. Never output sections like:
+1. STOP WRITING QUESTION–ANSWER ARTICLES. Never output section labels, sentences, or bullet starters like:
    - What happened
    - Why it matters
    - Why should I care
@@ -673,17 +674,25 @@ CRITICAL REQUIREMENTS — violating these means your output is rejected:
 
 5. No hype words like "revolutionary", "game-changing", "unprecedented" unless the source itself uses them.
 
-6. The article must feel like a journalist investigated the story, not like AI summarized it. Readers should understand everything after reading, not leave with more questions.
+6. The article must feel investigated. Readers should understand the event without opening another website.
+
+7. You are forbidden to write a final article from only a headline, description, RSS summary, meta description, NewsAPI snippet, or GNews snippet. Use only the complete source text supplied below. If the complete text does not support a fact, omit it.
+
+8. Internally collect facts before writing: people, organizations, countries, cities, dates, timeline, numbers, official statements, quotes, background, previous events, current developments, latest updates, related events, and next official steps. Write only from that structured fact set. Never directly rewrite source text.
+
+9. Source names belong only in the Sources array unless the source name is also a direct actor in the event. Do not write "published by", "reported by", "according to", "source says", timestamps, platform promotion, or outlet credits inside story sections.
 
 ARTICLE STRUCTURE — follow this exact structure:
 
 - Summary: A concise introduction (2-3 sentences). This should immediately tell readers what happened. No fluff.
 
-- Main Story: This is the most important section. It should explain everything. Include what happened, where, when, why, who is involved, background, important numbers, timeline, official statements, latest developments, current status. Everything must flow naturally. No bullet points unless appropriate. No repeating sentences. No filler.
+- Main Story: This is 80% of the article. It must explain the full event with who, what, where, when, why, how, numbers, statements, chronology, and current status when supported. Write 5-9 substantial paragraphs separated by blank lines. No bullet points. No repeated idea. No filler.
 
 - Background: If the story depends on previous events, explain them. What is the context? Why does today's update matter?
 
 - Key Developments: After the main story, create concise bullets. Example: "Six soldiers officially identified. Indian Army released confirmation." No repeated information.
+
+- Quick Insights: Maximum 5 concise bullets covering main issue, biggest development, significance, current status, and next official step. Every bullet must add new information and must not repeat Key Developments.
 
 - Expert Analysis: Explain significance, consequences, broader context, economic/scientific/political/environmental impact depending on the article. Write naturally.
 
@@ -710,6 +719,7 @@ Return STRICT JSON ONLY (no markdown, no commentary):
     "main_story": "Complete story with what, where, when, why, who, background, numbers, timeline, statements, developments, status. 4-8 paragraphs flowing naturally.",
     "background": "Context and previous events if relevant, otherwise omit",
     "key_developments": ["concise bullet point", "another bullet"],
+    "quick_insights": ["main issue", "biggest development", "why this matters without using that phrase", "current status", "next official step"],
     "expert_analysis": "Significance, consequences, broader context, impact analysis",
     "timeline": ["chronological event 1", "chronological event 2"],
     "what_happens_next": "likely future developments based on facts",
@@ -735,22 +745,146 @@ async function fetchArticleFullText(url: string): Promise<string> {
     const paras = Array.from(region.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi))
       .map((m) => xmlDecode(m[1]))
       .map((s) => s.replace(/\s+/g, " ").trim())
-      .filter((s) => s.length >= 40 && !/cookie|subscribe|newsletter|advert/i.test(s));
+      .filter((s) => s.length >= 40 && !/cookie|subscribe|newsletter|advert|sign up|all rights reserved/i.test(s));
     const joined = paras.join("\n\n");
-    return joined.slice(0, 6000);
+    return joined.slice(0, 12000);
   } catch {
     return "";
   }
+}
+
+const FORBIDDEN_ARTICLE_PATTERNS = [
+  /what happened/i,
+  /why it matters/i,
+  /why should i care/i,
+  /what can we learn/i,
+  /how does this affect/i,
+  /why is it interesting/i,
+  /future impact/i,
+  /published this article/i,
+  /published by/i,
+  /source says/i,
+  /according to\s+(reuters|bbc|gnews|newsapi|the hindu|times of india|associated press|ap|the guardian|new york times)/i,
+  /this is a current/i,
+  /readers should check/i,
+];
+
+const GENERIC_VOCAB = new Set(["verified", "context", "source", "information", "article", "news", "report", "update"]);
+
+function wordCount(value?: string) {
+  return (value || "").trim().split(/\s+/).filter(Boolean).length;
+}
+
+function cleanEditorialText(value?: string) {
+  if (!value) return undefined;
+  const cleaned = value
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter((line) => line && !/published this article|published by|source says|readers should check|category:/i.test(line))
+    .join("\n\n")
+    .replace(/\bAccording to\s+(Reuters|BBC|GNews|NewsAPI|The Hindu|Times of India|Associated Press|AP|The Guardian|New York Times),?\s*/gi, "")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+  return cleaned || undefined;
+}
+
+function cleanListValues(items?: string[]) {
+  return (items || [])
+    .map((item) => cleanEditorialText(item))
+    .filter((item): item is string => !!item && wordCount(item) >= 4)
+    .filter((item, index, arr) => arr.findIndex((other) => normalizeText(other) === normalizeText(item)) === index)
+    .slice(0, 5);
+}
+
+function sanitizeProcessed(out: Processed, raw: RawItem): Processed {
+  const story = out.story || ({} as Processed["story"]);
+  const vocabulary = (story.vocabulary || [])
+    .filter((v) => v?.word && !GENERIC_VOCAB.has(v.word.toLowerCase().trim()))
+    .filter((v) => normalizeText(`${story.summary} ${story.main_story} ${story.background || ""}`).includes(normalizeText(v.word)))
+    .slice(0, 6);
+  const sourceNames = Array.from(
+    new Set(
+      [...(story.sources || []), raw.source]
+        .map((source) => source.replace(/^https?:\/\/\S+$/i, "").trim())
+        .filter((source) => source && source.length <= 80),
+    ),
+  );
+  return {
+    ...out,
+    title: cleanEditorialText(out.title) || raw.title,
+    dek: (cleanEditorialText(out.dek) || raw.description || raw.title).slice(0, 170),
+    story: {
+      ...story,
+      summary: cleanEditorialText(story.summary) || "",
+      main_story: cleanEditorialText(story.main_story) || "",
+      background: cleanEditorialText(story.background),
+      key_developments: cleanListValues(story.key_developments),
+      quick_insights: cleanListValues(story.quick_insights),
+      expert_analysis: cleanEditorialText(story.expert_analysis),
+      timeline: cleanListValues(story.timeline).length ? cleanListValues(story.timeline) : undefined,
+      what_happens_next: cleanEditorialText(story.what_happens_next),
+      vocabulary,
+      sources: sourceNames.length ? sourceNames : [raw.source],
+    },
+  };
+}
+
+function qualityPass(out: Processed, sourceBody: string) {
+  const story = out.story;
+  const combined = `${out.title}\n${out.dek}\n${story.summary}\n${story.main_story}\n${story.background || ""}\n${story.expert_analysis || ""}`;
+  if (wordCount(sourceBody) < 80) return false;
+  if (wordCount(story.main_story) < 70) return false;
+  if (wordCount(story.summary) < 12) return false;
+  if (FORBIDDEN_ARTICLE_PATTERNS.some((rx) => rx.test(combined))) return false;
+  const paragraphs = story.main_story.split(/\n{2,}/).filter((p) => wordCount(p) >= 18);
+  if (paragraphs.length < 1) return false;
+  const seen = new Set<string>();
+  for (const paragraph of paragraphs) {
+    const key = normalizeText(paragraph).slice(0, 120);
+    if (seen.has(key)) return false;
+    seen.add(key);
+  }
+  return true;
+}
+
+function sourceTextProcessed(raw: RawItem, fullText: string): Processed | null {
+  const paragraphs = fullText
+    .split(/\n{2,}/)
+    .map((line) => cleanEditorialText(line))
+    .filter((line): line is string => !!line && wordCount(line) >= 18)
+    .filter((line, index, arr) => arr.findIndex((other) => normalizeText(other) === normalizeText(line)) === index)
+    .slice(0, 8);
+  if (paragraphs.length < 2) return null;
+  const category = raw.forcedCategory && ALLOWED_SLUGS.includes(raw.forcedCategory) ? raw.forcedCategory : categoryFromHint(raw) || "world";
+  const mainStory = paragraphs.join("\n\n");
+  const summary = paragraphs[0].split(/(?<=[.!?])\s+/).slice(0, 2).join(" ");
+  const keyDevelopments = paragraphs.slice(1, 6).map((paragraph) => paragraph.split(/(?<=[.!?])\s+/)[0]).filter((line) => wordCount(line) >= 6);
+  return {
+    title: raw.title.replace(/\s[-–—|]\s.*$/, "").replace(/^\s*Live updates?:\s*/i, "").slice(0, 95),
+    dek: (summary || raw.description || raw.title).slice(0, 170),
+    category,
+    subcategory: raw.topicHint || category,
+    tags: [category, ...(raw.topicHint ? [raw.topicHint] : []), ...raw.title.split(/\s+/).filter((word) => word.length > 5).slice(0, 5)].slice(0, 8),
+    trust_score: 84,
+    read_time_minutes: Math.max(3, Math.min(10, Math.ceil(wordCount(mainStory) / 220))),
+    country_code: category === "india" ? "IN" : null,
+    story: {
+      summary,
+      main_story: mainStory,
+      key_developments: keyDevelopments.slice(0, 5),
+      quick_insights: keyDevelopments.slice(0, 5),
+      sources: [raw.source],
+    },
+  };
 }
 
 async function processItem(raw: RawItem): Promise<Processed | null> {
   try {
     const allowed = ALLOWED_SLUGS.join(", ");
     const fullText = await fetchArticleFullText(raw.url);
-    const sourceBody =
-      fullText.length > 400
-        ? fullText
-        : (raw.description || "").slice(0, 1800) || "(none)";
+    const sourceBody = fullText.length > 700 ? fullText : (raw.description || "").slice(0, 5000);
+    const hasCompleteSource = fullText.length > 700 || wordCount(raw.description) >= 80;
+    if (!hasCompleteSource || wordCount(sourceBody) < 80) return null;
     const out = await orJson<Processed>({
       system: SYSTEM,
       prompt: `Allowed category slugs (pick the single best match): ${allowed}
@@ -762,58 +896,33 @@ SOURCE: ${raw.source}
 PUBLISHED: ${raw.publishedAt}
 URL: ${raw.url}
 
-FULL SOURCE TEXT (use ONLY facts present here — never invent people, numbers, quotes, dates, or events that are not in this text):
+COMPLETE SOURCE TEXT (use ONLY facts present here — never invent people, numbers, quotes, dates, or events that are not in this text):
 ${sourceBody}
 
-Write a complete premium news article based strictly on the facts above. Follow the structure in the system prompt. Do NOT label paragraphs with "What happened" / "Why it matters" / "Why should I care" / "What can we learn". Use natural section headings only where the article structure requires them (Background, Key Developments, Expert Analysis, Timeline, What Happens Next, Vocabulary Builder, Sources). Every paragraph must add NEW information. Never repeat the headline or summary inside paragraphs.`,
+First build an internal fact sheet from the complete source text. Then write a complete premium news article based strictly on that fact sheet. Do NOT label paragraphs with "What happened" / "Why it matters" / "Why should I care" / "What can we learn". Do not mention the outlet/source name inside story sections unless it is a direct actor in the event. Every paragraph must add NEW information. Never repeat the headline or summary inside paragraphs.`,
     });
-    if (!out?.title) return null;
+    if (!out?.title) return sourceTextProcessed(raw, fullText);
+    const cleaned = sanitizeProcessed(out, raw);
+    if (!qualityPass(cleaned, sourceBody)) return sourceTextProcessed(raw, fullText);
     const inferredCategory = categoryFromHint(raw);
     if (inferredCategory) {
-      out.category = inferredCategory;
-    } else if (!out.category || !ALLOWED_SLUGS.includes(out.category)) {
-      out.category = "discovery";
+      cleaned.category = inferredCategory;
+    } else if (!cleaned.category || !ALLOWED_SLUGS.includes(cleaned.category)) {
+      cleaned.category = "discovery";
     }
-    return out;
+    return cleaned;
   } catch (e) {
     console.error("[ingest] AI process failed:", (e as Error).message);
-    return fallbackProcessed(raw);
+    const fullText = await fetchArticleFullText(raw.url);
+    return sourceTextProcessed(raw, fullText);
   }
 }
 
-
-function fallbackProcessed(raw: RawItem): Processed {
-  const category = raw.forcedCategory && ALLOWED_SLUGS.includes(raw.forcedCategory) ? raw.forcedCategory : "world";
-  const title = raw.title.replace(/\s[-|–|—]\s.*$/, "").replace(/^\s*Live updates?:\s*/i, "").slice(0, 95);
-  const published = new Date(raw.publishedAt).toUTCString();
-  const summary = (raw.description || raw.title).replace(/\s+/g, " ").trim();
-  const sourceLine = `${raw.source} published this article on ${published}.`;
-  
-  return {
-    title,
-    dek: summary.slice(0, 150),
-    category,
-    subcategory: raw.topicHint || category,
-    tags: [category, raw.source, ...(raw.topicHint ? [raw.topicHint] : [])].slice(0, 8),
-    trust_score: 82,
-    read_time_minutes: 5,
-    country_code: category === "india" ? "IN" : null,
-    story: {
-      summary: `${title}. ${summary}`,
-      main_story: `${title}. ${summary}\n\n${sourceLine}\n\nThis article was categorized under ${category.replace(/-/g, " ")} based on the title and source information. The publication date is ${published}.`,
-      background: undefined,
-      key_developments: [title, sourceLine, `Category: ${category}`],
-      expert_analysis: `This is a current ${category.replace(/-/g, " ")} update from ${raw.source}. The information provides context on recent developments in this area.`,
-      timeline: [`${new Date(raw.publishedAt).toUTCString()}: ${raw.source} published the report.`],
-      what_happens_next: `Readers should check ${raw.source} for future updates on this story.`,
-      vocabulary: [
-        { word: "Verified", meaning: "Checked against a real source or reliable evidence." },
-        { word: "Context", meaning: "Background information that helps explain why a story matters." },
-        { word: "Source", meaning: "The publication, institution, or record where information comes from." },
-      ],
-      sources: [raw.source],
-    },
-  };
+function fallbackCoverDataUrl(title: string, category: string) {
+  const safeTitle = title.slice(0, 90).replace(/[&<>\"]/g, " ");
+  const safeCategory = category.replace(/-/g, " ").toUpperCase();
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000"><rect width="1600" height="1000" fill="#f6f1e7"/><rect x="80" y="80" width="1440" height="840" fill="#fbf8f0" stroke="#1f1b16" stroke-width="6"/><rect x="128" y="128" width="1344" height="76" fill="#2f5e88"/><text x="144" y="178" font-family="Georgia,serif" font-size="34" fill="#fbf8f0" letter-spacing="4">${safeCategory}</text><text x="128" y="420" font-family="Georgia,serif" font-size="78" fill="#1f1b16">${safeTitle.slice(0, 32)}</text><text x="128" y="520" font-family="Georgia,serif" font-size="78" fill="#1f1b16">${safeTitle.slice(32, 64)}</text><text x="128" y="620" font-family="Georgia,serif" font-size="78" fill="#1f1b16">${safeTitle.slice(64)}</text><line x1="128" y1="740" x2="1472" y2="740" stroke="#1f1b16" stroke-width="4"/><text x="128" y="820" font-family="Arial,sans-serif" font-size="28" fill="#4f4a42" letter-spacing="5">THE UNITED HELL</text></svg>`;
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }
 
 // Simple concurrency-limited map
@@ -900,7 +1009,7 @@ export async function runIngestion(opts?: { maxItems?: number; priorityCategory?
       if (existingSet.has(titleKey) || existingSet.has(normalizeUrl(q.url)) || existingSet.has(normalizeText(q.description))) return false;
       return !existingTitles.some((t) => similarity(t, q.title) >= 0.86);
     })
-    .slice(0, max);
+    .slice(0, Math.min(queue.length, Math.max(max, max * 25)));
 
   // 4. Process in parallel (concurrency 6)
   const processed = await pMap(fresh, 6, async (raw) => {
@@ -908,9 +1017,9 @@ export async function runIngestion(opts?: { maxItems?: number; priorityCategory?
     if (!p) return null;
     let cover = raw.imageUrl || null;
     if (cover && existingImages.has(cover)) cover = null;
-    if (!cover) {
-      cover = await pexelsImage(p.tags?.[0] || p.category || raw.topicHint || "news");
-    }
+    if (!cover) cover = await pexelsImage(p.tags?.[0] || p.category || raw.topicHint || "news");
+    if (!cover) cover = await pexelsImage(p.title || raw.title);
+    if (!cover) cover = fallbackCoverDataUrl(p.title || raw.title, p.category || raw.forcedCategory || "world");
     if (cover && existingImages.has(cover)) cover = null;
     return { raw, p, cover };
   });
@@ -922,13 +1031,14 @@ export async function runIngestion(opts?: { maxItems?: number; priorityCategory?
   const batchUrls = new Set<string>();
   const batchImages = new Set<string>();
   for (const item of processed) {
+    if (rows.length >= max) break;
     if (!item) { errors++; continue; }
     const { raw, p } = item;
     let cover = item.cover;
     const titleKey = normalizeText(p.title);
     const urlKey = normalizeUrl(raw.url);
     if (batchTitles.has(titleKey) || batchUrls.has(urlKey)) { errors++; continue; }
-    if (cover && batchImages.has(cover)) cover = null;
+    if (cover && batchImages.has(cover)) cover = fallbackCoverDataUrl(p.title || raw.title, p.category || raw.forcedCategory || "world");
     batchTitles.add(titleKey);
     batchUrls.add(urlKey);
     if (cover) batchImages.add(cover);

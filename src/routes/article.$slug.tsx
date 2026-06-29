@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Quote } from "lucide-react";
 import type { CommentRow } from "@/lib/types";
+import { fallbackCoverUrl } from "@/lib/article-images";
 
 const articleQ = (slug: string) =>
   queryOptions({
@@ -65,6 +66,7 @@ function ArticlePage() {
   if (!article) return null;
   const story = article.story ?? {};
   const sources = article.sources ?? [];
+  const cover = article.cover_image_url || fallbackCoverUrl(article);
 
   const { data: related = [] } = useQuery({
     queryKey: ["related", article.category, article.slug],
@@ -78,38 +80,42 @@ function ArticlePage() {
         <div className="kicker">{categoryLabel(article.category)}</div>
         <h1 className="display-1 mt-5">{article.title}</h1>
         {article.dek && <p className="dek mt-6 text-balance">{article.dek}</p>}
-        <div className="mt-8 flex items-center justify-center gap-4 text-xs text-muted-foreground">
-          <span>{new Date(article.published_at).toLocaleDateString(undefined, { dateStyle: "long" })}</span>
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
+          <span>Publication Date: {new Date(article.published_at).toLocaleDateString(undefined, { dateStyle: "long" })}</span>
+          <span className="opacity-50">·</span>
+          <span>Reading Time: {article.read_time_minutes} min</span>
           <span className="opacity-50">·</span>
           <span>Trust {article.trust_score} / 100</span>
           <span className="opacity-50">·</span>
-          <span>{sources.length} sources</span>
+          <span>Category: {categoryLabel(article.category)}</span>
         </div>
         <div className="mt-6 flex justify-center">
           <ArticleActions articleId={article.id} title={article.title} />
         </div>
       </header>
 
-      {article.cover_image_url && (
-        <figure className="container-edit mt-10">
-          <img
-            src={article.cover_image_url}
-            alt={article.title}
-            className="w-full max-h-[70vh] object-cover grayscale"
-          />
-        </figure>
-      )}
+      <figure className="container-edit mt-10">
+        <img
+          src={cover}
+          alt={article.title}
+          className="w-full max-h-[70vh] object-cover grayscale"
+        />
+      </figure>
 
       {/* Story Mode */}
       <section className="container-read py-12 md:py-16">
         <div className="grid gap-10">
           <StoryBlock label="Summary" body={story.summary} />
-          <StoryBlock label="" body={story.main_story} />
+          <StoryBlock label="Main Story" body={story.main_story} />
 
           {story.background && <StoryBlock label="Background" body={story.background} />}
 
           {story.key_developments && story.key_developments.length > 0 && (
             <ListBlock label="Key Developments" items={story.key_developments} />
+          )}
+
+          {story.quick_insights && story.quick_insights.length > 0 && (
+            <ListBlock label="Quick Insights" items={story.quick_insights} />
           )}
 
           {story.expert_analysis && <StoryBlock label="Expert Analysis" body={story.expert_analysis} />}
@@ -136,24 +142,12 @@ function ArticlePage() {
           )}
         </div>
 
-        {article.body && (
-          <div className="article-prose mt-12">
-            {article.body.split(/\n+/).map((p, i) => (
-              <p key={i}>{p}</p>
-            ))}
-          </div>
-        )}
-
         {(sources.length > 0 || story.sources) && (
           <div className="mt-16 border-t rule pt-8">
             <div className="kicker mb-3">Sources</div>
             <ul className="space-y-2 text-sm">
               {sources.map((s, i) => (
-                <li key={i}>
-                  <a href={s.url} target="_blank" rel="noreferrer" className="hover:underline underline-offset-4">
-                    {s.name}
-                  </a>
-                </li>
+                <li key={i}>{s.name}</li>
               ))}
               {story.sources?.map((s, i) => (
                 <li key={`story-${i}`}>
@@ -161,9 +155,6 @@ function ArticlePage() {
                 </li>
               ))}
             </ul>
-            <p className="text-xs text-muted-foreground mt-3">
-              Last verified {new Date(article.published_at).toLocaleDateString()}.
-            </p>
           </div>
         )}
 
@@ -192,10 +183,15 @@ function ArticlePage() {
 
 function StoryBlock({ label, body }: { label: string; body?: string }) {
   if (!body) return null;
+  const paragraphs = body.split(/\n{2,}|\r?\n/).map((p) => p.trim()).filter(Boolean);
   return (
     <div>
-      <div className="kicker mb-3">{label}</div>
-      <p className="font-serif text-xl md:text-2xl leading-snug">{body}</p>
+      {label && <div className="kicker mb-3">{label}</div>}
+      <div className="grid gap-5">
+        {paragraphs.map((paragraph, index) => (
+          <p key={index} className="font-serif text-xl md:text-2xl leading-snug">{paragraph}</p>
+        ))}
+      </div>
     </div>
   );
 }
