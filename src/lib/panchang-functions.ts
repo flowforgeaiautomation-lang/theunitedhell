@@ -115,6 +115,9 @@ export const getCurrentPanchang = createServerFn({ method: "GET" })
         return fallbackPanchang();
       }
       const j = await r.json();
+      console.log("PROKERALA JSON START");
+console.log(JSON.stringify(j, null, 2));
+console.log("PROKERALA JSON END");
       const data = j?.data ?? {};
       // Tithi: data.tithi is an array [{name, paksha:{name}}, ...]
       const tithiObj = Array.isArray(data.tithi) ? data.tithi[0] : data.tithi;
