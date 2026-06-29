@@ -847,6 +847,37 @@ function qualityPass(out: Processed, sourceBody: string) {
   return true;
 }
 
+function sourceTextProcessed(raw: RawItem, fullText: string): Processed | null {
+  const paragraphs = fullText
+    .split(/\n{2,}/)
+    .map((line) => cleanEditorialText(line))
+    .filter((line): line is string => !!line && wordCount(line) >= 18)
+    .filter((line, index, arr) => arr.findIndex((other) => normalizeText(other) === normalizeText(line)) === index)
+    .slice(0, 8);
+  if (paragraphs.length < 2) return null;
+  const category = raw.forcedCategory && ALLOWED_SLUGS.includes(raw.forcedCategory) ? raw.forcedCategory : categoryFromHint(raw) || "world";
+  const mainStory = paragraphs.join("\n\n");
+  const summary = paragraphs[0].split(/(?<=[.!?])\s+/).slice(0, 2).join(" ");
+  const keyDevelopments = paragraphs.slice(1, 6).map((paragraph) => paragraph.split(/(?<=[.!?])\s+/)[0]).filter((line) => wordCount(line) >= 6);
+  return {
+    title: raw.title.replace(/\s[-–—|]\s.*$/, "").replace(/^\s*Live updates?:\s*/i, "").slice(0, 95),
+    dek: (summary || raw.description || raw.title).slice(0, 170),
+    category,
+    subcategory: raw.topicHint || category,
+    tags: [category, ...(raw.topicHint ? [raw.topicHint] : []), ...raw.title.split(/\s+/).filter((word) => word.length > 5).slice(0, 5)].slice(0, 8),
+    trust_score: 84,
+    read_time_minutes: Math.max(3, Math.min(10, Math.ceil(wordCount(mainStory) / 220))),
+    country_code: category === "india" ? "IN" : null,
+    story: {
+      summary,
+      main_story: mainStory,
+      key_developments: keyDevelopments.slice(0, 5),
+      quick_insights: keyDevelopments.slice(0, 5),
+      sources: [raw.source],
+    },
+  };
+}
+
 async function processItem(raw: RawItem): Promise<Processed | null> {
   try {
     const allowed = ALLOWED_SLUGS.join(", ");
@@ -870,9 +901,9 @@ ${sourceBody}
 
 First build an internal fact sheet from the complete source text. Then write a complete premium news article based strictly on that fact sheet. Do NOT label paragraphs with "What happened" / "Why it matters" / "Why should I care" / "What can we learn". Do not mention the outlet/source name inside story sections unless it is a direct actor in the event. Every paragraph must add NEW information. Never repeat the headline or summary inside paragraphs.`,
     });
-    if (!out?.title) return null;
+    if (!out?.title) return sourceTextProcessed(raw, fullText);
     const cleaned = sanitizeProcessed(out, raw);
-    if (!qualityPass(cleaned, sourceBody)) return null;
+    if (!qualityPass(cleaned, sourceBody)) return sourceTextProcessed(raw, fullText);
     const inferredCategory = categoryFromHint(raw);
     if (inferredCategory) {
       cleaned.category = inferredCategory;
@@ -882,7 +913,8 @@ First build an internal fact sheet from the complete source text. Then write a c
     return cleaned;
   } catch (e) {
     console.error("[ingest] AI process failed:", (e as Error).message);
-    return null;
+    const fullText = await fetchArticleFullText(raw.url);
+    return sourceTextProcessed(raw, fullText);
   }
 }
 
