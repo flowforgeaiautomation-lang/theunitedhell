@@ -110,18 +110,18 @@ export function SiteHeader() {
     >
       <div className="container-edit">
         {/* Masthead */}
-        <div className="flex items-center justify-between py-4 md:py-6 gap-2 md:gap-3">
+        <div className="flex items-center justify-between py-4 lg:py-6 gap-2 lg:gap-3">
           {/* Left side */}
           <div className="flex items-center gap-2 shrink-0">
             {/* Desktop date (3-line Panchang) */}
-            <div className="hidden md:block">
+            <div className="hidden lg:block">
               <PanchangDisplay />
             </div>
             {/* Mobile / tablet hamburger */}
             <button
               aria-label="menu"
               onClick={() => setOpen((v) => !v)}
-              className="md:hidden p-1.5 border border-foreground/30 hover:bg-foreground hover:text-background transition"
+              className="lg:hidden p-1.5 border border-foreground/30 hover:bg-foreground hover:text-background transition"
             >
               {open ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
             </button>
@@ -130,10 +130,10 @@ export function SiteHeader() {
           {/* Center: Title (takes remaining space) */}
           <div className="flex-1 min-w-0 flex items-center justify-center text-center px-1">
             <Link to="/" className="inline-block max-w-full">
-              <div className="font-serif text-[1.05rem] sm:text-xl md:text-5xl font-semibold tracking-tight leading-tight uppercase truncate">
+              <div className="font-serif text-[1.05rem] sm:text-xl lg:text-5xl font-semibold tracking-tight leading-tight uppercase truncate">
                 THE UNITED HELL
               </div>
-              <div className="dek text-[0.55rem] sm:text-[0.65rem] md:text-sm mt-0.5 md:mt-1 not-italic font-sans tracking-wide text-muted-foreground truncate">
+              <div className="dek text-[0.55rem] sm:text-[0.65rem] lg:text-sm mt-0.5 lg:mt-1 not-italic font-sans tracking-wide text-muted-foreground truncate">
                 Beyond comfort. Beyond headlines.
               </div>
             </Link>
@@ -145,7 +145,7 @@ export function SiteHeader() {
               aria-label="Location"
               value={location}
               onChange={(e) => updateLocation(e.target.value)}
-              className="bg-background border rule px-1 md:px-2 py-0.5 md:py-1 text-[0.55rem] md:text-[0.65rem] uppercase tracking-wide md:tracking-widest max-w-[4.5rem] md:max-w-none shrink-0"
+              className="bg-background border rule px-1 lg:px-2 py-0.5 lg:py-1 text-[0.55rem] lg:text-[0.65rem] uppercase tracking-wide lg:tracking-widest max-w-[4.5rem] lg:max-w-none shrink-0"
             >
               {LOCATIONS.map((l) => (
                 <option key={l.code} value={l.code}>
@@ -153,24 +153,24 @@ export function SiteHeader() {
                 </option>
               ))}
             </select>
-            <Link to="/search" aria-label="search" className="hidden md:inline-block p-2 hover:opacity-70">
+            <Link to="/search" aria-label="search" className="hidden lg:inline-block p-2 hover:opacity-70">
               <Search className="h-4 w-4" />
             </Link>
             <button
               onClick={toggleTheme}
               aria-label="theme"
-              className="hidden md:inline-block p-2 hover:opacity-70"
+              className="hidden lg:inline-block p-2 hover:opacity-70"
             >
               {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>
             {signedIn ? (
-              <Link to="/profile" className="hidden md:inline-block p-2 hover:opacity-70" aria-label="profile">
+              <Link to="/profile" className="hidden lg:inline-block p-2 hover:opacity-70" aria-label="profile">
                 <User className="h-4 w-4" />
               </Link>
             ) : (
               <Link
                 to="/auth"
-                className="ml-1 hidden md:inline-block border border-foreground px-3 py-1.5 text-xs font-medium uppercase tracking-widest hover:bg-foreground hover:text-background transition"
+                className="ml-1 hidden lg:inline-block border border-foreground px-3 py-1.5 text-xs font-medium uppercase tracking-widest hover:bg-foreground hover:text-background transition"
               >
                 Sign in
               </Link>
@@ -179,8 +179,8 @@ export function SiteHeader() {
         </div>
 
         {/* Desktop primary nav — unchanged */}
-        <nav className="hidden md:block border-t rule">
-          <ul className="flex md:justify-center md:gap-10 py-3 text-[0.82rem] uppercase tracking-[0.18em] font-medium">
+        <nav className="hidden lg:block border-t rule">
+          <ul className="flex lg:justify-center lg:gap-10 py-3 text-[0.82rem] uppercase tracking-[0.18em] font-medium">
             {NAV.map((n) => {
               const active = router.state.location.pathname === n.to;
               return (
@@ -206,7 +206,7 @@ export function SiteHeader() {
 
         {/* Mobile / tablet hamburger panel */}
         {open && (
-          <div className="md:hidden border-t rule py-5 max-h-[75vh] overflow-y-auto">
+          <div className="lg:hidden border-t rule py-5 max-h-[75vh] overflow-y-auto">
             {/* 3-line Panchang date, same as desktop */}
             <div className="mb-5">
               <PanchangDisplay />
@@ -259,7 +259,7 @@ export function SiteHeader() {
       </div>
 
       {/* Mobile/tablet only: secondary nav (Today menu + Categories popup). Desktop unchanged. */}
-      <div className="md:hidden">
+      <div className="lg:hidden">
         <SubNav />
       </div>
     </header>
