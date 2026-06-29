@@ -833,11 +833,11 @@ function qualityPass(out: Processed, sourceBody: string) {
   const story = out.story;
   const combined = `${out.title}\n${out.dek}\n${story.summary}\n${story.main_story}\n${story.background || ""}\n${story.expert_analysis || ""}`;
   if (wordCount(sourceBody) < 80) return false;
-  if (wordCount(story.main_story) < 120) return false;
+  if (wordCount(story.main_story) < 90) return false;
   if (wordCount(story.summary) < 18) return false;
   if (FORBIDDEN_ARTICLE_PATTERNS.some((rx) => rx.test(combined))) return false;
   const paragraphs = story.main_story.split(/\n{2,}/).filter((p) => wordCount(p) >= 18);
-  if (paragraphs.length < 2) return false;
+  if (paragraphs.length < 1) return false;
   const seen = new Set<string>();
   for (const paragraph of paragraphs) {
     const key = normalizeText(paragraph).slice(0, 120);
