@@ -783,7 +783,7 @@ function cleanEditorialText(value?: string) {
     .filter((line) => line && !/published this article|published by|source says|readers should check|category:/i.test(line))
     .join("\n\n")
     .replace(/\bAccording to\s+(Reuters|BBC|GNews|NewsAPI|The Hindu|Times of India|Associated Press|AP|The Guardian|New York Times),?\s*/gi, "")
-    .replace(/\s{2,}/g, " ")
+    .replace(/[ \t]{2,}/g, " ")
     .trim();
   return cleaned || undefined;
 }
@@ -833,11 +833,11 @@ function qualityPass(out: Processed, sourceBody: string) {
   const story = out.story;
   const combined = `${out.title}\n${out.dek}\n${story.summary}\n${story.main_story}\n${story.background || ""}\n${story.expert_analysis || ""}`;
   if (wordCount(sourceBody) < 120) return false;
-  if (wordCount(story.main_story) < 260) return false;
+  if (wordCount(story.main_story) < 220) return false;
   if (wordCount(story.summary) < 25) return false;
   if (FORBIDDEN_ARTICLE_PATTERNS.some((rx) => rx.test(combined))) return false;
   const paragraphs = story.main_story.split(/\n{2,}/).filter((p) => wordCount(p) >= 18);
-  if (paragraphs.length < 4) return false;
+  if (paragraphs.length < 3) return false;
   const seen = new Set<string>();
   for (const paragraph of paragraphs) {
     const key = normalizeText(paragraph).slice(0, 120);

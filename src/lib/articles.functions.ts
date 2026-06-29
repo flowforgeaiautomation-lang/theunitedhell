@@ -85,6 +85,7 @@ function cleanStoryText(text?: string | null) {
     .filter((line) => line && !/published this article|published by|source says|readers should check|category:/i.test(line))
     .join("\n\n")
     .replace(/\bAccording to\s+(Reuters|BBC|GNews|NewsAPI|The Hindu|Times of India|Associated Press|AP|The Guardian|New York Times),?\s*/gi, "")
+    .replace(/[ \t]{2,}/g, " ")
     .trim();
   return cleaned && !looksVague(cleaned) ? cleaned : undefined;
 }
