@@ -97,10 +97,11 @@ export const getCurrentPanchang = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({}).parse(d ?? {}))
   .handler(async () => {
     const now = nowInIndia();
-    const vedic = await getVedicPanchang(now).catch(() => null);
-    if (vedic) return vedic;
+
     const token = await getProkeralaToken();
     if (!token) return fallbackPanchang();
+
+    ...
     // Prokerala expects ISO 8601 with timezone offset; use IST +05:30 noon today
     const y = now.getFullYear();
     const m = String(now.getMonth() + 1).padStart(2, "0");
