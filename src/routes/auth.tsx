@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { toast } from "sonner";
+import { Eye, EyeOff } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -16,11 +17,12 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
+  const [mode, setMode] = useState<"sign-in" | "sign-up" | "forgot">("sign-in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -32,6 +34,15 @@ function AuthPage() {
     e.preventDefault();
     setBusy(true);
     try {
+      if (mode === "forgot") {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        if (error) throw error;
+        toast.success("Password reset email sent.");
+        setMode("sign-in");
+        return;
+      }
       if (mode === "sign-up") {
         const { error } = await supabase.auth.signUp({
           email,
@@ -42,12 +53,12 @@ function AuthPage() {
           },
         });
         if (error) throw error;
-        toast.success("Welcome to The United Hell.");
-        navigate({ to: "/" });
+        toast.success("Account created. If verification is required, check your email before signing in.");
+        setMode("sign-in");
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        toast.success("Welcome back.");
+        toast.success("Signed in.");
         navigate({ to: "/" });
       }
     } catch (e) {
@@ -73,12 +84,12 @@ function AuthPage() {
   return (
     <div className="container-read py-16">
       <div className="text-center border-b rule pb-8 mb-10">
-        <div className="kicker">{mode === "sign-in" ? "Welcome back" : "Begin reading"}</div>
+        <div className="kicker">{mode === "forgot" ? "Reset access" : mode === "sign-in" ? "Welcome back" : "Begin reading"}</div>
         <h1 className="display-1 mt-3">
-          {mode === "sign-in" ? "Sign in." : "Create an account."}
+          {mode === "forgot" ? "Reset password." : mode === "sign-in" ? "Sign in." : "Create an account."}
         </h1>
         <p className="dek mt-3 max-w-md mx-auto">
-          Save stories, follow your interests, and join the discussion.
+          {mode === "forgot" ? "Enter your email and choose a new password from the secure link." : "Save stories, follow your interests, and join the discussion."}
         </p>
       </div>
 
@@ -116,29 +127,50 @@ function AuthPage() {
             className="w-full bg-transparent border-b-2 border-foreground/30 focus:border-foreground py-2 outline-none font-serif text-lg"
           />
         </Field>
-        <Field label="Password">
-          <input
-            required
-            type="password"
-            minLength={8}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full bg-transparent border-b-2 border-foreground/30 focus:border-foreground py-2 outline-none font-serif text-lg"
-          />
-        </Field>
+        {mode !== "forgot" && (
+          <Field label="Password">
+            <div className="relative">
+              <input
+                required
+                type={showPassword ? "text" : "password"}
+                minLength={8}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-transparent border-b-2 border-foreground/30 focus:border-foreground py-2 pr-10 outline-none font-serif text-lg"
+              />
+              <button
+                type="button"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                onClick={() => setShowPassword((value) => !value)}
+                className="absolute right-0 top-1/2 -translate-y-1/2 p-2 hover:opacity-70"
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </Field>
+        )}
         <button
           type="submit"
           disabled={busy}
           className="w-full border border-foreground py-3 text-sm uppercase tracking-widest hover:bg-foreground hover:text-background transition disabled:opacity-40"
         >
-          {busy ? "…" : mode === "sign-in" ? "Sign in" : "Create account"}
+          {busy ? "…" : mode === "forgot" ? "Send reset link" : mode === "sign-in" ? "Sign in" : "Create account"}
         </button>
       </form>
 
       <div className="text-center mt-6 text-sm">
         {mode === "sign-in" ? (
-          <button onClick={() => setMode("sign-up")} className="kicker hover:opacity-60">
-            New here? Create an account →
+          <div className="grid gap-3">
+            <button onClick={() => setMode("forgot")} className="kicker hover:opacity-60">
+              Forgot password?
+            </button>
+            <button onClick={() => setMode("sign-up")} className="kicker hover:opacity-60">
+              New here? Create an account →
+            </button>
+          </div>
+        ) : mode === "forgot" ? (
+          <button onClick={() => setMode("sign-in")} className="kicker hover:opacity-60">
+            Back to sign in →
           </button>
         ) : (
           <button onClick={() => setMode("sign-in")} className="kicker hover:opacity-60">

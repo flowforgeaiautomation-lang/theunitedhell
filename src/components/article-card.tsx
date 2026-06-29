@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import type { ArticleSummary } from "@/lib/types";
 import { categoryLabel } from "@/lib/categories";
+import { fallbackCoverUrl } from "@/lib/article-images";
 
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 function fmtDate(iso: string) {
@@ -41,6 +42,7 @@ function Meta({ article }: { article: ArticleSummary }) {
 }
 
 function HeroCard({ article }: { article: ArticleSummary }) {
+  const cover = article.cover_image_url || fallbackCoverUrl(article);
   return (
     <Link
       to="/article/$slug"
@@ -48,16 +50,14 @@ function HeroCard({ article }: { article: ArticleSummary }) {
       className="group block hover-lift"
     >
       <div className="grid gap-8 md:grid-cols-12">
-        {article.cover_image_url && (
-          <div className="md:col-span-7 overflow-hidden">
-            <img
-              src={article.cover_image_url}
-              alt={article.title}
-              loading="eager"
-              className="aspect-[16/10] w-full object-cover grayscale transition duration-700 group-hover:grayscale-0"
-            />
-          </div>
-        )}
+        <div className="md:col-span-7 overflow-hidden">
+          <img
+            src={cover}
+            alt={article.title}
+            loading="eager"
+            className="aspect-[16/10] w-full object-cover grayscale transition duration-700 group-hover:grayscale-0"
+          />
+        </div>
         <div className="md:col-span-5 flex flex-col justify-center">
           <Meta article={article} />
           <h2 className="display-1 mt-4">{article.title}</h2>
@@ -72,22 +72,21 @@ function HeroCard({ article }: { article: ArticleSummary }) {
 }
 
 function DefaultCard({ article }: { article: ArticleSummary }) {
+  const cover = article.cover_image_url || fallbackCoverUrl(article);
   return (
     <Link
       to="/article/$slug"
       params={{ slug: article.slug }}
       className="group flex flex-col hover-lift"
     >
-      {article.cover_image_url && (
-        <div className="overflow-hidden">
-          <img
-            src={article.cover_image_url}
-            alt={article.title}
-            loading="lazy"
-            className="aspect-[4/3] w-full object-cover grayscale transition duration-700 group-hover:grayscale-0"
-          />
-        </div>
-      )}
+      <div className="overflow-hidden">
+        <img
+          src={cover}
+          alt={article.title}
+          loading="lazy"
+          className="aspect-[4/3] w-full object-cover grayscale transition duration-700 group-hover:grayscale-0"
+        />
+      </div>
       <div className="mt-4 flex flex-col gap-3">
         <Meta article={article} />
         <h3 className="display-3 group-hover:underline decoration-1 underline-offset-4">
@@ -100,6 +99,7 @@ function DefaultCard({ article }: { article: ArticleSummary }) {
 }
 
 function WideCard({ article }: { article: ArticleSummary }) {
+  const cover = article.cover_image_url || fallbackCoverUrl(article);
   return (
     <Link
       to="/article/$slug"
@@ -107,14 +107,12 @@ function WideCard({ article }: { article: ArticleSummary }) {
       className="group grid gap-6 md:grid-cols-12 hover-lift border-t rule pt-8"
     >
       <div className="md:col-span-5 overflow-hidden">
-        {article.cover_image_url && (
-          <img
-            src={article.cover_image_url}
-            alt={article.title}
-            loading="lazy"
-            className="aspect-[4/3] w-full object-cover grayscale transition duration-700 group-hover:grayscale-0"
-          />
-        )}
+        <img
+          src={cover}
+          alt={article.title}
+          loading="lazy"
+          className="aspect-[4/3] w-full object-cover grayscale transition duration-700 group-hover:grayscale-0"
+        />
       </div>
       <div className="md:col-span-7 flex flex-col justify-center">
         <Meta article={article} />
@@ -126,20 +124,19 @@ function WideCard({ article }: { article: ArticleSummary }) {
 }
 
 function CompactCard({ article }: { article: ArticleSummary }) {
+  const cover = article.cover_image_url || fallbackCoverUrl(article);
   return (
     <Link
       to="/article/$slug"
       params={{ slug: article.slug }}
       className="group flex gap-4 items-start border-t rule pt-4"
     >
-      {article.cover_image_url && (
-        <img
-          src={article.cover_image_url}
-          alt={article.title}
-          loading="lazy"
-          className="h-20 w-20 flex-none object-cover grayscale transition group-hover:grayscale-0"
-        />
-      )}
+      <img
+        src={cover}
+        alt={article.title}
+        loading="lazy"
+        className="h-20 w-20 flex-none object-cover grayscale transition group-hover:grayscale-0"
+      />
       <div className="min-w-0">
         <span className="kicker text-[0.65rem]">{categoryLabel(article.category)}</span>
         <h4 className="font-serif font-medium text-base leading-snug mt-1 group-hover:underline decoration-1 underline-offset-2">
