@@ -853,7 +853,7 @@ async function processItem(raw: RawItem): Promise<Processed | null> {
     const fullText = await fetchArticleFullText(raw.url);
     const sourceBody = fullText.length > 700 ? fullText : (raw.description || "").slice(0, 5000);
     const hasCompleteSource = fullText.length > 700 || wordCount(raw.description) >= 120;
-    if (!hasCompleteSource || wordCount(sourceBody) < 120) return null;
+    if (!hasCompleteSource || wordCount(sourceBody) < 100) return null;
     const out = await orJson<Processed>({
       system: SYSTEM,
       prompt: `Allowed category slugs (pick the single best match): ${allowed}
