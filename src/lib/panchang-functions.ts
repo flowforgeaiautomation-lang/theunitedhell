@@ -68,8 +68,15 @@ async function getVedicPanchang(now: Date) {
   const d = String(now.getDate()).padStart(2, "0");
   const url = `https://api.vedicastroapi.com/v3/json/panchang/panchang?api_key=${encodeURIComponent(key)}&date=${d}/${m}/${y}&lat=28.6139&lon=77.2090&tz=5.5`;
   const r = await fetch(url);
-  if (!r.ok) return null;
-  const apiData = await r.json();
+  
+const apiData = await r.json();
+
+console.log("VEDIC API RESPONSE:", apiData);
+
+if (!r.ok || apiData.status === false || !apiData.response) {
+  console.error("VEDIC API FAILED:", apiData);
+  return null;
+}
   const tithi = Array.isArray(apiData.response?.tithi) ? apiData.response.tithi[0] : apiData.response?.tithi;
   const tithiName = tithi?.name || tithi?.details?.tithi_name || "Tithi";
   const paksha = String(tithi?.paksha ?? "").toLowerCase().includes("krishna") || tithi?.paksha === 2 ? "Krishna" : "Shukla";
