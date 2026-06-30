@@ -1,74 +1,62 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-// Known reference: June 14, 2026 at noon IST was Amavasya transitioning to Shukla Pratipada
-// Shukla Paksha starts after Amavasya, Krishna Paksha starts after Purnima
-const KNOWN_AMAVASYA_END = new Date("2026-06-14T12:00:00+05:30");
-const LUNAR_MONTH_DAYS = 29.53058867; // Synodic month in days
+// VERIFIED: Purnima (full moon) peaked June 29, 2026 at ~18:00 UTC (23:30 IST).
+// Krishna Pratipada begins immediately after Purnima ends.
+// So June 30 IST = Krishna Pratipada (tithi index 0 in Krishna Paksha).
+const PURNIMA_END_UTC = new Date("2026-06-29T18:00:00Z");
+const SYNODIC = 29.53058867; // days in one lunar month
+
+const TITHIS = [
+  "Pratipada", "Dwitiya", "Tritiya", "Chaturthi", "Panchami",
+  "Shashthi", "Saptami", "Ashtami", "Navami", "Dashami",
+  "Ekadashi", "Dwadashi", "Trayodashi", "Chaturdashi",
+];
 
 function nowInIndia(): Date {
   return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
 }
 
-function getSakaYear(now: Date) {
-  // Saka era starts 22 March. Before that we're in previous Saka year.
+function getSakaYear(now: Date): number {
   return now.getFullYear() - (now.getMonth() < 2 || (now.getMonth() === 2 && now.getDate() < 22) ? 79 : 78);
 }
 
-function calculateTithi(date: Date): { paksha: string; tithiName: string; tithiNumber: number } {
-  // Calculate days since known Amavasya end (noon on June 14, 2026)
-  const daysSinceAmavasya = (date.getTime() - KNOWN_AMAVASYA_END.getTime()) / (1000 * 60 * 60 * 24);
+function calculateTithi(date: Date): { paksha: string; tithiName: string } {
+  // Days elapsed since end of Purnima (= start of Krishna Paksha)
+  const daysSince = (date.getTime() - PURNIMA_END_UTC.getTime()) / (1000 * 60 * 60 * 24);
 
-  // Normalize to current lunar cycle
-  let lunarDay = daysSinceAmavasya % LUNAR_MONTH_DAYS;
-  if (lunarDay < 0) lunarDay += LUNAR_MONTH_DAYS;
+  // Normalise within one synodic month
+  let pos = daysSince % SYNODIC;
+  if (pos < 0) pos += SYNODIC;
 
-  // Tithi calculation:
-  // Shukla Paksha: days 0 to 14.99 → tithi 1-14
-  // Purnima: around day 15
-  // Krishna Paksha: days 15+ → tithi 1-15 (Amavasya at end)
-  const tithis = [
-    "Pratipada", "Dwitiya", "Tritiya", "Chaturthi", "Panchami",
-    "Shashthi", "Saptami", "Ashtami", "Navami", "Dashami",
-    "Ekadashi", "Dwadashi", "Trayodashi", "Chaturdashi", "Purnima"
-  ];
+  // First half after Purnima = Krishna Paksha (0 → ~14.77 days → Amavasya)
+  // Second half = Shukla Paksha (Amavasya → ~14.77 days → next Purnima)
+  const half = SYNODIC / 2; // ~14.765
 
-  if (lunarDay < 15) {
-    // Shukla Paksha: tithi 1-14
-    const tithiNumber = Math.floor(lunarDay) + 1;
-    const tithiName = tithis[tithiNumber - 1];
-    return { paksha: "Shukla", tithiName, tithiNumber };
-  } else if (lunarDay < 16) {
-    // Purnima: day 15
-    return { paksha: "Shukla", tithiName: "Purnima", tithiNumber: 15 };
+  if (pos < half) {
+    // Krishna Paksha
+    const n = Math.floor(pos);
+    return { paksha: "Krishna", tithiName: n >= 14 ? "Amavasya" : TITHIS[n] };
   } else {
-    // Krishna Paksha: starts after Purnima
-    const krishnaDay = lunarDay - 15;
-    const tithiNumber = Math.min(15, Math.floor(krishnaDay) + 1);
-    const tithiName = tithiNumber === 15 ? "Amavasya" : tithis[tithiNumber - 1];
-    return { paksha: "Krishna", tithiName, tithiNumber };
+    // Shukla Paksha
+    const n = Math.floor(pos - half);
+    return { paksha: "Shukla", tithiName: n >= 14 ? "Purnima" : TITHIS[n] };
   }
 }
 
 function fallbackPanchang() {
   const now = nowInIndia();
   const weekdayEn = now.toLocaleDateString("en-US", { weekday: "long" });
-  const day = String(now.getDate());
-  const month = now.toLocaleDateString("en-US", { month: "long" });
-  const year = now.getFullYear();
-
-  const { paksha, tithiName } = calculateTithi(now);
+  const { paksha, tithiName } = calculateTithi(new Date());
   const hinduWeekdays = ["Ravivaar", "Somvaar", "Mangalvaar", "Budhvaar", "Guruvaar", "Shukravaar", "Shanivaar"];
-
   return {
-    line1: `${weekdayEn}, ${day} ${month} ${year}`,
+    line1: `${weekdayEn}, ${now.getDate()} ${now.toLocaleDateString("en-US", { month: "long" })} ${now.getFullYear()}`,
     line2: `${paksha} ${tithiName}`,
     line3: `${getSakaYear(now)} Saka · ${hinduWeekdays[now.getDay()]}`,
     source: "fallback" as const,
   };
 }
 
-// In-memory token cache (per worker instance)
 let cachedToken: { token: string; exp: number } | null = null;
 
 async function getProkeralaToken(): Promise<string | null> {
@@ -104,46 +92,40 @@ export const getCurrentPanchang = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({}).parse(d ?? {}))
   .handler(async () => {
     const now = nowInIndia();
-
     const token = await getProkeralaToken();
-    if (!token) return fallbackPanchang();
 
-    // Prokerala expects ISO 8601 with timezone offset; use IST +05:30 noon today
-    const y = now.getFullYear();
-    const m = String(now.getMonth() + 1).padStart(2, "0");
-    const d = String(now.getDate()).padStart(2, "0");
-    const datetime = `${y}-${m}-${d}T12:00:00+05:30`;
-
-    try {
-      const url = `https://api.prokerala.com/v2/astrology/panchang?ayanamsa=1&coordinates=28.6139,77.2090&datetime=${encodeURIComponent(datetime)}&la=en`;
-      const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-      if (!r.ok) {
-        console.error("[panchang] api fail", r.status, await r.text().catch(() => ""));
-        return fallbackPanchang();
+    if (token) {
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, "0");
+      const d = String(now.getDate()).padStart(2, "0");
+      const datetime = `${y}-${m}-${d}T12:00:00+05:30`;
+      try {
+        const url = `https://api.prokerala.com/v2/astrology/panchang?ayanamsa=1&coordinates=28.6139,77.2090&datetime=${encodeURIComponent(datetime)}&la=en`;
+        const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+        if (r.ok) {
+          const j = await r.json();
+          const data = j?.data ?? {};
+          const tithiObj = Array.isArray(data.tithi) ? data.tithi[0] : data.tithi;
+          const tithiName: string = tithiObj?.name || "";
+          const pakshaRaw: string = (tithiObj?.paksha?.name || "").toLowerCase();
+          const paksha = pakshaRaw.includes("krishna") ? "Krishna" : "Shukla";
+          if (tithiName) {
+            const weekdayEn = now.toLocaleDateString("en-US", { weekday: "long" });
+            const hinduWeekdays = ["Ravivaar", "Somvaar", "Mangalvaar", "Budhvaar", "Guruvaar", "Shukravaar", "Shanivaar"];
+            return {
+              line1: `${weekdayEn}, ${now.getDate()} ${now.toLocaleDateString("en-US", { month: "long" })} ${now.getFullYear()}`,
+              line2: `${paksha} ${tithiName}`,
+              line3: `${getSakaYear(now)} Saka · ${hinduWeekdays[now.getDay()]}`,
+              source: "prokerala" as const,
+            };
+          }
+        } else {
+          console.error("[panchang] api fail", r.status, await r.text().catch(() => ""));
+        }
+      } catch (e) {
+        console.error("[panchang] error:", (e as Error).message);
       }
-      const j = await r.json();
-      const data = j?.data ?? {};
-
-      // Tithi: data.tithi is an array [{name, paksha:{name}}, ...]
-      const tithiObj = Array.isArray(data.tithi) ? data.tithi[0] : data.tithi;
-      const tithiName: string = tithiObj?.name || "Tithi";
-      const pakshaRaw: string = (tithiObj?.paksha?.name || "").toLowerCase();
-      const paksha = pakshaRaw.includes("krishna") ? "Krishna" : "Shukla";
-
-      const weekdayEn = now.toLocaleDateString("en-US", { weekday: "long" });
-      const day = String(now.getDate());
-      const monthName = now.toLocaleDateString("en-US", { month: "long" });
-      const year = now.getFullYear();
-      const hinduWeekdays = ["Ravivaar", "Somvaar", "Mangalvaar", "Budhvaar", "Guruvaar", "Shukravaar", "Shanivaar"];
-
-      return {
-        line1: `${weekdayEn}, ${day} ${monthName} ${year}`,
-        line2: `${paksha} ${tithiName}`,
-        line3: `${getSakaYear(now)} Saka · ${hinduWeekdays[now.getDay()]}`,
-        source: "prokerala" as const,
-      };
-    } catch (e) {
-      console.error("[panchang] error:", (e as Error).message);
-      return fallbackPanchang();
     }
+
+    return fallbackPanchang();
   });

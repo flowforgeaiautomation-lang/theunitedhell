@@ -2,64 +2,69 @@ import { useState, useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { getCurrentPanchang } from "@/lib/panchang-functions";
 
-function nowInIndia() {
+// VERIFIED: Purnima ended June 29, 2026 ~23:30 IST (18:00 UTC).
+// June 30 IST = Krishna Pratipada (first tithi after Purnima).
+const PURNIMA_END_UTC = new Date("2026-06-29T18:00:00Z");
+const SYNODIC = 29.53058867;
+
+const TITHIS = [
+  "Pratipada", "Dwitiya", "Tritiya", "Chaturthi", "Panchami",
+  "Shashthi", "Saptami", "Ashtami", "Navami", "Dashami",
+  "Ekadashi", "Dwadashi", "Trayodashi", "Chaturdashi",
+];
+
+function calculateTithi(now: Date): { paksha: string; tithiName: string } {
+  const pos = ((now.getTime() - PURNIMA_END_UTC.getTime()) / (1000 * 60 * 60 * 24) % SYNODIC + SYNODIC) % SYNODIC;
+  const half = SYNODIC / 2;
+  if (pos < half) {
+    const n = Math.floor(pos);
+    return { paksha: "Krishna", tithiName: n >= 14 ? "Amavasya" : TITHIS[n] };
+  }
+  const n = Math.floor(pos - half);
+  return { paksha: "Shukla", tithiName: n >= 14 ? "Purnima" : TITHIS[n] };
+}
+
+function getSakaYear(now: Date): number {
+  return now.getFullYear() - (now.getMonth() < 2 || (now.getMonth() === 2 && now.getDate() < 22) ? 79 : 78);
+}
+
+function nowInIndia(): Date {
   return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
 }
 
+function getLocalFallback() {
+  const now = nowInIndia();
+  const { paksha, tithiName } = calculateTithi(new Date());
+  const hinduWeekdays = ["Ravivaar", "Somvaar", "Mangalvaar", "Budhvaar", "Guruvaar", "Shukravaar", "Shanivaar"];
+  return {
+    line1: `${now.toLocaleDateString("en-US", { weekday: "long" })}, ${now.getDate()} ${now.toLocaleDateString("en-US", { month: "long" })} ${now.getFullYear()}`,
+    line2: `${paksha} ${tithiName}`,
+    line3: `${getSakaYear(now)} Saka · ${hinduWeekdays[now.getDay()]}`,
+  };
+}
+
 export function PanchangDisplay() {
-  const [panchang, setPanchang] = useState<any>(null);
+  const [panchang, setPanchang] = useState<{ line1: string; line2: string; line3: string } | null>(null);
   const fetchPanchang = useServerFn(getCurrentPanchang);
 
-  const fetchData = async () => {
-    try {
-      setPanchang(await fetchPanchang({ data: {} }));
-    } catch (error) {
-      setPanchang(getFallbackPanchang());
-    }
-  };
-
   useEffect(() => {
-    fetchData();
+    let mounted = true;
+    const load = () =>
+      fetchPanchang({ data: {} })
+        .then((d) => { if (mounted) setPanchang(d); })
+        .catch(() => { if (mounted) setPanchang(getLocalFallback()); });
 
-    let timeoutId: number | null = null;
-    let intervalId: number | null = null;
+    load();
 
-    const scheduleMidnightRefresh = () => {
-      const now = new Date();
-      const midnight = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate() + 1,
-        0, 0, 0, 0
-      );
-      
-      const timeUntilMidnight = midnight.getTime() - now.getTime();
-      
-      timeoutId = window.setTimeout(() => {
-        fetchData();
-        scheduleMidnightRefresh();
-      }, timeUntilMidnight);
+    // Refresh at midnight IST
+    const scheduleRefresh = () => {
+      const now = nowInIndia();
+      const msToMidnight = (24 * 60 * 60 * 1000) - (now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds()) * 1000;
+      return window.setTimeout(() => { load(); scheduleRefresh(); }, msToMidnight);
     };
+    const t = scheduleRefresh();
 
-    let lastDate = new Date().getDate();
-    intervalId = window.setInterval(() => {
-      const currentDate = new Date().getDate();
-      if (currentDate !== lastDate) {
-        lastDate = currentDate;
-        fetchData();
-      }
-    }, 60000);
-
-    scheduleMidnightRefresh();
-    
-    return () => {
-      if (timeoutId !== null) {
-        clearTimeout(timeoutId);
-      }
-      if (intervalId !== null) {
-        clearInterval(intervalId);
-      }
-    };
+    return () => { mounted = false; clearTimeout(t); };
   }, [fetchPanchang]);
 
   if (!panchang) return null;
@@ -71,58 +76,4 @@ export function PanchangDisplay() {
       <span className="kicker text-[0.65rem] md:text-xs">{panchang.line3}</span>
     </div>
   );
-}
-
-// Known reference: June 14, 2026 at noon IST was Amavasya transitioning to Shukla Pratipada
-const KNOWN_AMAVASYA_END = new Date("2026-06-14T12:00:00+05:30");
-const LUNAR_MONTH_DAYS = 29.53058867; // Synodic month in days
-
-function calculateTithi(date: Date): { paksha: string; tithiName: string } {
-  const daysSinceAmavasya = (date.getTime() - KNOWN_AMAVASYA_END.getTime()) / (1000 * 60 * 60 * 24);
-  let lunarDay = daysSinceAmavasya % LUNAR_MONTH_DAYS;
-  if (lunarDay < 0) lunarDay += LUNAR_MONTH_DAYS;
-
-  const tithis = [
-    "Pratipada", "Dwitiya", "Tritiya", "Chaturthi", "Panchami",
-    "Shashthi", "Saptami", "Ashtami", "Navami", "Dashami",
-    "Ekadashi", "Dwadashi", "Trayodashi", "Chaturdashi", "Purnima"
-  ];
-
-  if (lunarDay < 15) {
-    const tithiNumber = Math.floor(lunarDay) + 1;
-    const tithiName = tithis[tithiNumber - 1];
-    return { paksha: "Shukla", tithiName };
-  } else if (lunarDay < 16) {
-    return { paksha: "Shukla", tithiName: "Purnima" };
-  } else {
-    const krishnaDay = lunarDay - 15;
-    const tithiNumber = Math.min(15, Math.floor(krishnaDay) + 1);
-    const tithiName = tithiNumber === 15 ? "Amavasya" : tithis[tithiNumber - 1];
-    return { paksha: "Krishna", tithiName };
-  }
-}
-
-function getFallbackPanchang() {
-  const now = nowInIndia();
-
-  const weekdayEn = now.toLocaleDateString('en-US', { weekday: 'long' });
-  const day = String(now.getDate());
-  const month = now.toLocaleDateString('en-US', { month: 'long' });
-  const year = now.getFullYear();
-
-  const { paksha, tithiName } = calculateTithi(now);
-  const sakaYear = getSakaYear(now);
-
-  const hinduWeekdays = ["Ravivaar", "Somvaar", "Mangalvaar", "Budhvaar", "Guruvaar", "Shukravaar", "Shanivaar"];
-  const hinduWeekday = hinduWeekdays[now.getDay()];
-
-  return {
-    line1: `${weekdayEn}, ${day} ${month} ${year}`,
-    line2: `${paksha} ${tithiName}`,
-    line3: `${sakaYear} Saka · ${hinduWeekday}`
-  };
-}
-
-function getSakaYear(now: Date) {
-  return now.getFullYear() - (now.getMonth() < 2 || (now.getMonth() === 2 && now.getDate() < 22) ? 79 : 78);
 }
