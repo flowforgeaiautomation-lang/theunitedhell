@@ -1,2 +1,12 @@
 {
+  "framework": null,
+  "installCommand": "npm install",
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "crons": [
+    {
+      "path": "/api/public/hooks/ingest",
+      "schedule": "*/20 * * * *"
+    }
+  ]
 }
