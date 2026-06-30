@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-r
 import { useQuery, queryOptions } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { listArticles } from "@/lib/articles.functions";
-import { curateNow } from "@/lib/ai.functions";
+import { curateNow, curateNowPublic } from "@/lib/ai.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { categoryLabel } from "@/lib/categories";
 import { ArticleCard } from "@/components/article-card";
@@ -42,7 +42,8 @@ function DiscoverPage() {
   const [signedIn, setSignedIn] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [country, setCountry] = useState<string>("WORLD");
-  const ingest = useServerFn(curateNow);
+  const ingestAuth = useServerFn(curateNow);
+  const ingestPublic = useServerFn(curateNowPublic);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session)); 
@@ -69,17 +70,20 @@ function DiscoverPage() {
   );
 
   async function topUp() {
-    if (!signedIn) {
-      toast.message("Sign in to curate new stories", {
-        action: { label: "Sign in", onClick: () => (window.location.href = "/auth") },
-      });
-      return;
-    }
     setGenerating(true);
     try {
-      const r = await ingest({ data: { maxItems: 60, category: active } });
-      toast.success(`${r.inserted} real live stories curated`);
-      q.refetch();
+      let r: { inserted: number };
+      if (signedIn) {
+        r = await ingestAuth({ data: { maxItems: 60, category: active } });
+      } else {
+        r = await ingestPublic({ data: { maxItems: 12, category: active } });
+      }
+      if (r.inserted > 0) {
+        toast.success(`${r.inserted} new stories added`);
+        q.refetch();
+      } else {
+        toast.message("No new stories found right now — try again in a few minutes");
+      }
     } catch (e) {
       toast.error((e as Error).message);
     } finally {

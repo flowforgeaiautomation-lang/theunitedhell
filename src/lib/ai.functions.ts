@@ -31,3 +31,13 @@ export const curateNow = createServerFn({ method: "POST" })
     const { runIngestion } = await import("./ingestion.server");
     return await runIngestion({ maxItems: data.maxItems, priorityCategory: data.category, mode: "manual" });
   });
+
+// Public curate — no auth required, limited to 20 items.
+export const curateNowPublic = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z.object({ maxItems: z.number().int().min(1).max(20).default(12), category: z.string().optional() }).parse(d ?? {}),
+  )
+  .handler(async ({ data }) => {
+    const { runIngestion } = await import("./ingestion.server");
+    return await runIngestion({ maxItems: data.maxItems, priorityCategory: data.category, mode: "cron" });
+  });

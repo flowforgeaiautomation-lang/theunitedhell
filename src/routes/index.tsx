@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { listArticles } from "@/lib/articles.functions";
-import { curateNow } from "@/lib/ai.functions";
+import { curateNow, curateNowPublic } from "@/lib/ai.functions";
 import { ArticleCard } from "@/components/article-card";
 import { CategoryModal } from "@/components/CategoryModal";
 
@@ -65,7 +65,8 @@ function Home() {
   const [signedIn, setSignedIn] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [country, setCountry] = useState<string>("WORLD");
-  const ingest = useServerFn(curateNow);
+  const ingestAuth = useServerFn(curateNow);
+  const ingestPublic = useServerFn(curateNowPublic);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session));
@@ -101,20 +102,22 @@ function Home() {
   );
 
   async function topUp() {
-    if (!signedIn) {
-      toast.message("Sign in to curate new stories", {
-        action: { label: "Sign in", onClick: () => (window.location.href = "/auth") },
-      });
-      return;
-    }
-
     setGenerating(true);
     try {
-      const result = await ingest({ data: { maxItems: 60, category: active } });
-      toast.success(`${result.inserted} real live stories curated`);
-      q.refetch();
+      let result: { inserted: number };
+      if (signedIn) {
+        result = await ingestAuth({ data: { maxItems: 60, category: active } });
+      } else {
+        result = await ingestPublic({ data: { maxItems: 12, category: active } });
+      }
+      if (result.inserted > 0) {
+        toast.success(`${result.inserted} new stories added`);
+        q.refetch();
+      } else {
+        toast.message("No new stories found right now — try again in a few minutes");
+      }
     } catch (error) {
-      toast.error((error as Error).message);
+      toast.error("Could not curate stories: " + (error as Error).message);
     } finally {
       setGenerating(false);
     }
@@ -164,12 +167,13 @@ function Home() {
 
       {q.data && q.data.length === 0 && (
         <div className="text-center py-16">
-          <p className="dek">Nothing here yet. Ask the AI to curate this category.</p>
+          <p className="dek">Nothing here yet — fetching live stories now.</p>
           <button
             onClick={topUp}
-            className="mt-4 border border-foreground px-4 py-2 text-xs uppercase tracking-widest hover:bg-foreground hover:text-background transition"
+            disabled={generating}
+            className="mt-4 border border-foreground px-4 py-2 text-xs uppercase tracking-widest hover:bg-foreground hover:text-background transition disabled:opacity-40"
           >
-            Curate now
+            {generating ? "Curating…" : "Curate now"}
           </button>
         </div>
       )}

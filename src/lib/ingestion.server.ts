@@ -229,6 +229,15 @@ const RSS_FEEDS: { source: string; url: string; topicHint?: string; forcedCatego
   { source: "Renewable Energy World", url: "https://www.renewableenergyworld.com/feed/", forcedCategory: "renewable-energy" },
 ];
 
+async function sha256(input: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(input);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 function adminClient() {
   return createClient<Database>(
     process.env.SUPABASE_URL!,
@@ -1030,6 +1039,16 @@ export async function runIngestion(opts?: { maxItems?: number; priorityCategory?
   const batchTitles = new Set<string>();
   const batchUrls = new Set<string>();
   const batchImages = new Set<string>();
+  const batchHashes = new Set<string>();
+
+  // Fetch existing content hashes to skip already-seen content
+  const { data: existingHashes } = await supabase
+    .from("articles")
+    .select("content_hash")
+    .not("content_hash", "is", null)
+    .limit(5000);
+  const existingHashSet = new Set((existingHashes ?? []).map((r: { content_hash: string | null }) => r.content_hash).filter(Boolean));
+
   for (const item of processed) {
     if (rows.length >= max) break;
     if (!item) { errors++; continue; }
@@ -1037,10 +1056,12 @@ export async function runIngestion(opts?: { maxItems?: number; priorityCategory?
     let cover = item.cover;
     const titleKey = normalizeText(p.title);
     const urlKey = normalizeUrl(raw.url);
-    if (batchTitles.has(titleKey) || batchUrls.has(urlKey)) { errors++; continue; }
+    const contentHash = await sha256(titleKey + "|" + urlKey);
+    if (batchTitles.has(titleKey) || batchUrls.has(urlKey) || batchHashes.has(contentHash) || existingHashSet.has(contentHash)) { errors++; continue; }
     if (cover && batchImages.has(cover)) cover = fallbackCoverDataUrl(p.title || raw.title, p.category || raw.forcedCategory || "world");
     batchTitles.add(titleKey);
     batchUrls.add(urlKey);
+    batchHashes.add(contentHash);
     if (cover) batchImages.add(cover);
     rows.push({
       slug: `${slugify(p.title)}-${Math.random().toString(36).slice(2, 6)}`,
@@ -1055,9 +1076,10 @@ export async function runIngestion(opts?: { maxItems?: number; priorityCategory?
       sources: [{ name: raw.source, url: raw.url }] as unknown as Database["public"]["Tables"]["articles"]["Insert"]["sources"],
       story: (p.story || {}) as unknown as Database["public"]["Tables"]["articles"]["Insert"]["story"],
       country_code: p.country_code || null,
-      published_at: raw.publishedAt,
+      published_at: new Date().toISOString(),
       is_published: true,
-    });
+      content_hash: contentHash,
+    } as unknown as Database["public"]["Tables"]["articles"]["Insert"]);
   }
   for (const row of rows) {
     const { error } = await supabase.from("articles").insert(row);
