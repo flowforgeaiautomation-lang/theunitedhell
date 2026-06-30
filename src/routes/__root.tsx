@@ -97,6 +97,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/26064541-ea86-4f86-8c33-e06d2af5defd/id-preview-7b8da711--8976fc18-b87e-4c0b-b991-9aea76df5b96.lovable.app-1782369186247.png" },
       { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/26064541-ea86-4f86-8c33-e06d2af5defd/id-preview-7b8da711--8976fc18-b87e-4c0b-b991-9aea76df5b96.lovable.app-1782369186247.png" },
     ],
+    scripts: [
+      {
+        src: "https://www.googletagmanager.com/gtag/js?id=G-K7HBFF1Z2L",
+        async: true,
+      },
+      {
+        children: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-K7HBFF1Z2L');`,
+      },
+    ],
     links: [
       { rel: "stylesheet", href: appCss },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
