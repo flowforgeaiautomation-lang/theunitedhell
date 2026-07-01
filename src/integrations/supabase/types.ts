@@ -46,7 +46,6 @@ export type Database = {
           bookmark_count: number
           category: string
           comment_count: number
-          content_hash: string | null
           country_code: string | null
           cover_image_prompt: string | null
           cover_image_url: string | null
@@ -74,7 +73,6 @@ export type Database = {
           bookmark_count?: number
           category: string
           comment_count?: number
-          content_hash?: string | null
           country_code?: string | null
           cover_image_prompt?: string | null
           cover_image_url?: string | null
@@ -102,7 +100,6 @@ export type Database = {
           bookmark_count?: number
           category?: string
           comment_count?: number
-          content_hash?: string | null
           country_code?: string | null
           cover_image_prompt?: string | null
           cover_image_url?: string | null
