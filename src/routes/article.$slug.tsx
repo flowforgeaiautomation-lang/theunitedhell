@@ -2,7 +2,7 @@ import { createFileRoute, Link, notFound, useRouter } from "@tanstack/react-rout
 import { useQuery, queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { getArticleBySlug, getRelated, listComments, postReflection } from "@/lib/articles.functions";
+import { getArticleBySlug, getRelated, listComments } from "@/lib/articles.functions";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { postComment, deleteComment } from "@/lib/interactions.functions";
@@ -580,7 +580,6 @@ type SortMode = "newest" | "top" | "oldest";
 
 function KnowledgeCheckReflection({ articleId, story, title }: { articleId: string; story?: any; title?: string }) {
   const qc = useQueryClient();
-  const send = useServerFn(postReflection);
   const [posted, setPosted] = useState(false);
 
   return (
@@ -589,16 +588,26 @@ function KnowledgeCheckReflection({ articleId, story, title }: { articleId: stri
       story={story}
       title={title}
       onReflection={(reflectionText: string) => {
-        send({ data: { articleId, body: reflectionText, promptType: "perspective" } })
-          .then(() => {
+        supabase
+          .from("comments")
+          .insert({
+            article_id: articleId,
+            user_id: null,
+            prompt_type: "perspective",
+            body: reflectionText,
+          })
+          .then(({ error }: { error: any }) => {
+            if (error) {
+              toast.error(error.message);
+              return;
+            }
             qc.invalidateQueries({ queryKey: ["comments", articleId] });
             toast.success("Your reflection was posted to the discussion");
             setPosted(true);
             requestAnimationFrame(() => {
               document.getElementById("discussion")?.scrollIntoView({ behavior: "smooth", block: "start" });
             });
-          })
-          .catch((e: Error) => toast.error(e.message));
+          });
       }}
     />
   );

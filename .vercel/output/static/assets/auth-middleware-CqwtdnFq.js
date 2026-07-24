@@ -1,1 +1,0 @@
-import{gt as e}from"./index-CoTq8GL0.js";var t=e({type:`function`});export{t};
