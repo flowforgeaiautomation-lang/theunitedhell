@@ -646,7 +646,9 @@ function KnowledgeCheckReflection({ articleId, story, title }: { articleId: stri
           author: null,
         };
 
-        qc.setQueryData<CommentRow[]>(["comments", articleId], (old = []) => [optimisticComment, ...old]);
+        qc.setQueryData<CommentRow[]>(["comments", articleId, "newest"], (old = []) => [optimisticComment, ...old]);
+        qc.setQueryData<CommentRow[]>(["comments", articleId, "oldest"], (old = []) => [...old, optimisticComment]);
+        qc.setQueryData<CommentRow[]>(["comments", articleId, "top"], (old = []) => [optimisticComment, ...old]);
         setPosted(true);
         requestAnimationFrame(() => {
           document.getElementById("discussion")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -654,11 +656,11 @@ function KnowledgeCheckReflection({ articleId, story, title }: { articleId: stri
 
         sendReflection({ data: { articleId, body: reflectionText } })
           .then(() => {
-            qc.invalidateQueries({ queryKey: ["comments", articleId] });
+            qc.invalidateQueries({ queryKey: ["comments", articleId], exact: false });
             toast.success("Your reflection was posted to the discussion");
           })
           .catch(() => {
-            qc.invalidateQueries({ queryKey: ["comments", articleId] });
+            qc.invalidateQueries({ queryKey: ["comments", articleId], exact: false });
             toast.success("Your reflection was posted to the discussion");
           });
       }}
@@ -785,11 +787,11 @@ function Discussion({ articleId }: { articleId: string }) {
       setReplyingTo(null);
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["comments", articleId] });
+      qc.invalidateQueries({ queryKey: ["comments", articleId], exact: false });
       toast.success("Posted to the discussion");
     },
     onError: () => {
-      qc.invalidateQueries({ queryKey: ["comments", articleId] });
+      qc.invalidateQueries({ queryKey: ["comments", articleId], exact: false });
       toast.success("Posted to the discussion");
     },
   });
@@ -814,11 +816,10 @@ function Discussion({ articleId }: { articleId: string }) {
       );
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["comments", articleId] });
+      qc.invalidateQueries({ queryKey: ["comments", articleId], exact: false });
     },
     onError: () => {
-      // Revert on error
-      qc.invalidateQueries({ queryKey: ["comments", articleId] });
+      qc.invalidateQueries({ queryKey: ["comments", articleId], exact: false });
     },
   });
 
@@ -830,11 +831,11 @@ function Discussion({ articleId }: { articleId: string }) {
       );
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["comments", articleId] });
+      qc.invalidateQueries({ queryKey: ["comments", articleId], exact: false });
       toast.success("Comment deleted");
     },
     onError: () => {
-      qc.invalidateQueries({ queryKey: ["comments", articleId] });
+      qc.invalidateQueries({ queryKey: ["comments", articleId], exact: false });
     },
   });
 
@@ -849,11 +850,11 @@ function Discussion({ articleId }: { articleId: string }) {
       setEditBody("");
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["comments", articleId] });
+      qc.invalidateQueries({ queryKey: ["comments", articleId], exact: false });
       toast.success("Comment edited");
     },
     onError: () => {
-      qc.invalidateQueries({ queryKey: ["comments", articleId] });
+      qc.invalidateQueries({ queryKey: ["comments", articleId], exact: false });
     },
   });
 
