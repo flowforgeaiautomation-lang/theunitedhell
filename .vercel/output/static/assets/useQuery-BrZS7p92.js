@@ -1,1 +1,0 @@
-import{r as e,t}from"./useBaseQuery-CQ64gy-0.js";function n(n,r){return t(n,e,r)}export{n as t};

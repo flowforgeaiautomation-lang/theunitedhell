@@ -69,12 +69,9 @@ function dedupeSummaries(rows: ArticleSummary[], limit: number) {
   const out: ArticleSummary[] = [];
   for (const raw of rows) {
     const row = decodeSummary(raw);
-    const key = normalizeText(row.title || row.dek || row.slug);
-    const softKey = normalizeText(row.dek || row.title).slice(0, 110);
-    if (!key || seen.has(row.id) || seen.has(key) || (softKey && seen.has(softKey))) continue;
+    // Deduplicate by ID only — never drop articles with similar titles
+    if (!row.id || seen.has(row.id)) continue;
     seen.add(row.id);
-    seen.add(key);
-    if (softKey) seen.add(softKey);
     out.push(row);
     if (out.length >= limit) break;
   }

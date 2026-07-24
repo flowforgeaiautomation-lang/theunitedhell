@@ -1,1 +1,0 @@
-import{xt as e}from"./index-Xvn3sCu6.js";var t=e({type:`function`});export{t};

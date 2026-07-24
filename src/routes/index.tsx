@@ -251,15 +251,27 @@ function Home() {
         </div>
       )}
 
-      {articles.length === 0 && !articlesQuery.isLoading && (
+      {articles.length === 0 && !articlesQuery.isLoading && !articlesQuery.isError && (
         <div className="text-center py-16">
-          <p className="dek">Nothing here yet — fetching live stories now.</p>
+          <p className="dek">No stories found. Try curating fresh content below.</p>
           <button
             onClick={topUp}
             disabled={generating}
             className="mt-4 border border-foreground px-4 py-2 text-xs uppercase tracking-widest hover:bg-foreground hover:text-background transition disabled:opacity-40"
           >
             {generating ? "Curating…" : "Curate now"}
+          </button>
+        </div>
+      )}
+
+      {articlesQuery.isError && (
+        <div className="text-center py-16">
+          <p className="dek">We couldn't load stories right now. {(articlesQuery.error as Error)?.message}</p>
+          <button
+            onClick={() => articlesQuery.refetch()}
+            className="mt-4 border border-foreground px-4 py-2 text-xs uppercase tracking-widest hover:bg-foreground hover:text-background transition"
+          >
+            Try again
           </button>
         </div>
       )}
