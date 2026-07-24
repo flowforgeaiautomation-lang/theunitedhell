@@ -1,0 +1,1 @@
+import{pt as e}from"./index-B4TsoA_1.js";var t=e({type:`function`});export{t};

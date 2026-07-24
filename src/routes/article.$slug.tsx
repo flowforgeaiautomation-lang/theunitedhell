@@ -602,6 +602,9 @@ function KnowledgeCheckReflection({ articleId, story, title }: { articleId: stri
       title={title}
       onReflection={(text) => {
         if (signedIn) reflectionMutation.mutate(text);
+        requestAnimationFrame(() => {
+          document.getElementById("discussion")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
       }}
     />
   );
@@ -775,7 +778,7 @@ function Discussion({ articleId }: { articleId: string }) {
   }
 
   return (
-    <section className="container-read py-16 border-t rule">
+    <section id="discussion" className="container-read py-16 border-t rule scroll-mt-4">
       <div className="kicker mb-6">The Discussion</div>
       <h2 className="display-2 mb-8">
         A guided conversation
