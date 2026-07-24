@@ -721,6 +721,7 @@ export const postReflection = createServerFn({ method: "POST" })
         articleId: z.string().uuid(),
         body: z.string().trim().min(1).max(4000),
         promptType: z.enum(["learned", "surprised", "question", "perspective", "reply"]).optional(),
+        parentId: z.string().uuid().nullable().optional(),
       })
       .parse(d),
   )
@@ -731,6 +732,7 @@ export const postReflection = createServerFn({ method: "POST" })
       .insert({
         article_id: data.articleId,
         user_id: null,
+        parent_id: data.parentId ?? null,
         prompt_type: data.promptType ?? "perspective",
         body: data.body,
       })
@@ -738,6 +740,24 @@ export const postReflection = createServerFn({ method: "POST" })
       .single();
     if (error) throw new Error(error.message);
     return { id: row.id };
+  });
+
+export const bumpLike = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ commentId: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const supabase = publicClient();
+    const { error } = await supabase.rpc("bump_comment_likes", { comment_id: data.commentId });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const deleteCommentAnon = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ commentId: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const supabase = publicClient();
+    const { error } = await supabase.from("comments").delete().eq("id", data.commentId);
+    if (error) throw new Error(error.message);
+    return { deleted: true };
   });
 
 export const listComments = createServerFn({ method: "GET" })

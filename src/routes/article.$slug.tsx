@@ -2,14 +2,13 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useQuery, queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { getArticleBySlug, getRelated, listComments } from "@/lib/articles.functions";
-import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@/integrations/supabase/types";
+import { getArticleBySlug, getRelated, listComments, postReflection, bumpLike, deleteCommentAnon } from "@/lib/articles.functions";
+
 
 import { ArticleActions } from "@/components/article-actions";
 import { ArticleCard } from "@/components/article-card";
 import { categoryLabel } from "@/lib/categories";
-import { supabase } from "@/integrations/supabase/client";
+
 import { toast } from "sonner";
 import { Quote, Lightbulb, Clock, TrendingUp, Users, Building2, Globe2, Hash, Sparkles, Info, Bookmark, ChevronRight, ArrowBigUp, MessageCircle, Trash2, CornerDownRight } from "lucide-react";
 import type { CommentRow, ArticleStory, KeyNumber, PersonInvolved, OrganizationInvolved, CountryInvolved } from "@/lib/types";
@@ -29,13 +28,7 @@ const articleQ = (slug: string) =>
     gcTime: 10 * 60 * 1000,
   });
 
-function directSupabaseClient() {
-  return createClient<Database>(
-    process.env.SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL,
-    process.env.SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-    { auth: { persistSession: false, autoRefreshToken: false, storage: undefined } },
-  );
-}
+
 
 export const Route = createFileRoute("/article/$slug")({
   loader: async ({ context, params }) => {
@@ -46,16 +39,7 @@ export const Route = createFileRoute("/article/$slug")({
     } catch (e) {
       if (e && typeof e === 'object' && 'status' in e && (e as any).status === 404) throw e;
       try {
-        const supabase = directSupabaseClient();
-        const { data: row, error } = await supabase
-          .from("articles")
-          .select("*")
-          .eq("slug", params.slug)
-          .eq("is_published", true)
-          .maybeSingle();
-        if (error) throw error;
-        if (!row) throw notFound();
-        return { article: row as any };
+        throw notFound();
       } catch (e2) {
         if (e2 && typeof e2 === 'object' && 'status' in e2 && (e2 as any).status === 404) throw e2;
         console.error("[article loader] SSR fallback failed:", e2);
@@ -579,6 +563,7 @@ type SortMode = "newest" | "top" | "oldest";
 
 function KnowledgeCheckReflection({ articleId, story, title }: { articleId: string; story?: any; title?: string }) {
   const qc = useQueryClient();
+  const sendReflection = useServerFn(postReflection);
   const [posted, setPosted] = useState(false);
 
   return (
@@ -587,26 +572,16 @@ function KnowledgeCheckReflection({ articleId, story, title }: { articleId: stri
       story={story}
       title={title}
       onReflection={(reflectionText: string) => {
-        supabase
-          .from("comments")
-          .insert({
-            article_id: articleId,
-            user_id: null,
-            prompt_type: "perspective",
-            body: reflectionText,
-          })
-          .then(({ error }: { error: any }) => {
-            if (error) {
-              toast.error(error.message);
-              return;
-            }
+        sendReflection({ data: { articleId, body: reflectionText } })
+          .then(() => {
             qc.invalidateQueries({ queryKey: ["comments", articleId] });
             toast.success("Your reflection was posted to the discussion");
             setPosted(true);
             requestAnimationFrame(() => {
               document.getElementById("discussion")?.scrollIntoView({ behavior: "smooth", block: "start" });
             });
-          });
+          })
+          .catch((e: Error) => toast.error(e.message));
       }}
     />
   );
@@ -615,21 +590,15 @@ function KnowledgeCheckReflection({ articleId, story, title }: { articleId: stri
 function Discussion({ articleId }: { articleId: string }) {
   const qc = useQueryClient();
   const fetchComments = useServerFn(listComments);
-  const [signedIn, setSignedIn] = useState<boolean | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const sendReflection = useServerFn(postReflection);
+  const likeFn = useServerFn(bumpLike);
+  const delFn = useServerFn(deleteCommentAnon);
   const [prompt, setPrompt] = useState<typeof PROMPTS[number]["id"]>("perspective");
   const [body, setBody] = useState("");
   const [sort, setSort] = useState<SortMode>("newest");
   const [likedComments, setLikedComments] = useState<Set<string>>(new Set());
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyBody, setReplyBody] = useState("");
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSignedIn(!!data.session);
-      setCurrentUserId(data.session?.user?.id ?? null);
-    });
-  }, []);
 
   const { data: comments = [] } = useQuery({
     queryKey: ["comments", articleId],
@@ -647,16 +616,8 @@ function Discussion({ articleId }: { articleId: string }) {
   });
 
   const mutation = useMutation({
-    mutationFn: async (input: { body: string; promptType: typeof PROMPTS[number]["id"]; parentId?: string | null }) => {
-      const { error } = await supabase.from("comments").insert({
-        article_id: articleId,
-        user_id: currentUserId,
-        parent_id: input.parentId ?? null,
-        prompt_type: input.promptType,
-        body: input.body,
-      });
-      if (error) throw new Error(error.message);
-    },
+    mutationFn: (input: { body: string; promptType: typeof PROMPTS[number]["id"]; parentId?: string | null }) =>
+      sendReflection({ data: { articleId, body: input.body, promptType: input.promptType, parentId: input.parentId ?? null } }),
     onSuccess: () => {
       setBody("");
       setReplyBody("");
@@ -668,10 +629,7 @@ function Discussion({ articleId }: { articleId: string }) {
   });
 
   const likeMutation = useMutation({
-    mutationFn: async (commentId: string) => {
-      const { error } = await supabase.rpc("bump_comment_likes", { comment_id: commentId });
-      if (error) throw new Error(error.message);
-    },
+    mutationFn: (commentId: string) => likeFn({ data: { commentId } }),
     onMutate: (commentId) => {
       setLikedComments((prev) => {
         const next = new Set(prev);
@@ -685,10 +643,7 @@ function Discussion({ articleId }: { articleId: string }) {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (commentId: string) => {
-      const { error } = await supabase.from("comments").delete().eq("id", commentId);
-      if (error) throw new Error(error.message);
-    },
+    mutationFn: (commentId: string) => delFn({ data: { commentId } }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["comments", articleId] });
       toast.success("Comment deleted");
@@ -699,7 +654,7 @@ function Discussion({ articleId }: { articleId: string }) {
   function renderComment(c: CommentRow, isReply: boolean) {
     const isLiked = likedComments.has(c.id);
     const count = (c.like_count ?? 0) + (isLiked ? 1 : 0);
-    const canDelete = signedIn && currentUserId === c.user_id;
+    const canDelete = false;
     const childReplies = repliesOf(c.id);
 
     return (
@@ -719,16 +674,14 @@ function Discussion({ articleId }: { articleId: string }) {
         </div>
         <p className="font-serif text-lg leading-snug whitespace-pre-wrap">{c.body}</p>
         <div className="mt-3 flex items-center gap-3">
-          {signedIn && (
-            <button
-              onClick={() => likeMutation.mutate(c.id)}
-              className={`flex items-center gap-1 text-sm transition ${isLiked ? "text-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              {isLiked ? <ArrowBigUp className="h-4 w-4 fill-current" /> : <ArrowBigUp className="h-4 w-4" />}
-              <span>{count}</span>
-            </button>
-          )}
-          {signedIn && !isReply && (
+          <button
+            onClick={() => likeMutation.mutate(c.id)}
+            className={`flex items-center gap-1 text-sm transition ${isLiked ? "text-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            {isLiked ? <ArrowBigUp className="h-4 w-4 fill-current" /> : <ArrowBigUp className="h-4 w-4" />}
+            <span>{count}</span>
+          </button>
+          {!isReply && (
             <button
               onClick={() => {
                 setReplyingTo(replyingTo === c.id ? null : c.id);
@@ -752,7 +705,7 @@ function Discussion({ articleId }: { articleId: string }) {
           )}
         </div>
 
-        {replyingTo === c.id && signedIn && (
+        {replyingTo === c.id && (
           <div className="mt-4 ml-2">
             <textarea
               value={replyBody}

@@ -3,7 +3,7 @@ import { c as require_react, s as require_jsx_runtime } from "../_libs/react+tan
 import { v as useNavigate } from "../_libs/@tanstack/react-router+[...].mjs";
 import { n as toast } from "../_libs/sonner.mjs";
 import { t as supabase } from "./client-d8MeWTAO.mjs";
-import { G as EyeOff, W as Eye } from "../_libs/lucide-react.mjs";
+import { U as Eye, W as EyeOff } from "../_libs/lucide-react.mjs";
 //#region node_modules/.nitro/vite/services/ssr/assets/reset-password-CGVZsPZK.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
