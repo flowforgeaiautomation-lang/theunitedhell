@@ -20,6 +20,14 @@ export const Route = createFileRoute("/search")({
   validateSearch: (s: Record<string, unknown>) => ({
     q: typeof s.q === "string" ? s.q : "",
   }),
+  loader: async ({ context }) => {
+    await context.queryClient.prefetchQuery(
+      queryOptions({
+        queryKey: ["search", "", undefined, undefined, "recent"],
+        queryFn: () => listArticles({ data: { limit: 36 } }),
+      }),
+    );
+  },
   head: () => ({
     meta: [
       { title: "Search — The United Hell" },

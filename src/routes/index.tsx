@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
+import { useQuery, queryOptions } from "@tanstack/react-query";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Sparkles, Loader2 } from "lucide-react";
@@ -11,6 +12,13 @@ import { ScrollToTop } from "@/components/ScrollToTop";
 import { categoryLabel } from "@/lib/categories";
 import { supabase } from "@/integrations/supabase/client";
 import { canonicalUrl, SITE_NAME, SITE_LOGO } from "@/lib/seo";
+
+const homeQuery = (category: string | undefined, country: string | undefined) =>
+  queryOptions({
+    queryKey: ["home", category ?? "all", country ?? "world"],
+    queryFn: () => listArticles({ data: { limit: 24, offset: 0, category, country, todayOnly: true } }),
+    staleTime: 30_000,
+  });
 
 const COUNTRY_LABELS: Record<string, string> = {
   IN: "India",
@@ -52,6 +60,9 @@ export const Route = createFileRoute("/")({
       { rel: "canonical", href: canonicalUrl("/") },
     ],
   }),
+  loader: async ({ context }) => {
+    await context.queryClient.prefetchQuery(homeQuery(undefined, undefined));
+  },
   component: Home,
   errorComponent: ({ error }) => (
     <div className="container-edit py-20 text-center">
@@ -72,13 +83,16 @@ function Home() {
   const ingestAuth = useServerFn(curateNow);
   const ingestPublic = useServerFn(curateNowPublic);
 
-  const [articles, setArticles] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const offsetRef = useRef(0);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const isFetchingRef = useRef(false);
+
+  const articlesQuery = useQuery(homeQuery(active, country === "WORLD" ? undefined : country));
+  const baseArticles = articlesQuery.data ?? [];
+  const [extraArticles, setExtraArticles] = useState<any[]>([]);
+  const articles = [...baseArticles, ...extraArticles];
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session));
@@ -112,23 +126,11 @@ function Home() {
   }, [active, country]);
 
   const reset = useCallback(async () => {
-    setLoading(true);
-    setArticles([]);
+    setExtraArticles([]);
+    articlesQuery.refetch();
     setHasMore(true);
     offsetRef.current = 0;
-    isFetchingRef.current = true;
-    try {
-      const data = await fetchPage(0);
-      setArticles(data);
-      offsetRef.current = data.length;
-      if (data.length < PAGE_SIZE) setHasMore(false);
-    } catch {
-      setHasMore(false);
-    } finally {
-      setLoading(false);
-      isFetchingRef.current = false;
-    }
-  }, [fetchPage]);
+  }, [articlesQuery]);
 
   const loadMore = useCallback(async () => {
     if (isFetchingRef.current || !hasMore) return;
@@ -139,8 +141,8 @@ function Home() {
       const newArticles = await fetchPage(offset);
       if (newArticles.length < PAGE_SIZE) setHasMore(false);
       if (newArticles.length > 0) {
-        setArticles((prev) => {
-          const existingIds = new Set(prev.map((a) => a.id));
+        setExtraArticles((prev) => {
+          const existingIds = new Set([...baseArticles, ...prev].map((a) => a.id));
           const unique = newArticles.filter((a) => !existingIds.has(a.id));
           return [...prev, ...unique];
         });
@@ -154,22 +156,25 @@ function Home() {
       setLoadingMore(false);
       isFetchingRef.current = false;
     }
-  }, [fetchPage, hasMore]);
+  }, [fetchPage, hasMore, baseArticles]);
 
-  useEffect(() => { reset(); }, [reset]);
+  useEffect(() => {
+    offsetRef.current = baseArticles.length;
+    if (baseArticles.length < PAGE_SIZE) setHasMore(false);
+  }, [baseArticles]);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
     if (!sentinel) return;
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && !loading && !loadingMore && hasMore) loadMore();
+        if (entries[0].isIntersecting && !loadingMore && hasMore) loadMore();
       },
       { rootMargin: "800px" },
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [loadMore, loading, loadingMore, hasMore]);
+  }, [loadMore, loadingMore, hasMore]);
 
   async function topUp() {
     setGenerating(true);
@@ -226,20 +231,7 @@ function Home() {
         </button>
       </div>
 
-      {loading && (
-        <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="animate-pulse">
-              <div className="aspect-[4/3] bg-foreground/10 mb-4" />
-              <div className="h-3 w-20 bg-foreground/10 mb-3" />
-              <div className="h-5 w-full bg-foreground/10 mb-2" />
-              <div className="h-5 w-2/3 bg-foreground/10" />
-            </div>
-          ))}
-        </div>
-      )}
-
-      {!loading && articles.length > 0 && (
+      {articles.length > 0 && (
         <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-3">
           {articles.map((article, i) => (
             <div
@@ -253,7 +245,7 @@ function Home() {
         </div>
       )}
 
-      {!loading && articles.length === 0 && (
+      {articles.length === 0 && !articlesQuery.isLoading && (
         <div className="text-center py-16">
           <p className="dek">Nothing here yet — fetching live stories now.</p>
           <button
@@ -274,7 +266,7 @@ function Home() {
         </div>
       )}
 
-      {!hasMore && !loading && articles.length > 0 && (
+      {!hasMore && articles.length > 0 && (
         <div className="text-center py-12">
           <p className="kicker">You've reached the end of today's edition</p>
         </div>
