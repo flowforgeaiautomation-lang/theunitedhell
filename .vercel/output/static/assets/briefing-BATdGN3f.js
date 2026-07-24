@@ -1,0 +1,1 @@
+import{t as e}from"./jsx-runtime-DUAcabCT.js";var t=e(),n=({error:e})=>(0,t.jsx)(`div`,{className:`container-read py-20`,children:(0,t.jsxs)(`p`,{className:`dek`,children:[`Could not load briefing: `,e.message]})});export{n as errorComponent};

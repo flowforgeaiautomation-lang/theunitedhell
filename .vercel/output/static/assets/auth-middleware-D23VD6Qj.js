@@ -1,0 +1,1 @@
+import{dt as e}from"./index-CAFki1r2.js";var t=e({type:`function`});export{t};

@@ -1,0 +1,22 @@
+<!-- Add these lines to the <head> section of your index.html -->
+
+<!-- Ezoic Site Integration Script -->
+<script src="https://www.ezojs.com/ezoic/sa.min.js"></script>
+<script>
+  window.ezstandalone = window.ezstandalone || { cmd: [] };
+  window.ezstandalone.cmd.push(function() {
+    window.ezstandalone.showAds();
+  });
+</script>
+
+<!-- Ezoic Placeholder Definitions (Step 3: Ad Placements) -->
+<script>
+  window.ezstandalone = window.ezstandalone || { cmd: [] };
+  window.ezstandalone.cmd.push(function() {
+    window.ezstandalone.definePlaceholder(100, 100);
+    window.ezstandalone.definePlaceholder(101, 101);
+    window.ezstandalone.definePlaceholder(102, 102);
+    window.ezstandalone.definePlaceholder(103, 103);
+    window.ezstandalone.definePlaceholder(104, 104);
+  });
+</script>
