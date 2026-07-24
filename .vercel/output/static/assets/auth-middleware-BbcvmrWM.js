@@ -1,1 +1,0 @@
-import{bt as e}from"./index-MtYlFUb3.js";var t=e({type:`function`});export{t};
