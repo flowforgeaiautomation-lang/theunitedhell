@@ -1,1 +1,0 @@
-import{t as e}from"./jsx-runtime-DUAcabCT.js";var t=e(),n=({error:e})=>(0,t.jsx)(`div`,{className:`container-read py-24 text-center`,children:(0,t.jsxs)(`p`,{className:`dek`,children:[`We couldn't load this story. `,e.message]})});export{n as errorComponent};

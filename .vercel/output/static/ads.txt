@@ -1,4 +1,0 @@
-# Ezoic Ads.txt - theunitedhell.com
-# Source: https://srv.adstxtmanager.com/19390/theunitedhell.com
-google.com, pub-6206606606606606, DIRECT, f08c47fec0942fa0
-ezoic.com, 16785, DIRECT, fa588601b0bf5a85

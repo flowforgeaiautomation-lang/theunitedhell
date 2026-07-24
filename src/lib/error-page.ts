@@ -5,7 +5,6 @@ export function renderErrorPage(): string {
     <meta charset="utf-8" />
     <title>Loading…</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta http-equiv="refresh" content="3;url=/" />
     <style>
       body { font: 15px/1.5 system-ui, -apple-system, sans-serif; background: #fafafa; color: #111; display: grid; place-items: center; min-height: 100vh; margin: 0; padding: 1.5rem; }
       .card { max-width: 28rem; width: 100%; text-align: center; padding: 2rem; }
@@ -30,7 +29,6 @@ export function renderErrorPage(): string {
       </div>
     </div>
     <script>
-      // Auto-retry immediately, then after 3s redirect home
       setTimeout(function() { location.reload(); }, 1500);
     </script>
   </body>
