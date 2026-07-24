@@ -40,7 +40,7 @@ function MapPage() {
 
   const q = useQuery({
     queryKey: ["country-articles", active],
-    queryFn: () => listArticles({ data: { country: active, limit: 12 } }),
+    queryFn: async () => (await listArticles({ data: { country: active, limit: 12 } })).items,
     enabled: !!active,
   });
 

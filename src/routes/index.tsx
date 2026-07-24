@@ -23,19 +23,9 @@ const homeQuery = (category: string | undefined, country: string | undefined) =>
   });
 
 const COUNTRY_LABELS: Record<string, string> = {
-  IN: "India",
-  US: "United States",
-  GB: "United Kingdom",
-  CA: "Canada",
-  AU: "Australia",
-  CN: "China",
-  JP: "Japan",
-  BR: "Brazil",
-  FR: "France",
-  DE: "Germany",
-  AE: "UAE",
-  SG: "Singapore",
-  ZA: "South Africa",
+  IN: "India", US: "United States", GB: "United Kingdom", CA: "Canada",
+  AU: "Australia", CN: "China", JP: "Japan", BR: "Brazil", FR: "France",
+  DE: "Germany", AE: "UAE", SG: "Singapore", ZA: "South Africa",
 };
 
 const PAGE_SIZE = 24;
@@ -43,8 +33,7 @@ const PAGE_SIZE = 24;
 const cardVariants = {
   hidden: { opacity: 0, y: 24 },
   visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
+    opacity: 1, y: 0,
     transition: { duration: 0.4, delay: Math.min(i % 6, 5) * 0.06, ease: [0.2, 0.7, 0.2, 1] as const },
   }),
 };
@@ -67,9 +56,7 @@ export const Route = createFileRoute("/")({
       { name: "twitter:title", content: "The United Hell — Today" },
       { name: "twitter:description", content: "The Discovery Engine — explore beyond what you came for." },
     ],
-    links: [
-      { rel: "canonical", href: canonicalUrl("/") },
-    ],
+    links: [{ rel: "canonical", href: canonicalUrl("/") }],
   }),
   loader: async ({ context }) => {
     await context.queryClient.prefetchQuery(homeQuery(undefined, undefined));
@@ -94,26 +81,42 @@ function Home() {
   const ingestAuth = useServerFn(curateNow);
   const ingestPublic = useServerFn(curateNowPublic);
 
-  const [extraArticles, setExtraArticles] = useState<ArticleSummary[]>([]);
-  const [cursor, setCursor] = useState<string | undefined>(undefined);
-  const [loadingMore, setLoadingMore] = useState(false);
+  // Single unified list — no split between "base" and "extra"
+  const [articles, setArticles] = useState<ArticleSummary[]>([]);
   const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const cursorRef = useRef<string | undefined>(undefined);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const isFetchingRef = useRef(false);
 
   const articlesQuery = useQuery(homeQuery(active, country === "WORLD" ? undefined : country));
-  const baseResult = articlesQuery.data;
-  const baseArticles: ArticleSummary[] = Array.isArray(baseResult) ? baseResult : (baseResult?.items ?? []);
-  const baseHasMore = Array.isArray(baseResult) ? true : (baseResult?.hasMore ?? false);
-  const baseCursor = Array.isArray(baseResult) ? undefined : baseResult?.nextCursor;
 
-  const articles = [...baseArticles, ...extraArticles];
+  // When the base query resolves, seed the articles list from it
+  useEffect(() => {
+    const result = articlesQuery.data;
+    if (!result) return;
+    const items = (result as any).items ?? (Array.isArray(result) ? result : []);
+    if (items.length === 0) {
+      setArticles([]);
+      setHasMore(false);
+      cursorRef.current = undefined;
+      return;
+    }
+    // Only seed if this is a fresh query (different articles than what we have)
+    const currentIds = new Set(articles.map((a) => a.id));
+    const newIds = items.map((a: ArticleSummary) => a.id);
+    const isSamePage = newIds.length > 0 && newIds.every((id: string) => currentIds.has(id));
+    if (!isSamePage) {
+      setArticles(items);
+      cursorRef.current = (result as any).nextCursor;
+      setHasMore((result as any).hasMore ?? false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [articlesQuery.data]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session));
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) =>
-      setSignedIn(!!session),
-    );
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSignedIn(!!s));
     return () => sub.subscription.unsubscribe();
   }, []);
 
@@ -124,15 +127,13 @@ function Home() {
     return () => window.removeEventListener("tuh-preferences", readPrefs);
   }, []);
 
-  useEffect(() => {
-    setActive(search.category);
-  }, [search.category]);
+  useEffect(() => { setActive(search.category); }, [search.category]);
 
-  // Reset extra articles when filters change
+  // Reset everything when filters change
   useEffect(() => {
-    setExtraArticles([]);
-    setCursor(undefined);
+    setArticles([]);
     setHasMore(true);
+    cursorRef.current = undefined;
   }, [active, country]);
 
   const loadMore = useCallback(async () => {
@@ -140,40 +141,34 @@ function Home() {
     isFetchingRef.current = true;
     setLoadingMore(true);
     try {
-      const currentCursor = cursor ?? baseCursor;
       const result = await listArticles({
         data: {
           limit: PAGE_SIZE,
-          cursor: currentCursor,
+          cursor: cursorRef.current,
           category: active,
           country: country === "WORLD" ? undefined : country,
           todayOnly: true,
         },
       });
-      const newItems = result.items ?? [];
-      const newHasMore = result.hasMore ?? false;
+      const newItems = (result as any).items ?? [];
+      const newHasMore = (result as any).hasMore ?? false;
+
       if (newItems.length > 0) {
-        setExtraArticles((prev) => {
-          const existingIds = new Set([...baseArticles, ...prev].map((a) => a.id));
-          const unique = newItems.filter((a) => !existingIds.has(a.id));
+        setArticles((prev) => {
+          const existingIds = new Set(prev.map((a) => a.id));
+          const unique = newItems.filter((a: ArticleSummary) => !existingIds.has(a.id));
           return [...prev, ...unique];
         });
-        setCursor(result.nextCursor);
+        cursorRef.current = (result as any).nextCursor;
       }
-      if (!newHasMore) setHasMore(false);
+      if (!newHasMore || newItems.length === 0) setHasMore(false);
     } catch {
       setHasMore(false);
     } finally {
       setLoadingMore(false);
       isFetchingRef.current = false;
     }
-  }, [cursor, baseCursor, hasMore, active, country, baseArticles]);
-
-  // Initialize cursor and hasMore from base result
-  useEffect(() => {
-    if (baseCursor) setCursor(baseCursor);
-    if (!baseHasMore) setHasMore(false);
-  }, [baseCursor, baseHasMore]);
+  }, [hasMore, active, country]);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
@@ -199,9 +194,9 @@ function Home() {
       }
       if (result.inserted > 0) {
         toast.success(`${result.inserted} new stories added`);
-        setExtraArticles([]);
-        setCursor(undefined);
+        setArticles([]);
         setHasMore(true);
+        cursorRef.current = undefined;
         articlesQuery.refetch();
       } else {
         toast.message("No new stories found right now — try again in a few minutes");
@@ -249,13 +244,7 @@ function Home() {
       {articles.length > 0 && (
         <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-3">
           {articles.map((article, i) => (
-            <motion.div
-              key={article.id}
-              custom={i}
-              variants={cardVariants}
-              initial="hidden"
-              animate="visible"
-            >
+            <motion.div key={article.id} custom={i} variants={cardVariants} initial="hidden" animate="visible">
               <ArticleCard article={article} variant="default" />
             </motion.div>
           ))}
@@ -298,7 +287,7 @@ function Home() {
 
       {!hasMore && articles.length > 0 && (
         <div className="text-center py-12">
-          <p className="kicker">You've reached the end of today's edition</p>
+          <p className="kicker">You've reached the end of today's news</p>
         </div>
       )}
 

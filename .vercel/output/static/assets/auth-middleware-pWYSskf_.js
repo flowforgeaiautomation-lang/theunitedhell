@@ -1,1 +1,0 @@
-import{xt as e}from"./index-BQNPlWkd.js";var t=e({type:`function`});export{t};

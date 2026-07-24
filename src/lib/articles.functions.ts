@@ -555,48 +555,63 @@ export const listArticles = createServerFn({ method: "GET" })
   )
   .handler(async ({ data }) => {
     const supabase = publicClient();
-    const categorySlugs = relatedCategorySlugs(data.category);
-    let q = supabase.from("articles").select(summaryCols).eq("is_published", true);
-    if (data.category && categorySlugs.length) q = q.in("category", categorySlugs);
-    if (data.country) q = q.eq("country_code", data.country);
-    if (data.todayOnly) {
-      const now = new Date();
-      const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-      const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toISOString();
-      q = q.gte("published_at", start).lt("published_at", end);
-    }
 
-    // Cursor-based pagination: avoid offset drift when new articles are inserted.
-    // Cursor format: "published_at|id" (both descending). We fetch rows strictly
-    // after the cursor position so previously-loaded articles never shift.
+    // Parse cursor: format depends on sort order
+    // "sortVal|id" where sortVal is published_at (for recent) or a number (for others)
+    let cursorDate: string | null = null;
+    let cursorId: string | null = null;
+    let cursorSortVal: string | null = null;
+
     if (data.cursor) {
-      const [cursorDate, cursorId] = data.cursor.split("|");
-      if (cursorDate && cursorId) {
-        // (published_at < cursorDate) OR (published_at = cursorDate AND id < cursorId)
-        q = q.or(`published_at.lt.${cursorDate},and(published_at.eq.${cursorDate},id.lt.${cursorId})`);
+      const sep = data.cursor.lastIndexOf("|");
+      if (sep > 0) {
+        const sortValPart = data.cursor.slice(0, sep);
+        cursorId = data.cursor.slice(sep + 1);
+        if (data.sort === "recent") {
+          cursorDate = sortValPart;
+        } else {
+          cursorSortVal = sortValPart;
+        }
       }
     }
 
-    if (data.sort === "trending") q = q.order("trending_score", { ascending: false }).order("id", { ascending: false });
-    else if (data.sort === "most_read") q = q.order("view_count", { ascending: false }).order("id", { ascending: false });
-    else if (data.sort === "most_saved") q = q.order("bookmark_count", { ascending: false }).order("id", { ascending: false });
-    else q = q.order("published_at", { ascending: false }).order("id", { ascending: false });
+    const { data: rows, error } = await supabase.rpc("list_articles_cursor", {
+      p_limit: data.limit,
+      p_cursor_date: cursorDate,
+      p_cursor_id: cursorId,
+      p_category: data.category ?? null,
+      p_country: data.country ?? null,
+      p_today_only: data.todayOnly ?? false,
+      p_sort: data.sort,
+      p_cursor_sort_val: cursorSortVal,
+    });
 
-    // Fetch one extra row to determine if there are more pages
-    const fetchLimit = data.limit + 1;
-    const { data: rows, error } = await q.limit(fetchLimit);
     if (error) throw new Error(error.message);
 
-    const allRows = (rows ?? []) as ArticleSummary[];
+    const allRows = ((rows ?? []) as ArticleSummary[]).map((r) => decodeSummary(r));
     const hasMore = allRows.length > data.limit;
     const pageRows = hasMore ? allRows.slice(0, data.limit) : allRows;
-    const deduped = dedupeSummaries(pageRows, data.limit);
 
-    // Build next cursor from the last row
+    // Deduplicate by ID only — never drop articles with similar titles
+    const seenIds = new Set<string>();
+    const deduped = pageRows.filter((r) => {
+      if (seenIds.has(r.id)) return false;
+      seenIds.add(r.id);
+      return true;
+    });
+
     let nextCursor: string | undefined = undefined;
     if (hasMore && deduped.length > 0) {
       const last = deduped[deduped.length - 1];
-      nextCursor = `${last.published_at}|${last.id}`;
+      if (data.sort === "recent") {
+        nextCursor = `${last.published_at}|${last.id}`;
+      } else if (data.sort === "trending") {
+        nextCursor = `${(last as any).trending_score ?? 0}|${last.id}`;
+      } else if (data.sort === "most_read") {
+        nextCursor = `${last.view_count}|${last.id}`;
+      } else if (data.sort === "most_saved") {
+        nextCursor = `${last.bookmark_count}|${last.id}`;
+      }
     }
 
     return { items: deduped, nextCursor, hasMore };

@@ -24,7 +24,7 @@ export const Route = createFileRoute("/search")({
     await context.queryClient.prefetchQuery(
       queryOptions({
         queryKey: ["search", "", undefined, undefined, "recent"],
-        queryFn: () => listArticles({ data: { limit: 36 } }),
+        queryFn: async () => (await listArticles({ data: { limit: 36 } })).items,
       }),
     );
   },
@@ -70,11 +70,11 @@ function SearchPage() {
   const query = useQuery(
     queryOptions({
       queryKey: ["search", submitted, category, country, sort],
-      queryFn: () => {
+      queryFn: async () => {
         if (isSearching) {
           return searchFn({ data: { q: submitted } });
         }
-        return listFn({
+        const result = await listFn({
           data: {
             limit: 36,
             category,
@@ -82,6 +82,7 @@ function SearchPage() {
             sort,
           },
         });
+        return result.items;
       },
     }),
   );
