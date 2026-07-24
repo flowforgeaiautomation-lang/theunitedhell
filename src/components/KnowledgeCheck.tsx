@@ -214,22 +214,11 @@ export function KnowledgeCheck({ articleId, story, title, onReflection }: { arti
               const reflectionText = reflectionQuestion ? answers[reflectionQuestion.id]?.trim() : "";
               if (onReflection && reflectionText) onReflection(reflectionText);
             }}
-            disabled={Object.keys(answers).length < gradedCount}
+            disabled={Object.keys(answers).length < gradedCount && !answers[reflectionQuestion?.id ?? ""]?.trim()}
             className="border border-foreground px-6 py-2.5 text-xs uppercase tracking-widest hover:bg-foreground hover:text-background transition disabled:opacity-40"
           >
             Check answers
           </button>
-          {reflectionQuestion && answers[reflectionQuestion.id]?.trim() && (
-            <button
-              onClick={() => {
-                const reflectionText = answers[reflectionQuestion.id]?.trim();
-                if (reflectionText && onReflection) onReflection(reflectionText);
-              }}
-              className="border border-foreground/40 px-6 py-2.5 text-xs uppercase tracking-widest hover:bg-foreground hover:text-background transition"
-            >
-              Post reflection
-            </button>
-          )}
         </div>
       )}
     </div>
