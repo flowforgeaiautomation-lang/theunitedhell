@@ -7,12 +7,33 @@ import type { Article, ArticleSummary, Briefing, CommentRow, VocabEntry } from "
 import { relatedCategorySlugs } from "./categories";
 import { lookupWords } from "./dictionary.server";
 
+function isNewSupabaseApiKey(value: string): boolean {
+  return value.startsWith("sb_publishable_") || value.startsWith("sb_secret_");
+}
+
+function createSupabaseFetch(supabaseKey: string): typeof fetch {
+  return (input: any, init?: any) => {
+    const headers = new Headers(
+      typeof Request !== "undefined" && input instanceof Request ? input.headers : undefined,
+    );
+    if (init?.headers) {
+      new Headers(init.headers).forEach((value: string, key: string) => headers.set(key, value));
+    }
+    if (isNewSupabaseApiKey(supabaseKey) && headers.get("Authorization") === `Bearer ${supabaseKey}`) {
+      headers.delete("Authorization");
+    }
+    headers.set("apikey", supabaseKey);
+    return fetch(input, { ...init, headers });
+  };
+}
+
 function publicClient() {
-  return createClient<Database>(
-    process.env.SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL,
-    process.env.SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-    { auth: { persistSession: false, autoRefreshToken: false, storage: undefined } },
-  );
+  const url = process.env.SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL;
+  const key = process.env.SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  return createClient<Database>(url, key, {
+    global: { fetch: createSupabaseFetch(key) },
+    auth: { persistSession: false, autoRefreshToken: false, storage: undefined },
+  });
 }
 
 const summaryCols =
@@ -746,9 +767,19 @@ export const bumpLike = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ commentId: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     const supabase = publicClient();
-    const { error } = await supabase.rpc("bump_comment_likes", { comment_id: data.commentId });
+    const { data: row, error: fetchErr } = await supabase
+      .from("comments")
+      .select("like_count")
+      .eq("id", data.commentId)
+      .maybeSingle();
+    if (fetchErr) throw new Error(fetchErr.message);
+    const newCount = (row?.like_count ?? 0) + 1;
+    const { error } = await supabase
+      .from("comments")
+      .update({ like_count: newCount })
+      .eq("id", data.commentId);
     if (error) throw new Error(error.message);
-    return { ok: true };
+    return { ok: true, likeCount: newCount };
   });
 
 export const deleteCommentAnon = createServerFn({ method: "POST" })
