@@ -600,8 +600,7 @@ function KnowledgeCheckReflection({ articleId, story, title }: { articleId: stri
       articleId={articleId}
       story={story}
       title={title}
-      onReflection={(text) => {
-        if (signedIn) reflectionMutation.mutate(text);
+      onReflection={() => {
         requestAnimationFrame(() => {
           document.getElementById("discussion")?.scrollIntoView({ behavior: "smooth", block: "start" });
         });

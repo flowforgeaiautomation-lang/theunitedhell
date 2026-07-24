@@ -92,7 +92,7 @@ function generateQuiz(story: any, title: string): QuizQuestion[] {
   return questions;
 }
 
-export function KnowledgeCheck({ articleId, story, title, onReflection }: { articleId: string; story?: any; title?: string; onReflection?: (text: string) => void }) {
+export function KnowledgeCheck({ articleId, story, title, onReflection }: { articleId: string; story?: any; title?: string; onReflection?: () => void }) {
   const questions = useMemo(() => {
     if (!story) return [];
     return generateQuiz(story, title || "");
@@ -107,7 +107,6 @@ export function KnowledgeCheck({ articleId, story, title, onReflection }: { arti
   const gradedCount = questions.filter((q) => q.question_type !== "reflection").length;
 
   const reflectionQuestion = questions.find((q) => q.question_type === "reflection");
-  const reflectionText = reflectionQuestion ? (answers[reflectionQuestion.id] ?? "").trim() : "";
 
   function reset() {
     setAnswers({});
@@ -212,7 +211,7 @@ export function KnowledgeCheck({ articleId, story, title, onReflection }: { arti
           <button
             onClick={() => {
               setSubmitted(true);
-              if (onReflection && reflectionText) onReflection(reflectionText);
+              if (onReflection) onReflection();
             }}
             disabled={Object.keys(answers).length < gradedCount}
             className="border border-foreground px-6 py-2.5 text-xs uppercase tracking-widest hover:bg-foreground hover:text-background transition disabled:opacity-40"
