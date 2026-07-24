@@ -553,8 +553,8 @@ export const listArticles = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     const supabase = publicClient();
 
-    // Parse cursor: format depends on sort order
-    // "sortVal|id" where sortVal is published_at (for recent) or a number (for others)
+    // Parse cursor: format is "sortVal|id" where sortVal is published_at (for recent)
+    // or a number (for trending/most_read/most_saved)
     let cursorDate: string | null = null;
     let cursorId: string | null = null;
     let cursorSortVal: string | null = null;
@@ -572,16 +572,89 @@ export const listArticles = createServerFn({ method: "GET" })
       }
     }
 
-    const { data: rows, error } = await supabase.rpc("list_articles_cursor", {
-      p_limit: data.limit,
-      p_cursor_date: cursorDate,
-      p_cursor_id: cursorId,
-      p_category: data.category ?? null,
-      p_country: data.country ?? null,
-      p_today_only: data.todayOnly ?? false,
-      p_sort: data.sort,
-      p_cursor_sort_val: cursorSortVal,
-    });
+    // Build direct PostgREST query — no RPC dependency, no schema cache issues
+    let query = supabase
+      .from("articles")
+      .select(summaryCols)
+      .eq("is_published", true);
+
+    // Category filter with related slugs
+    if (data.category) {
+      const related = relatedCategorySlugs(data.category);
+      if (related.length > 0) {
+        query = query.in("category", related);
+      } else {
+        query = query.eq("category", data.category);
+      }
+    }
+
+    // Country filter
+    if (data.country) {
+      query = query.eq("country_code", data.country);
+    }
+
+    // Today-only filter (with graceful fallback handled by frontend)
+    if (data.todayOnly) {
+      const todayStart = new Date();
+      todayStart.setUTCHours(0, 0, 0, 0);
+      query = query.gte("published_at", todayStart.toISOString());
+    }
+
+    // Cursor pagination — use lt() on the sort column, with id as tiebreaker
+    // For "recent": published_at DESC, id DESC
+    // For others: sort_col DESC, id DESC
+    const fetchLimit = data.limit + 1; // fetch one extra to detect hasMore
+
+    if (data.sort === "recent") {
+      if (cursorId && cursorDate) {
+        // Cursor: (published_at, id) — get rows strictly before this point
+        query = query
+          .or(`published_at.lt.${cursorDate},and(published_at.eq.${cursorDate},id.lt.${cursorId})`)
+          .order("published_at", { ascending: false })
+          .order("id", { ascending: false });
+      } else {
+        query = query
+          .order("published_at", { ascending: false })
+          .order("id", { ascending: false });
+      }
+    } else if (data.sort === "trending") {
+      if (cursorId && cursorSortVal !== null) {
+        query = query
+          .or(`trending_score.lt.${cursorSortVal},and(trending_score.eq.${cursorSortVal},id.lt.${cursorId})`)
+          .order("trending_score", { ascending: false })
+          .order("id", { ascending: false });
+      } else {
+        query = query
+          .order("trending_score", { ascending: false })
+          .order("id", { ascending: false });
+      }
+    } else if (data.sort === "most_read") {
+      if (cursorId && cursorSortVal !== null) {
+        query = query
+          .or(`view_count.lt.${cursorSortVal},and(view_count.eq.${cursorSortVal},id.lt.${cursorId})`)
+          .order("view_count", { ascending: false })
+          .order("id", { ascending: false });
+      } else {
+        query = query
+          .order("view_count", { ascending: false })
+          .order("id", { ascending: false });
+      }
+    } else if (data.sort === "most_saved") {
+      if (cursorId && cursorSortVal !== null) {
+        query = query
+          .or(`bookmark_count.lt.${cursorSortVal},and(bookmark_count.eq.${cursorSortVal},id.lt.${cursorId})`)
+          .order("bookmark_count", { ascending: false })
+          .order("id", { ascending: false });
+      } else {
+        query = query
+          .order("bookmark_count", { ascending: false })
+          .order("id", { ascending: false });
+      }
+    }
+
+    query = query.limit(fetchLimit);
+
+    const { data: rows, error } = await query;
 
     if (error) throw new Error(error.message);
 
