@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { motion } from "framer-motion";
 import { listArticles } from "@/lib/articles.functions";
 import { curateNow, curateNowPublic } from "@/lib/ai.functions";
 import { ArticleCard } from "@/components/article-card";
@@ -12,11 +13,12 @@ import { ScrollToTop } from "@/components/ScrollToTop";
 import { categoryLabel } from "@/lib/categories";
 import { supabase } from "@/integrations/supabase/client";
 import { canonicalUrl, SITE_NAME, SITE_LOGO } from "@/lib/seo";
+import type { ArticleSummary } from "@/lib/types";
 
 const homeQuery = (category: string | undefined, country: string | undefined) =>
   queryOptions({
     queryKey: ["home", category ?? "all", country ?? "world"],
-    queryFn: () => listArticles({ data: { limit: 24, offset: 0, category, country, todayOnly: true } }),
+    queryFn: () => listArticles({ data: { limit: 24, category, country, todayOnly: true } }),
     staleTime: 30_000,
   });
 
@@ -37,6 +39,15 @@ const COUNTRY_LABELS: Record<string, string> = {
 };
 
 const PAGE_SIZE = 24;
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 24 },
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.4, delay: Math.min(i % 6, 5) * 0.06, ease: [0.2, 0.7, 0.2, 1] as const },
+  }),
+};
 
 export const Route = createFileRoute("/")({
   validateSearch: (s: Record<string, unknown>) => ({
@@ -83,15 +94,19 @@ function Home() {
   const ingestAuth = useServerFn(curateNow);
   const ingestPublic = useServerFn(curateNowPublic);
 
+  const [extraArticles, setExtraArticles] = useState<ArticleSummary[]>([]);
+  const [cursor, setCursor] = useState<string | undefined>(undefined);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-  const offsetRef = useRef(0);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const isFetchingRef = useRef(false);
 
   const articlesQuery = useQuery(homeQuery(active, country === "WORLD" ? undefined : country));
-  const baseArticles = articlesQuery.data ?? [];
-  const [extraArticles, setExtraArticles] = useState<any[]>([]);
+  const baseResult = articlesQuery.data;
+  const baseArticles: ArticleSummary[] = Array.isArray(baseResult) ? baseResult : (baseResult?.items ?? []);
+  const baseHasMore = Array.isArray(baseResult) ? true : (baseResult?.hasMore ?? false);
+  const baseCursor = Array.isArray(baseResult) ? undefined : baseResult?.nextCursor;
+
   const articles = [...baseArticles, ...extraArticles];
 
   useEffect(() => {
@@ -113,55 +128,52 @@ function Home() {
     setActive(search.category);
   }, [search.category]);
 
-  const fetchPage = useCallback(async (offset: number) => {
-    return listArticles({
-      data: {
-        limit: PAGE_SIZE,
-        offset,
-        category: active,
-        country: country === "WORLD" ? undefined : country,
-        todayOnly: true,
-      },
-    });
-  }, [active, country]);
-
-  const reset = useCallback(async () => {
+  // Reset extra articles when filters change
+  useEffect(() => {
     setExtraArticles([]);
-    articlesQuery.refetch();
+    setCursor(undefined);
     setHasMore(true);
-    offsetRef.current = 0;
-  }, [articlesQuery]);
+  }, [active, country]);
 
   const loadMore = useCallback(async () => {
     if (isFetchingRef.current || !hasMore) return;
     isFetchingRef.current = true;
     setLoadingMore(true);
-    const offset = offsetRef.current;
     try {
-      const newArticles = await fetchPage(offset);
-      if (newArticles.length < PAGE_SIZE) setHasMore(false);
-      if (newArticles.length > 0) {
+      const currentCursor = cursor ?? baseCursor;
+      const result = await listArticles({
+        data: {
+          limit: PAGE_SIZE,
+          cursor: currentCursor,
+          category: active,
+          country: country === "WORLD" ? undefined : country,
+          todayOnly: true,
+        },
+      });
+      const newItems = result.items ?? [];
+      const newHasMore = result.hasMore ?? false;
+      if (newItems.length > 0) {
         setExtraArticles((prev) => {
           const existingIds = new Set([...baseArticles, ...prev].map((a) => a.id));
-          const unique = newArticles.filter((a) => !existingIds.has(a.id));
+          const unique = newItems.filter((a) => !existingIds.has(a.id));
           return [...prev, ...unique];
         });
-        offsetRef.current = offset + newArticles.length;
-      } else {
-        setHasMore(false);
+        setCursor(result.nextCursor);
       }
+      if (!newHasMore) setHasMore(false);
     } catch {
       setHasMore(false);
     } finally {
       setLoadingMore(false);
       isFetchingRef.current = false;
     }
-  }, [fetchPage, hasMore, baseArticles]);
+  }, [cursor, baseCursor, hasMore, active, country, baseArticles]);
 
+  // Initialize cursor and hasMore from base result
   useEffect(() => {
-    offsetRef.current = baseArticles.length;
-    if (baseArticles.length < PAGE_SIZE) setHasMore(false);
-  }, [baseArticles]);
+    if (baseCursor) setCursor(baseCursor);
+    if (!baseHasMore) setHasMore(false);
+  }, [baseCursor, baseHasMore]);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
@@ -187,7 +199,10 @@ function Home() {
       }
       if (result.inserted > 0) {
         toast.success(`${result.inserted} new stories added`);
-        reset();
+        setExtraArticles([]);
+        setCursor(undefined);
+        setHasMore(true);
+        articlesQuery.refetch();
       } else {
         toast.message("No new stories found right now — try again in a few minutes");
       }
@@ -234,13 +249,15 @@ function Home() {
       {articles.length > 0 && (
         <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-3">
           {articles.map((article, i) => (
-            <div
+            <motion.div
               key={article.id}
-              className="animate-fade-in"
-              style={{ animationDelay: `${Math.min(i % 6, 5) * 60}ms` }}
+              custom={i}
+              variants={cardVariants}
+              initial="hidden"
+              animate="visible"
             >
               <ArticleCard article={article} variant="default" />
-            </div>
+            </motion.div>
           ))}
         </div>
       )}
@@ -255,6 +272,19 @@ function Home() {
           >
             {generating ? "Curating…" : "Curate now"}
           </button>
+        </div>
+      )}
+
+      {articlesQuery.isLoading && (
+        <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="animate-pulse">
+              <div className="aspect-[4/3] w-full bg-foreground/10" />
+              <div className="mt-4 h-4 w-1/3 bg-foreground/10" />
+              <div className="mt-3 h-6 w-full bg-foreground/10" />
+              <div className="mt-2 h-4 w-2/3 bg-foreground/10" />
+            </div>
+          ))}
         </div>
       )}
 

@@ -10,6 +10,7 @@ import { ArticleCard } from "@/components/article-card";
 import { categoryLabel } from "@/lib/categories";
 
 import { toast } from "sonner";
+import { motion } from "framer-motion";
 import { Quote, Lightbulb, Clock, TrendingUp, Users, Building2, Globe2, Hash, Sparkles, Info, Bookmark, ChevronRight, ArrowBigUp, MessageCircle, Trash2, CornerDownRight } from "lucide-react";
 import type { CommentRow, ArticleStory, KeyNumber, PersonInvolved, OrganizationInvolved, CountryInvolved, VocabEntry } from "@/lib/types";
 import { fallbackCoverUrl } from "@/lib/article-images";
@@ -183,21 +184,38 @@ function ArticlePage() {
       <ReadingProgress />
 
       {/* Hero */}
-      <header className="container-read pt-10 md:pt-16 text-center">
+      <motion.header
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.2, 0.7, 0.2, 1] }}
+        className="container-read pt-10 md:pt-16 text-center"
+      >
         <div className="kicker">{categoryLabel(article.category)}</div>
         <h1 className="display-1 mt-5">{article.title}</h1>
         {article.dek && <p className="dek mt-6 text-balance">{article.dek}</p>}
-        {addedDate && (
-          <div className="mt-4 text-sm text-muted-foreground">
-            {addedDate}
-          </div>
-        )}
+        <div className="mt-4 flex items-center justify-center gap-3 text-sm text-muted-foreground">
+          {addedDate && <span>{addedDate}</span>}
+          {article.read_time_minutes > 0 && (
+            <>
+              <span className="text-muted-foreground/40">•</span>
+              <span className="inline-flex items-center gap-1">
+                <Clock className="h-3.5 w-3.5" />
+                {article.read_time_minutes} min read
+              </span>
+            </>
+          )}
+        </div>
         <div className="mt-6 flex justify-center">
           <ArticleActions articleId={article.id} title={article.title} />
         </div>
-      </header>
+      </motion.header>
 
-      <figure className="container-edit mt-10 group">
+      <motion.figure
+        initial={{ opacity: 0, scale: 0.98 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.6, ease: [0.2, 0.7, 0.2, 1] }}
+        className="container-edit mt-10 group"
+      >
         <img
           src={cover}
           alt={article.title}
@@ -208,7 +226,7 @@ function ArticlePage() {
             if (img.src !== fallbackCoverUrl(article)) img.src = fallbackCoverUrl(article);
           }}
         />
-      </figure>
+      </motion.figure>
 
       {/* Story Mode */}
       <section className="container-read py-12 md:py-16" style={{ fontSize: "var(--article-font-size, 17px)", lineHeight: "var(--article-line-height, 1.6)" }}>
@@ -268,6 +286,10 @@ function ArticlePage() {
             <ListBlock label="Reader Takeaways" items={story.reader_takeaways} />
           )}
 
+          {story.what_happens_next && (
+            <InfoBox label="What Happens Next" body={story.what_happens_next} icon="sparkles" />
+          )}
+
           {tags.length > 0 && <RelatedTopics tags={tags} />}
         </div>
 
@@ -306,14 +328,28 @@ function ArticlePage() {
 
       {/* Related */}
       {related.length > 0 && (
-        <section className="container-edit py-16 border-t rule">
+        <motion.section
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.5 }}
+          className="container-edit py-16 border-t rule"
+        >
           <h2 className="display-3 mb-8">Keep reading</h2>
           <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
-            {related.slice(0, 4).map((a) => (
-              <ArticleCard key={a.id} article={a} variant="default" />
+            {related.slice(0, 4).map((a, i) => (
+              <motion.div
+                key={a.id}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: i * 0.1 }}
+              >
+                <ArticleCard article={a} variant="default" />
+              </motion.div>
             ))}
           </div>
-        </section>
+        </motion.section>
       )}
     </article>
   );

@@ -549,6 +549,7 @@ export const listArticles = createServerFn({ method: "GET" })
         offset: z.number().int().min(0).default(0),
         sort: z.enum(["recent", "trending", "most_read", "most_saved"]).default("recent"),
         todayOnly: z.boolean().optional(),
+        cursor: z.string().optional(),
       })
       .parse(d ?? {}),
   )
@@ -564,13 +565,41 @@ export const listArticles = createServerFn({ method: "GET" })
       const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toISOString();
       q = q.gte("published_at", start).lt("published_at", end);
     }
+
+    // Cursor-based pagination: avoid offset drift when new articles are inserted.
+    // Cursor format: "published_at|id" (both descending). We fetch rows strictly
+    // after the cursor position so previously-loaded articles never shift.
+    if (data.cursor) {
+      const [cursorDate, cursorId] = data.cursor.split("|");
+      if (cursorDate && cursorId) {
+        // (published_at < cursorDate) OR (published_at = cursorDate AND id < cursorId)
+        q = q.or(`published_at.lt.${cursorDate},and(published_at.eq.${cursorDate},id.lt.${cursorId})`);
+      }
+    }
+
     if (data.sort === "trending") q = q.order("trending_score", { ascending: false }).order("id", { ascending: false });
     else if (data.sort === "most_read") q = q.order("view_count", { ascending: false }).order("id", { ascending: false });
     else if (data.sort === "most_saved") q = q.order("bookmark_count", { ascending: false }).order("id", { ascending: false });
     else q = q.order("published_at", { ascending: false }).order("id", { ascending: false });
-    const { data: rows, error } = await q.range(data.offset, data.offset + data.limit - 1);
+
+    // Fetch one extra row to determine if there are more pages
+    const fetchLimit = data.limit + 1;
+    const { data: rows, error } = await q.limit(fetchLimit);
     if (error) throw new Error(error.message);
-    return dedupeSummaries((rows ?? []) as ArticleSummary[], data.limit);
+
+    const allRows = (rows ?? []) as ArticleSummary[];
+    const hasMore = allRows.length > data.limit;
+    const pageRows = hasMore ? allRows.slice(0, data.limit) : allRows;
+    const deduped = dedupeSummaries(pageRows, data.limit);
+
+    // Build next cursor from the last row
+    let nextCursor: string | undefined = undefined;
+    if (hasMore && deduped.length > 0) {
+      const last = deduped[deduped.length - 1];
+      nextCursor = `${last.published_at}|${last.id}`;
+    }
+
+    return { items: deduped, nextCursor, hasMore };
   });
 
 export const getFeatured = createServerFn({ method: "GET" }).handler(async () => {
