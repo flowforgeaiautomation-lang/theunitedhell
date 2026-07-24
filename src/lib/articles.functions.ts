@@ -336,7 +336,13 @@ async function generateFallbackVocab(text: string, existing: VocabEntry[]): Prom
   const words = text
     .replace(/[^a-zA-Z\s]/g, " ")
     .split(/\s+/)
-    .filter((w) => w.length >= 6 && !FALLBACK_STOP.has(w.toLowerCase()));
+    .filter((w) => {
+      if (w.length < 6) return false;
+      if (FALLBACK_STOP.has(w.toLowerCase())) return false;
+      // Skip proper nouns — words that appear capitalized mid-sentence are names/places, not vocabulary
+      if (/^[A-Z][a-z]+$/.test(w)) return false;
+      return true;
+    });
 
   const freq = new Map<string, number>();
   for (const w of words) {

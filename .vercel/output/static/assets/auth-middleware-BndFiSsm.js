@@ -1,1 +1,0 @@
-import{xt as e}from"./index-Bd9p1RG4.js";var t=e({type:`function`});export{t};

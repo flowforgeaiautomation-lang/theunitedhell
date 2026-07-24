@@ -75,11 +75,7 @@ export function EnhancedVocabCard({ entry, articleId, index }: { entry: VocabEnt
         <p className="mt-2 text-base text-foreground/90 leading-relaxed">
           <span className="font-semibold">Meaning:</span> {entry.meaning}
         </p>
-      ) : (
-        <p className="mt-2 text-sm text-muted-foreground italic leading-relaxed">
-          Tap the speaker icon to hear this word. Look it up using the search below.
-        </p>
-      )}
+      ) : null}
       {entry.simpleExplanation && (
         <p className="mt-1 text-sm text-foreground/70 leading-relaxed">{entry.simpleExplanation}</p>
       )}

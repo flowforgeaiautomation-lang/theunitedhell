@@ -297,15 +297,15 @@ function ArticlePage() {
         <div className="grid gap-10 mt-10">
           <div className="border-y rule py-10">
             <div className="kicker mb-6">Vocabulary Builder</div>
-            {story.vocabulary && story.vocabulary.length > 0 ? (
+            {story.vocabulary && story.vocabulary.filter((v) => v.meaning).length > 0 ? (
               <div className="grid gap-6">
-                {story.vocabulary.map((v, i) => (
+                {story.vocabulary.filter((v) => v.meaning).map((v, i) => (
                   <EnhancedVocabCard key={`${v.word}-${i}`} entry={v} articleId={article.id} index={i} />
                 ))}
               </div>
             ) : (
               <div className="grid gap-6">
-                {generateLocalVocabFallback(story.summary || story.main_story || article.dek || article.title || "").map((v, i) => (
+                {generateLocalVocabFallback(story.summary || story.main_story || article.dek || article.title || "").filter((v) => v.meaning).map((v, i) => (
                   <EnhancedVocabCard key={`${v.word}-${i}`} entry={v} articleId={article.id} index={i} />
                 ))}
               </div>
@@ -610,7 +610,7 @@ function generateLocalVocabFallback(text: string): VocabEntry[] {
     .replace(/[^a-zA-Z\s]/g, " ")
     .split(/\s+/)
     .map((w) => w.trim())
-    .filter((w) => w.length >= 6 && w.length <= 16 && !STOPWORDS.has(w.toLowerCase()));
+    .filter((w) => w.length >= 6 && w.length <= 16 && !STOPWORDS.has(w.toLowerCase()) && !/^[A-Z][a-z]+$/.test(w));
   const freq = new Map<string, number>();
   for (const w of words) {
     const lw = w.toLowerCase();
