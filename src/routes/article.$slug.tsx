@@ -1,5 +1,5 @@
 import { createFileRoute, Link, notFound, useRouter } from "@tanstack/react-router";
-import { useSuspenseQuery, useQuery, queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { getArticleBySlug, getRelated, listComments } from "@/lib/articles.functions";
@@ -24,6 +24,10 @@ const articleQ = (slug: string) =>
   queryOptions({
     queryKey: ["article", slug],
     queryFn: () => getArticleBySlug({ data: { slug } }),
+    retry: 3,
+    retryDelay: 1000,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
 function directSupabaseClient() {
@@ -150,7 +154,23 @@ function ReadingProgress() {
 
 function ArticlePage() {
   const { slug } = Route.useParams();
-  const { data: article } = useSuspenseQuery(articleQ(slug));
+  const { data: article, isError, refetch } = useQuery(articleQ(slug));
+  if (isError) {
+    return (
+      <div className="container-read py-24 text-center">
+        <div className="kicker">Connection issue</div>
+        <h1 className="display-2 mt-3">Couldn't load this story.</h1>
+        <p className="dek mt-3">A temporary error occurred. Please try again.</p>
+        <button
+          onClick={() => refetch()}
+          className="mt-6 border border-foreground px-5 py-2 text-xs uppercase tracking-widest hover:bg-foreground hover:text-background transition"
+        >
+          Try again
+        </button>
+        <Link to="/" search={{ category: undefined }} className="mt-3 block kicker hover:opacity-60">← Front page</Link>
+      </div>
+    );
+  }
   if (!article) return null;
   const story = article.story ?? {};
   const cover = article.cover_image_url || fallbackCoverUrl(article);

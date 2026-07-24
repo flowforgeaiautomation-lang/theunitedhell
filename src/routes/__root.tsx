@@ -45,14 +45,19 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
   useEffect(() => {
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
-  }, [error]);
+    const timer = setTimeout(() => {
+      router.invalidate();
+      reset();
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [error, router, reset]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="container-read text-center">
-        <div className="kicker">Press error</div>
-        <h1 className="display-2 mt-3">The presses jammed.</h1>
-        <p className="dek mt-3">Try again, or return to the front page.</p>
+        <div className="kicker">Retrying</div>
+        <h1 className="display-2 mt-3">One moment…</h1>
+        <p className="dek mt-3">The site is reloading automatically. You can also try the buttons below.</p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
             onClick={() => {

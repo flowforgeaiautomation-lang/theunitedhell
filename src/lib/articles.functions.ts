@@ -511,9 +511,10 @@ export const getArticleBySlug = createServerFn({ method: "GET" })
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!row) return null;
-    // fire-and-forget view bump
-    supabase.rpc as unknown;
-    await supabase.from("articles").update({ view_count: (row.view_count ?? 0) + 1 }).eq("id", row.id);
+    // fire-and-forget view bump — never block the page load on this
+    try {
+      supabase.from("articles").update({ view_count: (row.view_count ?? 0) + 1 }).eq("id", row.id).then(() => {});
+    } catch {}
     return await normalizeArticle(row as unknown as Article);
   });
 
