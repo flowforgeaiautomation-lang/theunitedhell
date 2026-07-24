@@ -579,31 +579,24 @@ type SortMode = "newest" | "top" | "oldest";
 function KnowledgeCheckReflection({ articleId, story, title }: { articleId: string; story?: any; title?: string }) {
   const qc = useQueryClient();
   const send = useServerFn(postComment);
-  const [signedIn, setSignedIn] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session));
-  }, []);
-
-  const reflectionMutation = useMutation({
-    mutationFn: (text: string) =>
-      send({ data: { articleId, body: text, promptType: "perspective" } }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["comments", articleId] });
-      toast.success("Your reflection was posted to the discussion");
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
+  const [posted, setPosted] = useState(false);
 
   return (
     <KnowledgeCheck
       articleId={articleId}
       story={story}
       title={title}
-      onReflection={() => {
-        requestAnimationFrame(() => {
-          document.getElementById("discussion")?.scrollIntoView({ behavior: "smooth", block: "start" });
-        });
+      onReflection={(reflectionText: string) => {
+        send({ data: { articleId, body: reflectionText, promptType: "perspective" } })
+          .then(() => {
+            qc.invalidateQueries({ queryKey: ["comments", articleId] });
+            toast.success("Your reflection was posted to the discussion");
+            setPosted(true);
+            requestAnimationFrame(() => {
+              document.getElementById("discussion")?.scrollIntoView({ behavior: "smooth", block: "start" });
+            });
+          })
+          .catch((e: Error) => toast.error(e.message));
       }}
     />
   );

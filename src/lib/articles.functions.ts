@@ -431,16 +431,20 @@ async function normalizeArticle(article: Article): Promise<Article> {
   // If AI vocabulary is missing or inadequate, generate from article text.
   // This ensures every article always has vocabulary — no exceptions.
   let finalVocab = rawVocab.slice(0, 5);
+  let vocabWasRegenerated = false;
   if (finalVocab.length < 3) {
     const fallback = await generateFallbackVocab(
       [summary, mainStory, decClean((currentStory as any).background), decClean((currentStory as any).expert_analysis)]
         .filter(Boolean).join(" "),
       finalVocab,
     );
-    finalVocab = fallback.length ? fallback : finalVocab;
+    if (fallback.length) {
+      finalVocab = fallback;
+      vocabWasRegenerated = true;
+    }
   }
 
-  return {
+  const normalized = {
     ...article,
     title: cleanTitle(cleanStoryText(article.title) ?? dec(article.title) ?? article.title),
     dek: truncateAtSentence(fullSourceText || mainStory || cleanStoryText(article.dek) || dec(article.dek) || article.dek, 280),
@@ -489,6 +493,31 @@ async function normalizeArticle(article: Article): Promise<Article> {
       insights: decodeListMaybe(cleanList(currentStory.insights)),
     },
   };
+
+  // Persist regenerated vocabulary back to the database so the next page load
+  // doesn't re-run dictionary lookups every time.
+  if (vocabWasRegenerated && article.id) {
+    try {
+      const supabase = publicClient();
+      const vocabJson = finalVocab.map((v) => ({
+        word: v.word,
+        part_of_speech: v.partOfSpeech || null,
+        meaning: v.meaning || null,
+        simple_explanation: v.simpleExplanation || null,
+        example: v.example || null,
+        synonyms: v.synonyms || null,
+        antonyms: v.antonyms || null,
+        pronunciation: v.pronunciation || null,
+      }));
+      supabase
+        .from("articles")
+        .update({ story: { ...normalized.story, vocabulary: vocabJson } })
+        .eq("id", article.id)
+        .then(() => {});
+    } catch {}
+  }
+
+  return normalized;
 }
 
 export const listArticles = createServerFn({ method: "GET" })
