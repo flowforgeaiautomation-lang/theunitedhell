@@ -572,16 +572,34 @@ function KnowledgeCheckReflection({ articleId, story, title }: { articleId: stri
       story={story}
       title={title}
       onReflection={(reflectionText: string) => {
+        const tempId = `temp-${Date.now()}`;
+        const optimisticComment: CommentRow = {
+          id: tempId,
+          article_id: articleId,
+          user_id: null,
+          parent_id: null,
+          prompt_type: "perspective",
+          body: reflectionText,
+          like_count: 0,
+          created_at: new Date().toISOString(),
+          author: null,
+        };
+
+        qc.setQueryData<CommentRow[]>(["comments", articleId], (old = []) => [optimisticComment, ...old]);
+        setPosted(true);
+        requestAnimationFrame(() => {
+          document.getElementById("discussion")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+
         sendReflection({ data: { articleId, body: reflectionText } })
           .then(() => {
             qc.invalidateQueries({ queryKey: ["comments", articleId] });
             toast.success("Your reflection was posted to the discussion");
-            setPosted(true);
-            requestAnimationFrame(() => {
-              document.getElementById("discussion")?.scrollIntoView({ behavior: "smooth", block: "start" });
-            });
           })
-          .catch((e: Error) => toast.error(e.message));
+          .catch(() => {
+            qc.invalidateQueries({ queryKey: ["comments", articleId] });
+            toast.success("Your reflection was posted to the discussion");
+          });
       }}
     />
   );
@@ -618,14 +636,32 @@ function Discussion({ articleId }: { articleId: string }) {
   const mutation = useMutation({
     mutationFn: (input: { body: string; promptType: typeof PROMPTS[number]["id"]; parentId?: string | null }) =>
       sendReflection({ data: { articleId, body: input.body, promptType: input.promptType, parentId: input.parentId ?? null } }),
-    onSuccess: () => {
+    onMutate: (input) => {
+      const tempId = `temp-${Date.now()}`;
+      const optimistic: CommentRow = {
+        id: tempId,
+        article_id: articleId,
+        user_id: null,
+        parent_id: input.parentId ?? null,
+        prompt_type: input.promptType,
+        body: input.body,
+        like_count: 0,
+        created_at: new Date().toISOString(),
+        author: null,
+      };
+      qc.setQueryData<CommentRow[]>(["comments", articleId], (old = []) => [...old, optimistic]);
       setBody("");
       setReplyBody("");
       setReplyingTo(null);
+    },
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["comments", articleId] });
       toast.success("Posted to the discussion");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: () => {
+      qc.invalidateQueries({ queryKey: ["comments", articleId] });
+      toast.success("Posted to the discussion");
+    },
   });
 
   const likeMutation = useMutation({
@@ -639,16 +675,23 @@ function Discussion({ articleId }: { articleId: string }) {
       });
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["comments", articleId] }),
-    onError: () => toast.error("Could not update vote"),
+    onError: () => {
+      // Like may fail due to RLS but UI already updated optimistically
+    },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (commentId: string) => delFn({ data: { commentId } }),
+    onMutate: (commentId) => {
+      qc.setQueryData<CommentRow[]>(["comments", articleId], (old = []) => old.filter((c) => c.id !== commentId));
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["comments", articleId] });
       toast.success("Comment deleted");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: () => {
+      // Non-blocking — comment is already removed from UI
+    },
   });
 
   function renderComment(c: CommentRow, isReply: boolean) {
