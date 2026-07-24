@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-r
 import { useQuery, queryOptions } from "@tanstack/react-query";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Sparkles, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { listArticles } from "@/lib/articles.functions";
@@ -221,13 +221,13 @@ function Home() {
               ? "Latest from all sections"
               : `Latest from ${COUNTRY_LABELS[country] ?? country}`}
         </div>
-        <button
-          onClick={topUp}
-          disabled={generating}
-          className="inline-flex items-center gap-2 border border-foreground px-3 py-1.5 text-xs uppercase tracking-widest hover:bg-foreground hover:text-background transition disabled:opacity-40"
+        <Link
+          to="/search"
+          className="inline-flex items-center gap-2 border border-foreground px-3 py-1.5 text-xs uppercase tracking-widest hover:bg-foreground hover:text-background transition"
         >
-          <Sparkles className="h-3.5 w-3.5" /> {generating ? "Curating…" : "Curate more"}
-        </button>
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          Search
+        </Link>
       </div>
 
       {articles.length > 0 && (
@@ -243,13 +243,13 @@ function Home() {
       {showEmptyState && (
         <div className="text-center py-16">
           <p className="dek">No stories found. Try curating fresh content below.</p>
-          <button
-            onClick={topUp}
-            disabled={generating}
-            className="mt-4 border border-foreground px-4 py-2 text-xs uppercase tracking-widest hover:bg-foreground hover:text-background transition disabled:opacity-40"
+          <Link
+            to="/search"
+            className="mt-4 inline-flex items-center gap-2 border border-foreground px-4 py-2 text-xs uppercase tracking-widest hover:bg-foreground hover:text-background transition"
           >
-            {generating ? "Curating…" : "Curate now"}
-          </button>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            Search stories
+          </Link>
         </div>
       )}
 

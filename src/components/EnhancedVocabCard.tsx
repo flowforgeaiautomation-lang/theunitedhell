@@ -26,7 +26,9 @@ export function EnhancedVocabCard({ entry, articleId, index }: { entry: VocabEnt
 
   const saveMutation = useMutation({
     mutationFn: async (save: boolean) =>
-      save ? saveFn({ data: { word: entry.word!, meaning: entry.meaning, pronunciation: entry.pronunciation, partOfSpeech: entry.partOfSpeech, example: entry.example, synonyms: entry.synonyms, antonyms: entry.antonyms, articleId } }) : unsaveFn({ data: { word: entry.word! } }),
+      save
+        ? saveFn({ data: { word: entry.word!, meaning: entry.meaning, pronunciation: entry.pronunciation, partOfSpeech: entry.partOfSpeech, example: entry.example, synonyms: entry.synonyms, antonyms: entry.antonyms, articleId } })
+        : unsaveFn({ data: { word: entry.word! } }),
     onSuccess: (_, save) => {
       toast.success(save ? "Saved to your vocabulary library" : "Removed from library");
       qc.invalidateQueries({ queryKey: ["saved-word", entry.word] });
@@ -42,8 +44,11 @@ export function EnhancedVocabCard({ entry, articleId, index }: { entry: VocabEnt
     window.speechSynthesis.speak(utterance);
   }
 
+  if (!entry.word || !entry.meaning) return null;
+
   return (
     <div className="border-l-2 border-foreground/20 pl-5 transition-colors hover:border-foreground/40">
+      {/* Word header */}
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <h3 className="font-serif text-2xl">{entry.word}</h3>
         {entry.pronunciation && (
@@ -71,20 +76,35 @@ export function EnhancedVocabCard({ entry, articleId, index }: { entry: VocabEnt
           {savedState?.saved ? <BookmarkCheck className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}
         </button>
       </div>
-      {entry.meaning ? (
-        <p className="mt-2 text-base text-foreground/90 leading-relaxed">
-          <span className="font-semibold">Meaning:</span> {entry.meaning}
+
+      {/* Dictionary meaning */}
+      <p className="mt-2 text-base text-foreground/90 leading-relaxed">
+        <span className="font-semibold">Meaning:</span> {entry.meaning}
+      </p>
+
+      {/* Plain-language explanation */}
+      {entry.simpleExplanation && entry.simpleExplanation !== entry.meaning && (
+        <p className="mt-1 text-sm text-foreground/70 leading-relaxed">
+          <span className="font-semibold text-foreground/80">In simple terms:</span> {entry.simpleExplanation}
         </p>
-      ) : null}
-      {entry.simpleExplanation && (
-        <p className="mt-1 text-sm text-foreground/70 leading-relaxed">{entry.simpleExplanation}</p>
       )}
+
+      {/* How it's used in THIS article */}
+      {entry.contextMeaning && (
+        <p className="mt-2 text-sm text-foreground/80 leading-relaxed border-l-2 border-foreground/20 pl-3">
+          <span className="font-semibold">Used in this article:</span> {entry.contextMeaning}
+        </p>
+      )}
+
+      {/* Example sentence */}
       {entry.example && (
-        <p className="mt-2 text-sm text-muted-foreground italic leading-relaxed border-l-2 border-foreground/10 pl-3">
-          {entry.example}
+        <p className="mt-2 text-sm text-muted-foreground italic leading-relaxed">
+          "{entry.example}"
         </p>
       )}
-      {(entry.synonyms?.length || entry.antonyms?.length) && (
+
+      {/* Synonyms & Antonyms */}
+      {(entry.synonyms?.length || entry.antonyms?.length) ? (
         <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm">
           {entry.synonyms?.length ? (
             <div>
@@ -99,7 +119,7 @@ export function EnhancedVocabCard({ entry, articleId, index }: { entry: VocabEnt
             </div>
           ) : null}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

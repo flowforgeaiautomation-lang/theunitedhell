@@ -6,6 +6,7 @@ export type VocabEntry = {
   partOfSpeech?: string;
   meaning?: string;
   simpleExplanation?: string;
+  contextMeaning?: string;
   example?: string;
   synonyms?: string[];
   antonyms?: string[];
