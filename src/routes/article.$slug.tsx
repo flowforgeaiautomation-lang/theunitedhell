@@ -2,7 +2,7 @@ import { createFileRoute, Link, notFound, useRouter } from "@tanstack/react-rout
 import { useQuery, queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { getArticleBySlug, getRelated, listComments } from "@/lib/articles.functions";
+import { getArticleBySlug, getRelated, listComments, postReflection } from "@/lib/articles.functions";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { postComment, deleteComment } from "@/lib/interactions.functions";
@@ -580,7 +580,7 @@ type SortMode = "newest" | "top" | "oldest";
 
 function KnowledgeCheckReflection({ articleId, story, title }: { articleId: string; story?: any; title?: string }) {
   const qc = useQueryClient();
-  const send = useServerFn(postComment);
+  const send = useServerFn(postReflection);
   const [posted, setPosted] = useState(false);
 
   return (

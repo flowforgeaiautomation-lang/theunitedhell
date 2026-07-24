@@ -714,6 +714,32 @@ export const getBriefingToday = createServerFn({ method: "GET" }).handler(async 
   return briefing;
 });
 
+export const postReflection = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        articleId: z.string().uuid(),
+        body: z.string().trim().min(1).max(4000),
+        promptType: z.enum(["learned", "surprised", "question", "perspective", "reply"]).optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const supabase = publicClient();
+    const { data: row, error } = await supabase
+      .from("comments")
+      .insert({
+        article_id: data.articleId,
+        user_id: null,
+        prompt_type: data.promptType ?? "perspective",
+        body: data.body,
+      })
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+    return { id: row.id };
+  });
+
 export const listComments = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ articleId: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
