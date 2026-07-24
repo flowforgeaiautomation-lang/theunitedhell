@@ -1,12 +1,11 @@
-import { createFileRoute, Link, notFound, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useQuery, queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { getArticleBySlug, getRelated, listComments } from "@/lib/articles.functions";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
-import { postComment, deleteComment } from "@/lib/interactions.functions";
-import { toggleCommentLike } from "@/lib/quiz.functions";
+
 import { ArticleActions } from "@/components/article-actions";
 import { ArticleCard } from "@/components/article-card";
 import { categoryLabel } from "@/lib/categories";
@@ -32,8 +31,8 @@ const articleQ = (slug: string) =>
 
 function directSupabaseClient() {
   return createClient<Database>(
-    process.env.SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL || "https://0ec90b57d6e95fcbda19832f.supabase.co",
-    process.env.SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJib2x0IiwicmVmIjoiMGVjOTBiNTdkNmU5NWZjYmRhMTk4MzJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg4ODE1NzQsImV4cCI6MTc1ODg4MTU3NH0.9I8-U0x86Ak8t2DGaIk0HfvTSLsAyzdnz-Nw00mMkKw",
+    process.env.SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL,
+    process.env.SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
     { auth: { persistSession: false, autoRefreshToken: false, storage: undefined } },
   );
 }
@@ -614,12 +613,8 @@ function KnowledgeCheckReflection({ articleId, story, title }: { articleId: stri
 }
 
 function Discussion({ articleId }: { articleId: string }) {
-  const router = useRouter();
   const qc = useQueryClient();
   const fetchComments = useServerFn(listComments);
-  const send = useServerFn(postComment);
-  const likeFn = useServerFn(toggleCommentLike);
-  const delFn = useServerFn(deleteComment);
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [prompt, setPrompt] = useState<typeof PROMPTS[number]["id"]>("perspective");
@@ -652,8 +647,16 @@ function Discussion({ articleId }: { articleId: string }) {
   });
 
   const mutation = useMutation({
-    mutationFn: (input: { body: string; promptType: typeof PROMPTS[number]["id"]; parentId?: string | null }) =>
-      send({ data: { articleId, body: input.body, promptType: input.promptType, parentId: input.parentId ?? null } }),
+    mutationFn: async (input: { body: string; promptType: typeof PROMPTS[number]["id"]; parentId?: string | null }) => {
+      const { error } = await supabase.from("comments").insert({
+        article_id: articleId,
+        user_id: currentUserId,
+        parent_id: input.parentId ?? null,
+        prompt_type: input.promptType,
+        body: input.body,
+      });
+      if (error) throw new Error(error.message);
+    },
     onSuccess: () => {
       setBody("");
       setReplyBody("");
@@ -665,7 +668,10 @@ function Discussion({ articleId }: { articleId: string }) {
   });
 
   const likeMutation = useMutation({
-    mutationFn: (commentId: string) => likeFn({ data: { commentId } }),
+    mutationFn: async (commentId: string) => {
+      const { error } = await supabase.rpc("bump_comment_likes", { comment_id: commentId });
+      if (error) throw new Error(error.message);
+    },
     onMutate: (commentId) => {
       setLikedComments((prev) => {
         const next = new Set(prev);
@@ -679,7 +685,10 @@ function Discussion({ articleId }: { articleId: string }) {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (commentId: string) => delFn({ data: { commentId } }),
+    mutationFn: async (commentId: string) => {
+      const { error } = await supabase.from("comments").delete().eq("id", commentId);
+      if (error) throw new Error(error.message);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["comments", articleId] });
       toast.success("Comment deleted");
@@ -790,49 +799,37 @@ function Discussion({ articleId }: { articleId: string }) {
         )}
       </h2>
 
-      {signedIn ? (
-        <div className="border rule p-6">
-          <div className="flex flex-wrap gap-2 mb-4">
-            {PROMPTS.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => setPrompt(p.id)}
-                className={`px-3 py-1.5 text-xs uppercase tracking-widest border rule transition ${prompt === p.id ? "bg-foreground text-background" : "hover:bg-foreground hover:text-background"}`}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-          <textarea
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            rows={4}
-            maxLength={4000}
-            placeholder={PROMPTS.find((p) => p.id === prompt)?.label}
-            className="w-full bg-transparent border rule p-4 font-serif text-lg focus:outline-none focus:ring-1 focus:ring-foreground/40"
-          />
-          <div className="flex items-center justify-between mt-3">
-            <div className="text-xs text-muted-foreground">{body.length}/4000</div>
+      <div className="border rule p-6">
+        <div className="flex flex-wrap gap-2 mb-4">
+          {PROMPTS.map((p) => (
             <button
-              onClick={() => body.trim() && mutation.mutate({ body: body.trim(), promptType: prompt })}
-              disabled={!body.trim() || mutation.isPending}
-              className="border border-foreground px-4 py-2 text-xs uppercase tracking-widest hover:bg-foreground hover:text-background transition disabled:opacity-40"
+              key={p.id}
+              onClick={() => setPrompt(p.id)}
+              className={`px-3 py-1.5 text-xs uppercase tracking-widest border rule transition ${prompt === p.id ? "bg-foreground text-background" : "hover:bg-foreground hover:text-background"}`}
             >
-              {mutation.isPending ? "Posting…" : "Post comment"}
+              {p.label}
             </button>
-          </div>
+          ))}
         </div>
-      ) : (
-        <div className="border rule p-6 flex items-center justify-between">
-          <p className="dek not-italic font-sans text-sm">Sign in to contribute to the discussion.</p>
+        <textarea
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          rows={4}
+          maxLength={4000}
+          placeholder={PROMPTS.find((p) => p.id === prompt)?.label}
+          className="w-full bg-transparent border rule p-4 font-serif text-lg focus:outline-none focus:ring-1 focus:ring-foreground/40"
+        />
+        <div className="flex items-center justify-between mt-3">
+          <div className="text-xs text-muted-foreground">{body.length}/4000</div>
           <button
-            onClick={() => router.navigate({ to: "/auth" })}
-            className="border border-foreground px-4 py-2 text-xs uppercase tracking-widest hover:bg-foreground hover:text-background transition"
+            onClick={() => body.trim() && mutation.mutate({ body: body.trim(), promptType: prompt })}
+            disabled={!body.trim() || mutation.isPending}
+            className="border border-foreground px-4 py-2 text-xs uppercase tracking-widest hover:bg-foreground hover:text-background transition disabled:opacity-40"
           >
-            Sign in
+            {mutation.isPending ? "Posting…" : "Post comment"}
           </button>
         </div>
-      )}
+      </div>
 
       {comments.length > 0 && (
         <div className="mt-8 flex items-center gap-2">

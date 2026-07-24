@@ -1,1 +1,0 @@
-import{ht as e}from"./index-BL2iLPJD.js";var t=e({type:`function`});export{t};
