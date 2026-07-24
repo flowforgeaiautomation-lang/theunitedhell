@@ -141,13 +141,25 @@ export function KnowledgeCheck({ articleId, story, title, onReflection }: { arti
             </div>
 
             {q.question_type === "reflection" ? (
-              <textarea
-                value={answers[q.id] ?? ""}
-                onChange={(e) => setAnswers((a) => ({ ...a, [q.id]: e.target.value }))}
-                rows={3}
-                placeholder="Share your reflection…"
-                className="w-full bg-transparent border rule p-4 font-serif text-base focus:outline-none focus:ring-1 focus:ring-foreground/40"
-              />
+              <div>
+                <textarea
+                  value={answers[q.id] ?? ""}
+                  onChange={(e) => setAnswers((a) => ({ ...a, [q.id]: e.target.value }))}
+                  rows={3}
+                  placeholder="Share your reflection…"
+                  className="w-full bg-transparent border rule p-4 font-serif text-base focus:outline-none focus:ring-1 focus:ring-foreground/40"
+                />
+                <button
+                  onClick={() => {
+                    const text = (answers[q.id] ?? "").trim();
+                    if (text && onReflection) onReflection(text);
+                  }}
+                  disabled={!(answers[q.id] ?? "").trim()}
+                  className="mt-3 border border-foreground px-4 py-2 text-xs uppercase tracking-widest hover:bg-foreground hover:text-background transition disabled:opacity-40"
+                >
+                  Share to discussion
+                </button>
+              </div>
             ) : q.question_type === "true_false" ? (
               <div className="flex gap-3">
                 {["true", "false"].map((opt) => {

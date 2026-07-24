@@ -602,7 +602,7 @@ function Discussion({ articleId }: { articleId: string }) {
     supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session));
   }, []);
 
-  const { data: comments = [], isLoading } = useQuery({
+  const { data: comments = [] } = useQuery({
     queryKey: ["comments", articleId],
     queryFn: () => fetchComments({ data: { articleId } }),
   });
@@ -703,8 +703,7 @@ function Discussion({ articleId }: { articleId: string }) {
       )}
 
       <div className="mt-10 space-y-8">
-        {isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
-        {!isLoading && comments.length === 0 && (
+        {comments.length === 0 && (
           <p className="text-sm text-muted-foreground">No contributions yet. Be the first.</p>
         )}
         {sortedComments.map((c: CommentRow) => {
