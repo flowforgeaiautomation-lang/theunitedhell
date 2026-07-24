@@ -1,0 +1,153 @@
+import { l as createServerFn } from "./esm-Dova13aH.mjs";
+import { t as requireSupabaseAuth } from "./auth-middleware-Bugw3wPl.mjs";
+import { a as objectType, o as stringType, r as enumType, t as arrayType } from "../_libs/zod.mjs";
+import { t as createServerRpc } from "./createServerRpc-WJgk8O8C.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/interactions.functions-nUGIolLg.js
+var toggleLike_createServerFn_handler = createServerRpc({
+	id: "137f5ea154602f1772ede27de11a2fdd69fb9f490c204538a330cc9b9bcbfbd0",
+	name: "toggleLike",
+	filename: "src/lib/interactions.functions.ts"
+}, (opts) => toggleLike.__executeServer(opts));
+var toggleLike = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((d) => objectType({ articleId: stringType().uuid() }).parse(d)).handler(toggleLike_createServerFn_handler, async ({ data, context }) => {
+	const { supabase, userId } = context;
+	const { data: existing } = await supabase.from("article_likes").select("article_id").eq("user_id", userId).eq("article_id", data.articleId).maybeSingle();
+	if (existing) {
+		await supabase.from("article_likes").delete().eq("user_id", userId).eq("article_id", data.articleId);
+		return { liked: false };
+	}
+	await supabase.from("article_likes").insert({
+		user_id: userId,
+		article_id: data.articleId
+	});
+	return { liked: true };
+});
+var toggleBookmark_createServerFn_handler = createServerRpc({
+	id: "0fb08557df523ca07940ebdc9dcc62c66ec0e1c55e0b942a191ee6b9047f5555",
+	name: "toggleBookmark",
+	filename: "src/lib/interactions.functions.ts"
+}, (opts) => toggleBookmark.__executeServer(opts));
+var toggleBookmark = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((d) => objectType({ articleId: stringType().uuid() }).parse(d)).handler(toggleBookmark_createServerFn_handler, async ({ data, context }) => {
+	const { supabase, userId } = context;
+	const { data: existing } = await supabase.from("bookmarks").select("article_id").eq("user_id", userId).eq("article_id", data.articleId).maybeSingle();
+	if (existing) {
+		await supabase.from("bookmarks").delete().eq("user_id", userId).eq("article_id", data.articleId);
+		return { bookmarked: false };
+	}
+	await supabase.from("bookmarks").insert({
+		user_id: userId,
+		article_id: data.articleId
+	});
+	return { bookmarked: true };
+});
+var getMyInteractions_createServerFn_handler = createServerRpc({
+	id: "fa0cbd6ede72e168910c0d196ecad51e6c133cc3a263313efa796595d486ff30",
+	name: "getMyInteractions",
+	filename: "src/lib/interactions.functions.ts"
+}, (opts) => getMyInteractions.__executeServer(opts));
+var getMyInteractions = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((d) => objectType({ articleIds: arrayType(stringType().uuid()) }).parse(d)).handler(getMyInteractions_createServerFn_handler, async ({ data, context }) => {
+	if (data.articleIds.length === 0) return {
+		liked: [],
+		bookmarked: []
+	};
+	const { supabase, userId } = context;
+	const [likes, bms] = await Promise.all([supabase.from("article_likes").select("article_id").eq("user_id", userId).in("article_id", data.articleIds), supabase.from("bookmarks").select("article_id").eq("user_id", userId).in("article_id", data.articleIds)]);
+	return {
+		liked: (likes.data ?? []).map((r) => r.article_id),
+		bookmarked: (bms.data ?? []).map((r) => r.article_id)
+	};
+});
+var listMyBookmarks_createServerFn_handler = createServerRpc({
+	id: "454c7e9205d14eda45b03e6dca9b9a36ce2b79d72bf81f7575ea76cb3652c9a8",
+	name: "listMyBookmarks",
+	filename: "src/lib/interactions.functions.ts"
+}, (opts) => listMyBookmarks.__executeServer(opts));
+var listMyBookmarks = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth]).handler(listMyBookmarks_createServerFn_handler, async ({ context }) => {
+	const { supabase, userId } = context;
+	const { data, error } = await supabase.from("bookmarks").select("created_at, articles(id,slug,title,dek,category,cover_image_url,read_time_minutes,published_at,view_count,like_count,bookmark_count,comment_count,featured_slot,country_code,subcategory)").eq("user_id", userId).order("created_at", { ascending: false }).limit(100);
+	if (error) throw new Error(error.message);
+	return (data ?? []).map((r) => r.articles).filter(Boolean);
+});
+var postComment_createServerFn_handler = createServerRpc({
+	id: "4f9464f6c5e268b72439f7fb7e58e4ba9fbe7d312f9d0470e6b34862748d089d",
+	name: "postComment",
+	filename: "src/lib/interactions.functions.ts"
+}, (opts) => postComment.__executeServer(opts));
+var postComment = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((d) => objectType({
+	articleId: stringType().uuid(),
+	body: stringType().trim().min(1).max(4e3),
+	promptType: enumType([
+		"learned",
+		"surprised",
+		"question",
+		"perspective",
+		"reply"
+	]).optional(),
+	parentId: stringType().uuid().nullable().optional()
+}).parse(d)).handler(postComment_createServerFn_handler, async ({ data, context }) => {
+	const { supabase, userId } = context;
+	const { data: id, error } = await supabase.rpc("insert_comment", {
+		p_article_id: data.articleId,
+		p_body: data.body,
+		p_prompt_type: data.promptType ?? "perspective",
+		p_parent_id: data.parentId ?? null,
+		p_user_id: userId
+	});
+	if (error) throw new Error(error.message);
+	return { id };
+});
+var saveInterests_createServerFn_handler = createServerRpc({
+	id: "3e0c5a60d3635a478c9d9a79daa645b631bf49d62ab3455b8d1322618d25650e",
+	name: "saveInterests",
+	filename: "src/lib/interactions.functions.ts"
+}, (opts) => saveInterests.__executeServer(opts));
+var saveInterests = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((d) => objectType({ interests: arrayType(stringType().min(1)).max(30) }).parse(d)).handler(saveInterests_createServerFn_handler, async ({ data, context }) => {
+	const { supabase, userId } = context;
+	const { error } = await supabase.from("profiles").update({
+		interests: data.interests,
+		onboarded: true
+	}).eq("id", userId);
+	if (error) throw new Error(error.message);
+	return { ok: true };
+});
+var getMyProfile_createServerFn_handler = createServerRpc({
+	id: "99f139f7ab6563e54274bfeea44122dee80fcdc2c401e33dffe8dad33dbdf722",
+	name: "getMyProfile",
+	filename: "src/lib/interactions.functions.ts"
+}, (opts) => getMyProfile.__executeServer(opts));
+var getMyProfile = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth]).handler(getMyProfile_createServerFn_handler, async ({ context }) => {
+	const { supabase, userId } = context;
+	const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
+	if (error) throw new Error(error.message);
+	return data;
+});
+var updateMyProfile_createServerFn_handler = createServerRpc({
+	id: "bb0a251087d079129b93b6aa6dc3949acdae68f8a2536522a2843c5b4406f228",
+	name: "updateMyProfile",
+	filename: "src/lib/interactions.functions.ts"
+}, (opts) => updateMyProfile.__executeServer(opts));
+var updateMyProfile = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((d) => objectType({
+	display_name: stringType().trim().min(1).max(80).optional(),
+	username: stringType().trim().min(2).max(40).regex(/^[a-z0-9_]+$/i).optional(),
+	bio: stringType().trim().max(400).optional()
+}).parse(d)).handler(updateMyProfile_createServerFn_handler, async ({ data, context }) => {
+	const { supabase, userId } = context;
+	const { error } = await supabase.from("profiles").update(data).eq("id", userId);
+	if (error) throw new Error(error.message);
+	return { ok: true };
+});
+var deleteComment_createServerFn_handler = createServerRpc({
+	id: "230a0aabcf513e3531644fb294f65ca89321a3009398c29b47cc30e1cdd40ddd",
+	name: "deleteComment",
+	filename: "src/lib/interactions.functions.ts"
+}, (opts) => deleteComment.__executeServer(opts));
+var deleteComment = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((d) => objectType({ commentId: stringType().uuid() }).parse(d)).handler(deleteComment_createServerFn_handler, async ({ data, context }) => {
+	const { supabase, userId } = context;
+	const { data: comment, error: fetchErr } = await supabase.from("comments").select("user_id").eq("id", data.commentId).maybeSingle();
+	if (fetchErr) throw new Error(fetchErr.message);
+	if (comment?.user_id !== userId) throw new Error("You can only delete your own comments");
+	const { error } = await supabase.rpc("delete_comment_by_id", { p_comment_id: data.commentId });
+	if (error) throw new Error(error.message);
+	return { deleted: true };
+});
+//#endregion
+export { deleteComment_createServerFn_handler, getMyInteractions_createServerFn_handler, getMyProfile_createServerFn_handler, listMyBookmarks_createServerFn_handler, postComment_createServerFn_handler, saveInterests_createServerFn_handler, toggleBookmark_createServerFn_handler, toggleLike_createServerFn_handler, updateMyProfile_createServerFn_handler };

@@ -430,17 +430,36 @@ async function normalizeArticle(article: Article): Promise<Article> {
 
   // If AI vocabulary is missing or inadequate, generate from article text.
   // This ensures every article always has vocabulary — no exceptions.
-  let finalVocab = rawVocab.slice(0, 5);
+  let finalVocab = rawVocab.slice(0, 10);
   let vocabWasRegenerated = false;
-  if (finalVocab.length < 3) {
+  if (finalVocab.length < 5) {
     const fallback = await generateFallbackVocab(
-      [summary, mainStory, decClean((currentStory as any).background), decClean((currentStory as any).expert_analysis)]
+      [summary, mainStory, decClean((currentStory as any).background), decClean((currentStory as any).expert_analysis), article.dek, article.title]
         .filter(Boolean).join(" "),
       finalVocab,
     );
     if (fallback.length) {
-      finalVocab = fallback;
-      vocabWasRegenerated = true;
+      // Merge with existing AI vocab, avoiding duplicates
+      const existing = new Set(finalVocab.map((v) => v.word?.toLowerCase()));
+      const merged = [...finalVocab, ...fallback.filter((v) => !existing.has(v.word?.toLowerCase()))].slice(0, 10);
+      if (merged.length >= 5) {
+        finalVocab = merged;
+        vocabWasRegenerated = true;
+      } else if (merged.length > finalVocab.length) {
+        finalVocab = merged;
+        vocabWasRegenerated = true;
+      }
+    }
+    // If still fewer than 5, try harder with a broader text source
+    if (finalVocab.length < 5) {
+      const allArticleText = [article.title, article.dek, summary, mainStory, decClean((currentStory as any).background), decClean((currentStory as any).expert_analysis), decClean((currentStory as any).why_it_matters), decClean((currentStory as any).historical_context), decClean((currentStory as any).future_outlook), ...(currentStory.key_developments || []), ...(currentStory.quick_insights || []), ...(currentStory.reader_takeaways || [])].filter(Boolean).join(" ");
+      const moreFallback = await generateFallbackVocab(allArticleText, finalVocab);
+      if (moreFallback.length) {
+        const existing = new Set(finalVocab.map((v) => v.word?.toLowerCase()));
+        const merged = [...finalVocab, ...moreFallback.filter((v) => !existing.has(v.word?.toLowerCase()))].slice(0, 10);
+        finalVocab = merged;
+        vocabWasRegenerated = true;
+      }
     }
   }
 

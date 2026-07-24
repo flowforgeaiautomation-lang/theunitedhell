@@ -101,17 +101,30 @@ export function KnowledgeCheck({ articleId, story, title, onReflection }: { arti
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
 
-  if (questions.length === 0) return null;
-
-  const score = questions.filter((q) => q.question_type !== "reflection" && answers[q.id] === q.correct_answer).length;
-  const gradedCount = questions.filter((q) => q.question_type !== "reflection").length;
-
   const reflectionQuestion = questions.find((q) => q.question_type === "reflection");
+
+  // If no quiz questions can be generated, still show the reflection prompt
+  // so users can always post to the discussion.
+  if (questions.length === 0 && !story) return null;
+
+  const gradedQuestions = questions.filter((q) => q.question_type !== "reflection");
+  const score = gradedQuestions.filter((q) => answers[q.id] === q.correct_answer).length;
+  const gradedCount = gradedQuestions.length;
 
   function reset() {
     setAnswers({});
     setSubmitted(false);
   }
+
+  function handleSubmit() {
+    setSubmitted(true);
+    const reflectionText = reflectionQuestion ? answers[reflectionQuestion.id]?.trim() : "";
+    if (onReflection && reflectionText) onReflection(reflectionText);
+  }
+
+  const canSubmit = gradedQuestions.length > 0
+    ? Object.keys(answers).length >= gradedCount || !!answers[reflectionQuestion?.id ?? ""]?.trim()
+    : !!answers[reflectionQuestion?.id ?? ""]?.trim();
 
   return (
     <div className="border-t rule pt-8 mt-4">
@@ -119,7 +132,7 @@ export function KnowledgeCheck({ articleId, story, title, onReflection }: { arti
         <Trophy className="h-4 w-4" /> Knowledge Check
       </div>
 
-      {submitted && (
+      {submitted && gradedCount > 0 && (
         <div className="mb-8 rounded-lg border rule bg-foreground/[0.02] p-6 text-center">
           <div className="font-serif text-4xl mb-2">{score} / {gradedCount}</div>
           <p className="text-sm text-muted-foreground">
@@ -209,15 +222,11 @@ export function KnowledgeCheck({ articleId, story, title, onReflection }: { arti
       {!submitted && (
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <button
-            onClick={() => {
-              setSubmitted(true);
-              const reflectionText = reflectionQuestion ? answers[reflectionQuestion.id]?.trim() : "";
-              if (onReflection && reflectionText) onReflection(reflectionText);
-            }}
-            disabled={Object.keys(answers).length < gradedCount && !answers[reflectionQuestion?.id ?? ""]?.trim()}
+            onClick={handleSubmit}
+            disabled={!canSubmit}
             className="border border-foreground px-6 py-2.5 text-xs uppercase tracking-widest hover:bg-foreground hover:text-background transition disabled:opacity-40"
           >
-            Check answers
+            {answers[reflectionQuestion?.id ?? ""]?.trim() ? "Post comment" : "Check answers"}
           </button>
         </div>
       )}

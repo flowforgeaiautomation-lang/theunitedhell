@@ -42,28 +42,15 @@ function NotFoundComponent() {
 
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
-  const router = useRouter();
-  useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
-    const timer = setTimeout(() => {
-      router.invalidate();
-      reset();
-    }, 2000);
-    return () => clearTimeout(timer);
-  }, [error, router, reset]);
-
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="container-read text-center">
-        <div className="kicker">Retrying</div>
-        <h1 className="display-2 mt-3">One moment…</h1>
-        <p className="dek mt-3">The site is reloading automatically. You can also try the buttons below.</p>
+        <div className="kicker">Error</div>
+        <h1 className="display-2 mt-3">Something went wrong</h1>
+        <p className="dek mt-3">Please try refreshing the page.</p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
-            onClick={() => {
-              router.invalidate();
-              reset();
-            }}
+            onClick={() => reset()}
             className="border border-foreground px-4 py-2 text-xs uppercase tracking-widest hover:bg-foreground hover:text-background transition"
           >
             Try again

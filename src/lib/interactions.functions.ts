@@ -87,19 +87,15 @@ export const postComment = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { data: row, error } = await supabase
-      .from("comments")
-      .insert({
-        article_id: data.articleId,
-        user_id: userId,
-        parent_id: data.parentId ?? null,
-        prompt_type: data.promptType ?? "perspective",
-        body: data.body,
-      })
-      .select("id")
-      .single();
+    const { data: id, error } = await supabase.rpc("insert_comment", {
+      p_article_id: data.articleId,
+      p_body: data.body,
+      p_prompt_type: data.promptType ?? "perspective",
+      p_parent_id: data.parentId ?? null,
+      p_user_id: userId,
+    });
     if (error) throw new Error(error.message);
-    return { id: row.id };
+    return { id };
   });
 
 export const saveInterests = createServerFn({ method: "POST" })
@@ -147,11 +143,16 @@ export const deleteComment = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ commentId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { error } = await supabase
+    const { data: comment, error: fetchErr } = await supabase
       .from("comments")
-      .delete()
+      .select("user_id")
       .eq("id", data.commentId)
-      .eq("user_id", userId);
+      .maybeSingle();
+    if (fetchErr) throw new Error(fetchErr.message);
+    if (comment?.user_id !== userId) throw new Error("You can only delete your own comments");
+    const { error } = await supabase.rpc("delete_comment_by_id", {
+      p_comment_id: data.commentId,
+    });
     if (error) throw new Error(error.message);
     return { deleted: true };
   });
