@@ -1,0 +1,1 @@
+import{t as e}from"./jsx-runtime-DUAcabCT.js";var t=e(),n=({error:e})=>(0,t.jsx)(`div`,{className:`container-edit py-20 text-center`,children:(0,t.jsxs)(`p`,{className:`dek`,children:[`We couldn't load the front page. `,e.message]})});export{n as errorComponent};

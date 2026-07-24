@@ -1,0 +1,171 @@
+import { l as createServerFn } from "./esm-Dova13aH.mjs";
+import { t as createClient } from "../_libs/supabase__supabase-js.mjs";
+import { t as requireSupabaseAuth } from "./auth-middleware-Bugw3wPl.mjs";
+import { a as objectType, o as stringType, r as enumType, t as arrayType } from "../_libs/zod.mjs";
+import { t as createServerRpc } from "./createServerRpc-WJgk8O8C.mjs";
+import { n as orJson } from "./openrouter.server-CyJoPfDo.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/quiz.functions-BGfeW39J.js
+function publicClient() {
+	return createClient(process.env.SUPABASE_URL || "https://myrteqlcfwckgdokzzhg.supabase.co", process.env.SUPABASE_PUBLISHABLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im15cnRlcWxjZndja2dkb2t6emhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3MjE4OTgsImV4cCI6MjA5ODI5Nzg5OH0.lGAyAxmYrJAag1yONChoqV4-A1QQAkdWKxZp5IMJyII", { auth: {
+		persistSession: false,
+		autoRefreshToken: false,
+		storage: void 0
+	} });
+}
+async function generateQuizFromArticle(articleId) {
+	const supabase = publicClient();
+	const { data: article } = await supabase.from("articles").select("title, story").eq("id", articleId).single();
+	if (!article) return [];
+	const story = article.story || {};
+	const articleText = [
+		story.summary,
+		story.main_story,
+		story.background,
+		story.expert_analysis,
+		story.why_it_matters,
+		...story.key_developments || [],
+		...story.quick_insights || []
+	].filter(Boolean).join("\n\n").slice(0, 6e3);
+	if (!articleText || articleText.trim().length < 100) return [];
+	const prompt = `You are a quiz generator for a premium news site. Based ONLY on the article below, create 4 quiz questions.
+
+Article title: ${article.title}
+
+Article content:
+${articleText}
+
+Rules:
+- 2 multiple_choice questions with 4 options each, one correct answer, and a 1-sentence explanation
+- 1 true_false question with correct_answer "true" or "false" and an explanation
+- 1 reflection question (open-ended, no correct answer, options null, explanation null)
+- Questions must be answerable from the article text alone
+
+Return as JSON object: {"questions":[{"question_type":"multiple_choice","question":"...","options":["A","B","C","D"],"correct_answer":"A","explanation":"..."},{"question_type":"true_false","question":"...","options":null,"correct_answer":"true","explanation":"..."},{"question_type":"reflection","question":"...","options":null,"correct_answer":null,"explanation":null}]}`;
+	try {
+		const result = await orJson({
+			system: "You are a quiz generator. Return only valid JSON, no other text.",
+			prompt,
+			temperature: .5
+		});
+		const questions = Array.isArray(result) ? result : result?.questions ?? [];
+		if (!questions.length) return [];
+		const rows = questions.map((q) => ({
+			article_id: articleId,
+			question_type: q.question_type,
+			question: q.question,
+			options: q.options,
+			correct_answer: q.correct_answer,
+			explanation: q.explanation
+		}));
+		await supabase.from("article_quizzes").insert(rows);
+		return questions.map((q, i) => ({
+			id: `gen-${articleId}-${i}`,
+			question_type: q.question_type,
+			question: q.question,
+			options: q.options,
+			correct_answer: q.correct_answer,
+			explanation: q.explanation
+		}));
+	} catch {
+		return [];
+	}
+}
+var getQuiz_createServerFn_handler = createServerRpc({
+	id: "3f411a5a86e1b94831a0a4c65b6d7be325d72f6e16bfcaafd1eea5420eba2d40",
+	name: "getQuiz",
+	filename: "src/lib/quiz.functions.ts"
+}, (opts) => getQuiz.__executeServer(opts));
+var getQuiz = createServerFn({ method: "GET" }).inputValidator((d) => objectType({ articleId: stringType().uuid() }).parse(d)).handler(getQuiz_createServerFn_handler, async ({ data }) => {
+	const { data: rows, error } = await publicClient().from("article_quizzes").select("id, question_type, question, options, correct_answer, explanation").eq("article_id", data.articleId).order("created_at", { ascending: true });
+	if (error) throw new Error(error.message);
+	const existing = rows ?? [];
+	if (existing.length > 0) return existing;
+	return generateQuizFromArticle(data.articleId);
+});
+var saveWord_createServerFn_handler = createServerRpc({
+	id: "9f2f6ba40525e8198b118ea0792a6dd5b091e0e918ad20deaa2ec04e656768dc",
+	name: "saveWord",
+	filename: "src/lib/quiz.functions.ts"
+}, (opts) => saveWord.__executeServer(opts));
+var saveWord = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((d) => objectType({
+	word: stringType().min(1).max(100),
+	meaning: stringType().optional(),
+	pronunciation: stringType().optional(),
+	partOfSpeech: stringType().optional(),
+	example: stringType().optional(),
+	synonyms: arrayType(stringType()).optional(),
+	antonyms: arrayType(stringType()).optional(),
+	articleId: stringType().uuid().optional(),
+	difficulty: enumType([
+		"beginner",
+		"intermediate",
+		"advanced"
+	]).default("intermediate")
+}).parse(d)).handler(saveWord_createServerFn_handler, async ({ data, context }) => {
+	const { supabase, userId } = context;
+	const { error } = await supabase.from("saved_words").upsert({
+		user_id: userId,
+		word: data.word,
+		meaning: data.meaning,
+		pronunciation: data.pronunciation,
+		part_of_speech: data.partOfSpeech,
+		example: data.example,
+		synonyms: data.synonyms,
+		antonyms: data.antonyms,
+		article_id: data.articleId,
+		difficulty: data.difficulty
+	}, { onConflict: "user_id,word" });
+	if (error) throw new Error(error.message);
+	return { saved: true };
+});
+var unsaveWord_createServerFn_handler = createServerRpc({
+	id: "98f0758b4436662ac49e7cd7349646eec144ced754078fceff93813f6eecbb8c",
+	name: "unsaveWord",
+	filename: "src/lib/quiz.functions.ts"
+}, (opts) => unsaveWord.__executeServer(opts));
+var unsaveWord = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((d) => objectType({ word: stringType().min(1).max(100) }).parse(d)).handler(unsaveWord_createServerFn_handler, async ({ data, context }) => {
+	const { supabase, userId } = context;
+	await supabase.from("saved_words").delete().eq("user_id", userId).eq("word", data.word);
+	return { saved: false };
+});
+var listSavedWords_createServerFn_handler = createServerRpc({
+	id: "c9ea2b6c2c8c2926151fc15aabcb729a89c2bd8dcfb93cc940482adffed6c282",
+	name: "listSavedWords",
+	filename: "src/lib/quiz.functions.ts"
+}, (opts) => listSavedWords.__executeServer(opts));
+var listSavedWords = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth]).handler(listSavedWords_createServerFn_handler, async ({ context }) => {
+	const { supabase, userId } = context;
+	const { data, error } = await supabase.from("saved_words").select("word,meaning,pronunciation,part_of_speech,example,synonyms,antonyms,difficulty,created_at").eq("user_id", userId).order("created_at", { ascending: false });
+	if (error) throw new Error(error.message);
+	return data ?? [];
+});
+var checkSavedWord_createServerFn_handler = createServerRpc({
+	id: "baeae8ce0f95a331573919e9f2d39c15914c425568f97eaedbf2166a0ed9815b",
+	name: "checkSavedWord",
+	filename: "src/lib/quiz.functions.ts"
+}, (opts) => checkSavedWord.__executeServer(opts));
+var checkSavedWord = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((d) => objectType({ word: stringType().min(1).max(100) }).parse(d)).handler(checkSavedWord_createServerFn_handler, async ({ data, context }) => {
+	const { supabase, userId } = context;
+	const { data: row } = await supabase.from("saved_words").select("word").eq("user_id", userId).eq("word", data.word).maybeSingle();
+	return { saved: !!row };
+});
+var toggleCommentLike_createServerFn_handler = createServerRpc({
+	id: "3818bce773c3be4ba554055b02c3855cb1a43083d49b2ccec573ca368210b885",
+	name: "toggleCommentLike",
+	filename: "src/lib/quiz.functions.ts"
+}, (opts) => toggleCommentLike.__executeServer(opts));
+var toggleCommentLike = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((d) => objectType({ commentId: stringType().uuid() }).parse(d)).handler(toggleCommentLike_createServerFn_handler, async ({ data, context }) => {
+	const { supabase, userId } = context;
+	const { data: existing } = await supabase.from("comment_likes").select("comment_id").eq("user_id", userId).eq("comment_id", data.commentId).maybeSingle();
+	if (existing) {
+		await supabase.from("comment_likes").delete().eq("user_id", userId).eq("comment_id", data.commentId);
+		return { liked: false };
+	}
+	await supabase.from("comment_likes").insert({
+		user_id: userId,
+		comment_id: data.commentId
+	});
+	return { liked: true };
+});
+//#endregion
+export { checkSavedWord_createServerFn_handler, getQuiz_createServerFn_handler, listSavedWords_createServerFn_handler, saveWord_createServerFn_handler, toggleCommentLike_createServerFn_handler, unsaveWord_createServerFn_handler };

@@ -157,7 +157,7 @@ export function KnowledgeCheck({ articleId, story, title, onReflection }: { arti
                   disabled={!(answers[q.id] ?? "").trim()}
                   className="mt-3 border border-foreground px-4 py-2 text-xs uppercase tracking-widest hover:bg-foreground hover:text-background transition disabled:opacity-40"
                 >
-                  Share to discussion
+                  Post reflection
                 </button>
               </div>
             ) : q.question_type === "true_false" ? (

@@ -5,14 +5,14 @@ import { useServerFn } from "@tanstack/react-start";
 import { getArticleBySlug, getRelated, listComments } from "@/lib/articles.functions";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
-import { postComment } from "@/lib/interactions.functions";
+import { postComment, deleteComment } from "@/lib/interactions.functions";
 import { toggleCommentLike } from "@/lib/quiz.functions";
 import { ArticleActions } from "@/components/article-actions";
 import { ArticleCard } from "@/components/article-card";
 import { categoryLabel } from "@/lib/categories";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Quote, Lightbulb, Clock, TrendingUp, Users, Building2, Globe2, Hash, Sparkles, Info, Bookmark, ChevronRight, ArrowBigUp } from "lucide-react";
+import { Quote, Lightbulb, Clock, TrendingUp, Users, Building2, Globe2, Hash, Sparkles, Info, Bookmark, ChevronRight, ArrowBigUp, MessageCircle, Trash2, CornerDownRight } from "lucide-react";
 import type { CommentRow, ArticleStory, KeyNumber, PersonInvolved, OrganizationInvolved, CountryInvolved } from "@/lib/types";
 import { fallbackCoverUrl } from "@/lib/article-images";
 import { WordSearch } from "@/components/word-search";
@@ -155,6 +155,15 @@ function ReadingProgress() {
 function ArticlePage() {
   const { slug } = Route.useParams();
   const { data: article, isError, refetch } = useQuery(articleQ(slug));
+
+  // All hooks must run unconditionally before any early return,
+  // otherwise React throws error #310 (hooks called conditionally).
+  const relatedQuery = useQuery({
+    queryKey: ["related", article?.category ?? "", article?.slug ?? ""],
+    queryFn: () => getRelated({ data: { category: article!.category, excludeSlug: article!.slug } }),
+    enabled: !!article,
+  });
+
   if (isError) {
     return (
       <div className="container-read py-24 text-center">
@@ -174,11 +183,7 @@ function ArticlePage() {
   if (!article) return null;
   const story = article.story ?? {};
   const cover = article.cover_image_url || fallbackCoverUrl(article);
-
-  const { data: related = [] } = useQuery({
-    queryKey: ["related", article.category, article.slug],
-    queryFn: () => getRelated({ data: { category: article.category, excludeSlug: article.slug } }),
-  });
+  const related = relatedQuery.data ?? [];
 
   const tags = (article as any).tags || (story as any).tags || [];
 
@@ -293,11 +298,7 @@ function ArticlePage() {
                   <EnhancedVocabCard key={`${v.word}-${i}`} entry={v} articleId={article.id} index={i} />
                 ))}
               </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                No vocabulary available for this article.
-              </p>
-            )}
+            ) : null}
 
             <WordSearch />
           </div>
@@ -612,14 +613,21 @@ function Discussion({ articleId }: { articleId: string }) {
   const fetchComments = useServerFn(listComments);
   const send = useServerFn(postComment);
   const likeFn = useServerFn(toggleCommentLike);
+  const delFn = useServerFn(deleteComment);
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [prompt, setPrompt] = useState<typeof PROMPTS[number]["id"]>("perspective");
   const [body, setBody] = useState("");
   const [sort, setSort] = useState<SortMode>("newest");
   const [likedComments, setLikedComments] = useState<Set<string>>(new Set());
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyBody, setReplyBody] = useState("");
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session));
+    supabase.auth.getSession().then(({ data }) => {
+      setSignedIn(!!data.session);
+      setCurrentUserId(data.session?.user?.id ?? null);
+    });
   }, []);
 
   const { data: comments = [] } = useQuery({
@@ -627,17 +635,23 @@ function Discussion({ articleId }: { articleId: string }) {
     queryFn: () => fetchComments({ data: { articleId } }),
   });
 
-  const sortedComments = [...comments].sort((a, b) => {
+  // Build threaded structure: top-level comments with nested replies
+  const topLevel = comments.filter((c: CommentRow) => !c.parent_id);
+  const repliesOf = (parentId: string) => comments.filter((c: CommentRow) => c.parent_id === parentId);
+
+  const sortedTop = [...topLevel].sort((a, b) => {
     if (sort === "top") return (b.like_count ?? 0) - (a.like_count ?? 0);
     if (sort === "oldest") return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
 
   const mutation = useMutation({
-    mutationFn: (input: { body: string; promptType: typeof PROMPTS[number]["id"] }) =>
-      send({ data: { articleId, body: input.body, promptType: input.promptType } }),
+    mutationFn: (input: { body: string; promptType: typeof PROMPTS[number]["id"]; parentId?: string | null }) =>
+      send({ data: { articleId, body: input.body, promptType: input.promptType, parentId: input.parentId ?? null } }),
     onSuccess: () => {
       setBody("");
+      setReplyBody("");
+      setReplyingTo(null);
       qc.invalidateQueries({ queryKey: ["comments", articleId] });
       toast.success("Posted to the discussion");
     },
@@ -658,10 +672,117 @@ function Discussion({ articleId }: { articleId: string }) {
     onError: () => toast.error("Could not update vote"),
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (commentId: string) => delFn({ data: { commentId } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["comments", articleId] });
+      toast.success("Comment deleted");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  function renderComment(c: CommentRow, isReply: boolean) {
+    const isLiked = likedComments.has(c.id);
+    const count = (c.like_count ?? 0) + (isLiked ? 1 : 0);
+    const canDelete = signedIn && currentUserId === c.user_id;
+    const childReplies = repliesOf(c.id);
+
+    return (
+      <div key={c.id} className={isReply ? "ml-6 border-l border-foreground/10 pl-4" : "border-t rule pt-6"}>
+        <div className="flex items-baseline justify-between mb-2">
+          <div className="font-serif font-medium">
+            {c.author?.display_name || c.author?.username || "Reader"}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {c.prompt_type && !isReply && (
+              <span className="mr-3 kicker text-[0.6rem]">
+                {PROMPTS.find((p) => p.id === c.prompt_type)?.label ?? c.prompt_type}
+              </span>
+            )}
+            {new Date(c.created_at).toLocaleDateString()}
+          </div>
+        </div>
+        <p className="font-serif text-lg leading-snug whitespace-pre-wrap">{c.body}</p>
+        <div className="mt-3 flex items-center gap-3">
+          {signedIn && (
+            <button
+              onClick={() => likeMutation.mutate(c.id)}
+              className={`flex items-center gap-1 text-sm transition ${isLiked ? "text-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              {isLiked ? <ArrowBigUp className="h-4 w-4 fill-current" /> : <ArrowBigUp className="h-4 w-4" />}
+              <span>{count}</span>
+            </button>
+          )}
+          {signedIn && !isReply && (
+            <button
+              onClick={() => {
+                setReplyingTo(replyingTo === c.id ? null : c.id);
+                setReplyBody("");
+              }}
+              className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition"
+            >
+              <MessageCircle className="h-4 w-4" />
+              <span>Reply</span>
+            </button>
+          )}
+          {canDelete && (
+            <button
+              onClick={() => deleteMutation.mutate(c.id)}
+              disabled={deleteMutation.isPending}
+              className="flex items-center gap-1 text-sm text-muted-foreground hover:text-red-600 transition"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span>Delete</span>
+            </button>
+          )}
+        </div>
+
+        {replyingTo === c.id && signedIn && (
+          <div className="mt-4 ml-2">
+            <textarea
+              value={replyBody}
+              onChange={(e) => setReplyBody(e.target.value)}
+              rows={3}
+              maxLength={4000}
+              placeholder={`Reply to ${c.author?.display_name || c.author?.username || "Reader"}…`}
+              className="w-full bg-transparent border rule p-4 font-serif text-base focus:outline-none focus:ring-1 focus:ring-foreground/40"
+            />
+            <div className="flex items-center gap-2 mt-2">
+              <button
+                onClick={() => replyBody.trim() && mutation.mutate({ body: replyBody.trim(), promptType: prompt, parentId: c.id })}
+                disabled={!replyBody.trim() || mutation.isPending}
+                className="border border-foreground px-4 py-2 text-xs uppercase tracking-widest hover:bg-foreground hover:text-background transition disabled:opacity-40"
+              >
+                {mutation.isPending ? "Posting…" : "Post reply"}
+              </button>
+              <button
+                onClick={() => { setReplyingTo(null); setReplyBody(""); }}
+                className="text-xs text-muted-foreground hover:text-foreground transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {childReplies.length > 0 && (
+          <div className="mt-4 space-y-4">
+            {childReplies.map((r: CommentRow) => renderComment(r, true))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <section className="container-read py-16 border-t rule">
       <div className="kicker mb-6">The Discussion</div>
-      <h2 className="display-2 mb-8">A guided conversation</h2>
+      <h2 className="display-2 mb-8">
+        A guided conversation
+        {comments.length > 0 && (
+          <span className="ml-3 text-base font-sans text-muted-foreground">({comments.length} {comments.length === 1 ? "contribution" : "contributions"})</span>
+        )}
+      </h2>
 
       {signedIn ? (
         <div className="border rule p-6">
@@ -691,7 +812,7 @@ function Discussion({ articleId }: { articleId: string }) {
               disabled={!body.trim() || mutation.isPending}
               className="border border-foreground px-4 py-2 text-xs uppercase tracking-widest hover:bg-foreground hover:text-background transition disabled:opacity-40"
             >
-              {mutation.isPending ? "Posting…" : "Post to discussion"}
+              {mutation.isPending ? "Posting…" : "Post comment"}
             </button>
           </div>
         </div>
@@ -726,39 +847,7 @@ function Discussion({ articleId }: { articleId: string }) {
         {comments.length === 0 && (
           <p className="text-sm text-muted-foreground">No contributions yet. Be the first.</p>
         )}
-        {sortedComments.map((c: CommentRow) => {
-          const isLiked = likedComments.has(c.id);
-          const count = (c.like_count ?? 0) + (isLiked ? 1 : 0);
-          return (
-            <div key={c.id} className="border-t rule pt-6">
-              <div className="flex items-baseline justify-between mb-2">
-                <div className="font-serif font-medium">
-                  {c.author?.display_name || c.author?.username || "Reader"}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  {c.prompt_type && (
-                    <span className="mr-3 kicker text-[0.6rem]">
-                      {PROMPTS.find((p) => p.id === c.prompt_type)?.label ?? c.prompt_type}
-                    </span>
-                  )}
-                  {new Date(c.created_at).toLocaleDateString()}
-                </div>
-              </div>
-              <p className="font-serif text-lg leading-snug whitespace-pre-wrap">{c.body}</p>
-              {signedIn && (
-                <div className="mt-3 flex items-center gap-2">
-                  <button
-                    onClick={() => likeMutation.mutate(c.id)}
-                    className={`flex items-center gap-1 text-sm transition ${isLiked ? "text-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}
-                  >
-                    {isLiked ? <ArrowBigUp className="h-4 w-4 fill-current" /> : <ArrowBigUp className="h-4 w-4" />}
-                    <span>{count}</span>
-                  </button>
-                </div>
-              )}
-            </div>
-          );
-        })}
+        {sortedTop.map((c: CommentRow) => renderComment(c, false))}
       </div>
     </section>
   );

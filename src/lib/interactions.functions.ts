@@ -141,3 +141,17 @@ export const updateMyProfile = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export const deleteComment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ commentId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { error } = await supabase
+      .from("comments")
+      .delete()
+      .eq("id", data.commentId)
+      .eq("user_id", userId);
+    if (error) throw new Error(error.message);
+    return { deleted: true };
+  });

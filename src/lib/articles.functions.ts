@@ -328,6 +328,54 @@ function cleanList(items?: (string | null | undefined)[] | null): string[] | und
   return cleaned.length ? cleaned : undefined;
 }
 
+// Generate vocabulary from article text when AI vocabulary is missing or inadequate.
+// This is a local fallback — no API calls — so it always works.
+function generateFallbackVocab(text: string, title: string, existing: VocabEntry[]): VocabEntry[] {
+  const STOP = new Set([
+    "the","a","an","and","or","but","in","on","at","to","for","of","with","by","from","is","was","are","were","be","been","being","have","has","had","do","does","did","will","would","could","should","may","might","can","this","that","these","those","it","its","as","if","then","than","so","not","no","yes","also","about","after","before","because","while","during","through","between","against","without","within","across","among","around","above","below","up","down","out","over","under","again","further","once","here","there","when","where","why","how","all","any","both","each","few","more","most","other","some","such","only","own","same","very","just","now","said","says","say","one","two","three","new","old","good","bad","big","small","high","low","long","short","great","little","own","get","got","make","made","go","went","come","came","take","took","give","gave","find","found","think","thought","know","knew","tell","told","ask","asked","work","worked","look","looked","seem","seemed","feel","felt","try","tried","leave","left","call","called","want","need","use","used","find","found","put","mean","meant","keep","kept","let","begin","began","seem","seemed","help","helped","show","showed","run","play","move","live","believe","hold","bring","happen","write","sit","stand","lose","pay","meet","include","continue","set","learn","change","lead","understand","watch","follow","stop","create","speak","read","allow","add","spend","grow","open","walk","win","offer","remember","love","consider","appear","buy","wait","serve","die","send","expect","build","stay","fall","cut","reach","kill","remain","suggest","raise","pass","sell","require","report","decide","pull","break","receive","agree","pick","wear","support","hit","produce","eat","cover","catch","draw","choose","cause","point","hear","eat","explain","hope","develop","carry","thank","improve","sign","notice","prepare","relate","reach","raise","remember","represent","serve","reveal","secure","separate","seek","share","spread","spring","stick","strike","struggle","suggest","supply","support","suppose","survive","target","teach","tend","test","threat","throw","touch","trade","train","treat","trouble","trust","turn","vary","view","visit","voice","vote","wait","warn","waste","watch","wear","week","weight","wish","wonder","worry","write","year","yet","young","able","across","address","adult","affect","age","ago","agree","ahead","aid","aim","air","allow","almost","alone","along","already","although","always","among","amount","answer","anti","apply","area","argue","arm","army","art","ask","assault","asset","attempt","attention","attorney","audience","author","authority","available","avoid","award","aware","away","baby","back","bad","bag","ball","band","bank","bar","base","battle","beach","beat","beautiful","bed","begin","behind","believe","benefit","best","better","between","beyond","big","bill","billion","bit","black","blood","blue","board","boat","body","book","born","both","box","boy","brain","brand","break","bridge","brief","bring","broad","brother","brown","budget","build","building","business","busy","buy","cabinet","call","campaign","cancer","candidate","capital","car","card","care","career","carry","case","catch","cause","cell","center","central","century","certain","chain","chair","challenge","chance","change","charge","check","child","choice","choose","church","city","civil","claim","class","clean","clear","climate","climb","clock","close","cloth","clothes","cloud","club","coach","coast","code","coffee","cold","collect","college","color","come","comfort","common","community","company","compare","computer","concern","condition","consider","consumer","contain","continue","control","cost","could","country","couple","course","court","cover","create","crime","crisis","critic","cross","crowd","current","customer","cut","dad","damage","dance","danger","dark","data","daughter","day","dead","deal","death","debate","decade","decide","decision","deep","defense","degree","democrat","describe","design","despite","detail","determine","develop","development","device","die","difference","different","difficult","dinner","direction","director","discover","discuss","disease","doctor","dog","door","down","draw","dream","drive","drop","drug","dry","due","during","each","earlier","early","earn","earth","east","easy","eat","economic","economy","edge","education","effect","effort","eight","either","election","electric","else","employee","end","energy","enjoy","enough","enter","entire","environment","environmental","especially","establish","even","evening","event","ever","every","everybody","everyone","everything","evidence","exactly","example","executive","exist","expect","experience","expert","explain","eye","face","fact","factor","fail","fall","family","far","farm","fast","father","fear","federal","feel","few","field","fight","figure","fill","final","finally","financial","find","fine","finger","finish","fire","firm","first","fish","five","floor","fly","focus","follow","food","foot","force","foreign","forest","forget","form","former","forward","four","free","friend","front","full","fund","future","game","garden","gas","gate","gather","general","generation","get","girl","give","glass","global","goal","god","gold","good","government","great","green","ground","group","grow","growth","guess","gun","guy","hair","half","hall","hand","handle","hang","happen","happy","hard","hat","have","head","health","hear","heart","heat","heavy","help","her","here","herself","hide","high","him","himself","his","history","hit","hold","home","hope","hospital","hot","hotel","hour","house","how","huge","human","hundred","husband","idea","identify","image","imagine","impact","important","improve","include","including","increase","indeed","indicate","individual","industry","information","inside","instead","institution","interest","interesting","international","interview","into","investment","involve","issue","item","itself","job","join","key","kid","kill","kind","kitchen","know","knowledge","land","language","large","last","late","later","laugh","law","lawyer","lay","lead","leader","learn","least","leave","left","legal","less","let","letter","level","lie","life","light","like","likely","line","list","listen","little","live","local","long","look","lose","loss","lot","love","low","machine","magazine","main","maintain","major","make","management","manager","many","market","marriage","material","matter","may","maybe","mean","measure","medical","meet","meeting","member","memory","mention","message","method","middle","might","military","million","mind","minute","miss","mission","model","modern","moment","money","month","more","morning","most","mother","mouth","move","movement","movie","much","music","must","myself","name","nation","national","natural","nature","near","nearly","necessary","need","network","never","new","news","next","nice","night","nine","none","normal","north","not","note","nothing","notice","now","nuclear","number","occur","off","offer","office","officer","official","often","oil","old","once","one","online","only","onto","open","operation","opportunity","option","order","organization","other","others","ought","our","out","outside","over","own","page","pain","painting","paper","parent","part","participant","particular","partner","party","pass","past","patient","pay","peace","people","per","perform","perhaps","period","person","personal","phone","physical","pick","picture","piece","place","plan","plant","play","player","point","police","policy","political","politics","poor","popular","population","position","positive","possible","power","practice","prepare","present","president","pressure","pretty","prevent","price","private","probably","problem","process","produce","product","production","professional","professor","program","project","property","protect","prove","provide","public","pull","purpose","push","put","quality","question","quickly","quite","race","radio","raise","range","rate","rather","reach","ready","real","reality","realize","really","reason","receive","recent","recently","recognize","record","red","reduce","reflect","region","relate","relationship","religious","remain","remember","remove","report","represent","republican","require","research","resource","respond","response","responsibility","rest","result","return","reveal","rich","right","rise","risk","road","rock","role","room","rule","run","safe","same","save","scene","school","science","scientist","sea","season","seat","second","section","security","seek","seem","sell","senator","send","senior","sense","series","serious","serve","service","set","seven","several","shake","share","she","shoot","short","shot","should","shoulder","show","side","sign","significant","similar","simple","simply","since","single","sister","sit","site","situation","six","size","skill","skin","small","smile","social","society","soldier","some","somebody","someone","something","sometimes","somewhat","son","song","soon","sort","sound","source","south","space","speak","special","specific","speech","spend","sport","spring","staff","stage","stand","standard","star","start","state","statement","station","stay","step","still","stock","stop","store","story","street","strong","structure","student","study","stuff","style","subject","success","successful","such","suddenly","suffer","suggest","summer","support","sure","surface","system","table","take","talk","task","teach","teacher","team","technology","television","tell","ten","tend","term","test","than","thank","that","their","them","themselves","then","theory","there","these","they","thing","think","third","this","those","though","thought","thousand","threat","three","through","throughout","throw","thus","time","today","together","tonight","too","top","total","tough","toward","town","trade","traditional","training","travel","treat","treatment","tree","trial","trip","trouble","true","truth","try","turn","tv","type","under","understand","unit","until","upon","use","usually","various","very","victim","view","violence","visit","voice","vote","wait","walk","wall","want","war","watch","water","way","weapon","wear","week","weight","well","west","western","what","whatever","when","where","whether","which","while","white","who","whole","whom","whose","why","wide","wife","will","win","wind","window","wish","with","within","without","woman","wonder","word","work","worker","world","worry","would","write","writer","wrong","yard","yeah","year","yes","yet","you","young","your","yourself","zone",
+  ]);
+
+  const words = text
+    .replace(/[^a-zA-Z\s]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length >= 5 && !STOP.has(w.toLowerCase()));
+
+  // Count word frequencies to find meaningful terms
+  const freq = new Map<string, number>();
+  for (const w of words) {
+    const lw = w.toLowerCase();
+    freq.set(lw, (freq.get(lw) ?? 0) + 1);
+  }
+
+  // Sort by frequency (descending) then by word length (descending) for richer words
+  const candidates = [...freq.entries()]
+    .sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)
+    .filter(([w]) => !existing.some((e) => e.word?.toLowerCase() === w))
+    .slice(0, 5)
+    .map(([w]) => w);
+
+  const partsOfSpeech = ["noun", "verb", "adjective", "noun", "noun"];
+
+  return candidates.map((word, i) => {
+    // Find a sentence from the article that uses this word
+    const sentences = text.split(/(?<=[.!?])\s+/);
+    const exampleSentence = sentences.find((s) =>
+      new RegExp(`\\b${word}\\b`, "i").test(s),
+    )?.trim() || `This article discusses ${word}.`;
+
+    return {
+      word: word.charAt(0).toUpperCase() + word.slice(1),
+      partOfSpeech: partsOfSpeech[i] || "noun",
+      meaning: `A key term used in this article.`,
+      simpleExplanation: `A word used in this article about ${title.toLowerCase()}.`,
+      example: exampleSentence.slice(0, 200),
+      synonyms: [],
+      antonyms: [],
+      pronunciation: undefined,
+    };
+  });
+}
+
 async function normalizeArticle(article: Article): Promise<Article> {
   const currentStory = article.story ?? {};
   const dec = (s?: string | null) => (s ? decodeEntities(s) : s);
@@ -392,10 +440,23 @@ async function normalizeArticle(article: Article): Promise<Article> {
     meaning: dec(v.meaning) || undefined,
     simpleExplanation: (dec(v.simple_explanation) || dec(v.simpleExplanation) || undefined)?.replace(/^In simple terms:\s*/i, ""),
     example: v.example ? dec(v.example) : undefined,
-    synonyms: v.synonyms || undefined,
-    antonyms: v.antonyms || undefined,
+    synonyms: Array.isArray(v.synonyms) ? v.synonyms.filter(Boolean) : undefined,
+    antonyms: Array.isArray(v.antonyms) ? v.antonyms.filter(Boolean) : undefined,
     pronunciation: v.pronunciation || v.phonetic || undefined,
   })).filter((v: any) => v.word && v.meaning) || [];
+
+  // If AI vocabulary is missing or inadequate, generate from article text.
+  // This ensures every article always has vocabulary — no exceptions.
+  let finalVocab = rawVocab.slice(0, 5);
+  if (finalVocab.length < 3) {
+    const fallback = generateFallbackVocab(
+      [summary, mainStory, decClean((currentStory as any).background), decClean((currentStory as any).expert_analysis)]
+        .filter(Boolean).join(" "),
+      article.title || "",
+      finalVocab,
+    );
+    finalVocab = fallback;
+  }
 
   return {
     ...article,
@@ -426,7 +487,7 @@ async function normalizeArticle(article: Article): Promise<Article> {
       future_outlook: dedupeProse((currentStory as any).future_outlook || currentStory.future_impact || currentStory.next),
       reader_takeaways: decodeListMaybe(cleanList(readerTakeaways)),
       what_happens_next: dedupeProse((currentStory as any).what_happens_next),
-      vocabulary: rawVocab.slice(0, 5),
+      vocabulary: finalVocab,
       sources: decodeListMaybe(cleanList((currentStory as any).sources)),
       // Legacy fields
       qa: undefined,

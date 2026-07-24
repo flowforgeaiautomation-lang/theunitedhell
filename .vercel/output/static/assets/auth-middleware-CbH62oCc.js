@@ -1,0 +1,1 @@
+import{pt as e}from"./index-DxOKYtVd.js";var t=e({type:`function`});export{t};

@@ -1,0 +1,1 @@
+import{t as e}from"./jsx-runtime-DUAcabCT.js";var t=e(),n=({error:e})=>(0,t.jsx)(`div`,{className:`container-edit py-20`,children:(0,t.jsx)(`p`,{className:`dek`,children:e.message})});export{n as errorComponent};
