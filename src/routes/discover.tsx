@@ -83,30 +83,19 @@ function DiscoverPage() {
   const cursorRef = useRef<string | undefined>(undefined);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const isFetchingRef = useRef(false);
+  const filterKeyRef = useRef<string>("");
 
-  const articlesQuery = useQuery(discoverQuery(active, country === "WORLD" ? undefined : country));
+  const countryParam = country === "WORLD" ? undefined : country;
+  const articlesQuery = useQuery(discoverQuery(active, countryParam));
 
-  // When the base query resolves, seed the articles list from it
+  // Seed articles directly from query data — no race condition
   useEffect(() => {
     const result = articlesQuery.data;
     if (!result) return;
     const items = (result as any).items ?? (Array.isArray(result) ? result : []);
-    if (items.length === 0) {
-      setArticles([]);
-      setHasMore(false);
-      cursorRef.current = undefined;
-      return;
-    }
-    // Only seed if this is a fresh query (different articles than what we have)
-    const currentIds = new Set(articles.map((a) => a.id));
-    const newIds = items.map((a: ArticleSummary) => a.id);
-    const isSamePage = newIds.length > 0 && newIds.every((id: string) => currentIds.has(id));
-    if (!isSamePage) {
-      setArticles(items);
-      cursorRef.current = (result as any).nextCursor;
-      setHasMore((result as any).hasMore ?? false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setArticles(items);
+    cursorRef.current = (result as any).nextCursor;
+    setHasMore((result as any).hasMore ?? false);
   }, [articlesQuery.data]);
 
   useEffect(() => {
@@ -125,11 +114,15 @@ function DiscoverPage() {
   useEffect(() => { setActive(search.category); }, [search.category]);
 
   // Reset everything when filters change
+  const currentFilterKey = `${active ?? "all"}|${country}`;
   useEffect(() => {
-    setArticles([]);
-    setHasMore(true);
-    cursorRef.current = undefined;
-  }, [active, country]);
+    if (filterKeyRef.current !== currentFilterKey) {
+      filterKeyRef.current = currentFilterKey;
+      setArticles([]);
+      setHasMore(true);
+      cursorRef.current = undefined;
+    }
+  }, [currentFilterKey]);
 
   const loadMore = useCallback(async () => {
     if (isFetchingRef.current || !hasMore) return;
@@ -141,7 +134,7 @@ function DiscoverPage() {
           limit: PAGE_SIZE,
           cursor: cursorRef.current,
           category: active,
-          country: country === "WORLD" ? undefined : country,
+          country: countryParam,
         },
       });
       const newItems = (result as any).items ?? [];
@@ -162,7 +155,7 @@ function DiscoverPage() {
       setLoadingMore(false);
       isFetchingRef.current = false;
     }
-  }, [hasMore, active, country]);
+  }, [hasMore, active, countryParam]);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
@@ -188,9 +181,6 @@ function DiscoverPage() {
       }
       if (result.inserted > 0) {
         toast.success(`${result.inserted} new stories added`);
-        setArticles([]);
-        setHasMore(true);
-        cursorRef.current = undefined;
         articlesQuery.refetch();
       } else {
         toast.message("No new stories found right now — try again in a few minutes");
@@ -260,7 +250,7 @@ function DiscoverPage() {
         </div>
       )}
 
-      {articles.length === 0 && !articlesQuery.isLoading && !articlesQuery.isError && (
+      {articles.length === 0 && !articlesQuery.isLoading && !articlesQuery.isError && articlesQuery.isFetched && (
         <div className="text-center py-16">
           <p className="dek">No stories found in this category yet. Try curating fresh content.</p>
           <button

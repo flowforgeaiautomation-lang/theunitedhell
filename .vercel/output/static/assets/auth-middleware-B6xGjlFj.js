@@ -1,1 +1,0 @@
-import{xt as e}from"./index-DMEUI8SS.js";var t=e({type:`function`});export{t};
