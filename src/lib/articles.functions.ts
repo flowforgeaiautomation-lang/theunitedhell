@@ -564,10 +564,10 @@ export const listArticles = createServerFn({ method: "GET" })
       const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toISOString();
       q = q.gte("published_at", start).lt("published_at", end);
     }
-    if (data.sort === "trending") q = q.order("trending_score", { ascending: false });
-    else if (data.sort === "most_read") q = q.order("view_count", { ascending: false });
-    else if (data.sort === "most_saved") q = q.order("bookmark_count", { ascending: false });
-    else q = q.order("published_at", { ascending: false });
+    if (data.sort === "trending") q = q.order("trending_score", { ascending: false }).order("id", { ascending: false });
+    else if (data.sort === "most_read") q = q.order("view_count", { ascending: false }).order("id", { ascending: false });
+    else if (data.sort === "most_saved") q = q.order("bookmark_count", { ascending: false }).order("id", { ascending: false });
+    else q = q.order("published_at", { ascending: false }).order("id", { ascending: false });
     const { data: rows, error } = await q.range(data.offset, data.offset + data.limit - 1);
     if (error) throw new Error(error.message);
     return dedupeSummaries((rows ?? []) as ArticleSummary[], data.limit);
@@ -580,7 +580,8 @@ export const getFeatured = createServerFn({ method: "GET" }).handler(async () =>
     .select(summaryCols)
     .eq("is_published", true)
     .not("featured_slot", "is", null)
-    .order("published_at", { ascending: false });
+    .order("published_at", { ascending: false })
+    .order("id", { ascending: false });
   if (error) throw new Error(error.message);
   // Keep latest per slot.
   const bySlot = new Map<string, ArticleSummary>();
@@ -622,6 +623,7 @@ export const getRelated = createServerFn({ method: "GET" })
       .eq("category", data.category)
       .neq("slug", data.excludeSlug)
       .order("published_at", { ascending: false })
+      .order("id", { ascending: false })
       .limit(data.limit);
     if (error) throw new Error(error.message);
     return (rows ?? []) as ArticleSummary[];
@@ -638,6 +640,7 @@ export const searchArticles = createServerFn({ method: "GET" })
       .eq("is_published", true)
       .or(`title.ilike.${term},dek.ilike.${term},category.ilike.${term}`)
       .order("published_at", { ascending: false })
+      .order("id", { ascending: false })
       .limit(40);
     if (error) throw new Error(error.message);
     return (rows ?? []) as ArticleSummary[];
@@ -684,6 +687,7 @@ export const getBriefingToday = createServerFn({ method: "GET" }).handler(async 
         .eq("is_published", true)
         .in("category", cats)
         .order("published_at", { ascending: false })
+        .order("id", { ascending: false })
         .limit(limit);
       return dedupeSummaries((rows ?? []) as ArticleSummary[], limit);
     };
@@ -692,6 +696,7 @@ export const getBriefingToday = createServerFn({ method: "GET" }).handler(async 
       .select(summaryCols)
       .eq("is_published", true)
       .order("published_at", { ascending: false })
+      .order("id", { ascending: false })
       .limit(80);
     const latestRows = dedupeSummaries((latest ?? []) as ArticleSummary[], 60);
 

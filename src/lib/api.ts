@@ -4,7 +4,7 @@ import type { Article } from "../types";
 const PAGE_SIZE = 12;
 
 export async function fetchArticles(limit: number, offset: number, category?: string): Promise<Article[]> {
-  let query = supabase.from("articles").select("*").eq("is_published", true).order("published_at", { ascending: false }).range(offset, offset + limit - 1);
+  let query = supabase.from("articles").select("*").eq("is_published", true).order("published_at", { ascending: false }).order("id", { ascending: false }).range(offset, offset + limit - 1);
   if (category) query = query.eq("category", category);
   const { data, error } = await query;
   if (error) { console.error("fetchArticles:", error.message); return []; }
@@ -15,7 +15,7 @@ export async function fetchTodaysArticles(limit: number, offset: number): Promis
   const now = new Date();
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0).toISOString();
   const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).toISOString();
-  const { data, error } = await supabase.from("articles").select("*").eq("is_published", true).gte("published_at", startOfDay).lte("published_at", endOfDay).order("published_at", { ascending: false }).range(offset, offset + limit - 1);
+  const { data, error } = await supabase.from("articles").select("*").eq("is_published", true).gte("published_at", startOfDay).lte("published_at", endOfDay).order("published_at", { ascending: false }).order("id", { ascending: false }).range(offset, offset + limit - 1);
   if (error) { console.error("fetchTodaysArticles:", error.message); return []; }
   return (data || []) as Article[];
 }
@@ -27,13 +27,13 @@ export async function fetchArticleBySlug(slug: string): Promise<Article | null> 
 }
 
 export async function fetchRelatedArticles(article: Article, limit = 4): Promise<Article[]> {
-  const { data, error } = await supabase.from("articles").select("*").eq("is_published", true).eq("category", article.category).neq("id", article.id).order("published_at", { ascending: false }).limit(limit);
+  const { data, error } = await supabase.from("articles").select("*").eq("is_published", true).eq("category", article.category).neq("id", article.id).order("published_at", { ascending: false }).order("id", { ascending: false }).limit(limit);
   if (error) { console.error("fetchRelated:", error.message); return []; }
   return (data || []) as Article[];
 }
 
 export async function searchArticles(query: string, limit = 24): Promise<Article[]> {
-  const { data, error } = await supabase.from("articles").select("*").eq("is_published", true).or(`title.ilike.%${query}%,dek.ilike.%${query}%`).order("published_at", { ascending: false }).limit(limit);
+  const { data, error } = await supabase.from("articles").select("*").eq("is_published", true).or(`title.ilike.%${query}%,dek.ilike.%${query}%`).order("published_at", { ascending: false }).order("id", { ascending: false }).limit(limit);
   if (error) { console.error("searchArticles:", error.message); return []; }
   return (data || []) as Article[];
 }
