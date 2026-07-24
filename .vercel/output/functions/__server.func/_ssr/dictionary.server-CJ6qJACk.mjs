@@ -1,0 +1,254 @@
+import { t as createClient } from "../_libs/supabase__supabase-js.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/dictionary.server-CJ6qJACk.js
+function publicClient() {
+	return createClient(process.env.SUPABASE_URL || "https://myrteqlcfwckgdokzzhg.supabase.co", process.env.SUPABASE_PUBLISHABLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im15cnRlcWxjZndja2dkb2t6emhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3MjE4OTgsImV4cCI6MjA5ODI5Nzg5OH0.lGAyAxmYrJAag1yONChoqV4-A1QQAkdWKxZp5IMJyII", { auth: {
+		persistSession: false,
+		autoRefreshToken: false,
+		storage: void 0
+	} });
+}
+async function fetchJson(url, timeoutMs = 8e3) {
+	const c = new AbortController();
+	const t = setTimeout(() => c.abort(), timeoutMs);
+	try {
+		const r = await fetch(url, {
+			signal: c.signal,
+			headers: { "user-agent": "TheUnitedHell/1.0" }
+		});
+		if (!r.ok) return null;
+		return await r.json();
+	} catch {
+		return null;
+	} finally {
+		clearTimeout(t);
+	}
+}
+function simplifyDefinition(def) {
+	return def.replace(/^[a-z]+;\s*/i, "").replace(/;[^;]*$/g, "").replace(/\s+/g, " ").trim().split(/[,;]\s*/)[0].trim();
+}
+function makeSimpleExplanation(def) {
+	return simplifyDefinition(def);
+}
+async function fetchFromDictionaryApi(word) {
+	const data = await fetchJson(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
+	if (!Array.isArray(data) || !data.length) return null;
+	const entry = data[0];
+	const meanings = Array.isArray(entry?.meanings) ? entry.meanings : [];
+	if (!meanings.length) return null;
+	const first = meanings[0];
+	const defs = Array.isArray(first?.definitions) ? first.definitions : [];
+	if (!defs.length) return null;
+	const def = defs[0]?.definition || "";
+	const partOfSpeech = first?.partOfSpeech || "";
+	const synonyms = Array.from(new Set([first?.synonyms || [], defs.flatMap((d) => d.synonyms || [])].flat().filter(Boolean))).slice(0, 5);
+	const antonyms = Array.from(new Set([first?.antonyms || [], defs.flatMap((d) => d.antonyms || [])].flat().filter(Boolean))).slice(0, 5);
+	const pronunciation = entry?.phonetic || entry?.phonetics?.find((p) => p.text)?.text;
+	const example = defs.find((d) => d.example)?.example || void 0;
+	return {
+		word,
+		partOfSpeech: partOfSpeech || void 0,
+		meaning: def || void 0,
+		simpleExplanation: makeSimpleExplanation(def),
+		example,
+		synonyms: synonyms.length ? synonyms : void 0,
+		antonyms: antonyms.length ? antonyms : void 0,
+		pronunciation: pronunciation || void 0
+	};
+}
+async function bumpSearchCount(supabase, word) {
+	await supabase.rpc("increment_vocab_search", { w: word }).then(() => {});
+}
+async function lookupWord(word) {
+	const key = word.toLowerCase().trim();
+	if (!key) return null;
+	const supabase = publicClient();
+	const { data: cached } = await supabase.from("vocabulary_cache").select("*").eq("word", key).maybeSingle();
+	if (cached?.meaning) {
+		bumpSearchCount(supabase, key);
+		return {
+			word: cached.word,
+			partOfSpeech: cached.part_of_speech || void 0,
+			meaning: cached.meaning || void 0,
+			simpleExplanation: cached.simple_explanation || void 0,
+			example: cached.example || void 0,
+			synonyms: cached.synonyms || void 0,
+			antonyms: cached.antonyms || void 0,
+			pronunciation: cached.pronunciation || void 0
+		};
+	}
+	const api = await fetchFromDictionaryApi(key);
+	if (api) {
+		await supabase.from("vocabulary_cache").upsert({
+			word: key,
+			part_of_speech: api.partOfSpeech || null,
+			meaning: api.meaning || null,
+			simple_explanation: api.simpleExplanation || null,
+			example: api.example || null,
+			synonyms: api.synonyms || null,
+			antonyms: api.antonyms || null,
+			pronunciation: api.pronunciation || null,
+			source: "dictionaryapi.dev",
+			search_count: 1,
+			last_searched_at: (/* @__PURE__ */ new Date()).toISOString(),
+			updated_at: (/* @__PURE__ */ new Date()).toISOString()
+		}, { onConflict: "word" }).then(() => {});
+		return api;
+	}
+	const ai = await fetchFromAiFallback(key);
+	if (ai) {
+		await supabase.from("vocabulary_cache").upsert({
+			word: key,
+			part_of_speech: ai.partOfSpeech || null,
+			meaning: ai.meaning || null,
+			simple_explanation: ai.simpleExplanation || null,
+			example: ai.example || null,
+			synonyms: ai.synonyms || null,
+			antonyms: ai.antonyms || null,
+			pronunciation: ai.pronunciation || null,
+			source: "ai-fallback",
+			search_count: 1,
+			last_searched_at: (/* @__PURE__ */ new Date()).toISOString(),
+			updated_at: (/* @__PURE__ */ new Date()).toISOString()
+		}, { onConflict: "word" }).then(() => {});
+		return ai;
+	}
+	return null;
+}
+async function getPopularWords(limit = 8) {
+	const { data } = await publicClient().from("vocabulary_cache").select("word").gt("search_count", 0).order("search_count", { ascending: false }).order("last_searched_at", { ascending: false }).limit(limit);
+	return (data ?? []).map((r) => r.word);
+}
+async function fetchFromAiFallback(word) {
+	const providers = getAiProviders();
+	if (!providers.length) return null;
+	const systemPrompt = "You are a precise dictionary. Return ONLY JSON with keys: word, partOfSpeech, meaning (one concise real dictionary definition — never a generic placeholder like 'an important word used in this story'), simpleExplanation (plain-language), example (one CORRECT, natural English sentence that uses the word with its proper meaning — never a nonsensical or grammatically broken sentence), synonyms (up to 5), antonyms (up to 5, empty array if none), pronunciation (IPA if known, else empty string). Never invent placeholder meanings. Never write example sentences that misuse the word. If the word is unknown or ambiguous, return {\"meaning\":\"\"}.";
+	for (const p of providers) {
+		const result = await p.chat(word, systemPrompt);
+		if (result) return result;
+	}
+	return null;
+}
+function getAiProviders() {
+	const providers = [];
+	const openaiKey = process.env.OPENAI_API_KEY || process.env.AI_API_KEY;
+	if (openaiKey) providers.push({
+		name: "openai",
+		async chat(word, system) {
+			return openAiCompatibleChat("https://api.openai.com/v1/chat/completions", openaiKey, process.env.AI_MODEL || "gpt-4o-mini", word, system);
+		}
+	});
+	const anthropicKey = process.env.ANTHROPIC_API_KEY;
+	if (anthropicKey) providers.push({
+		name: "anthropic",
+		async chat(word, system) {
+			return anthropicChat(anthropicKey, word, system);
+		}
+	});
+	const orKey = process.env.OPENROUTER_API_KEY || process.env.QWEN3_80B_API_KEY;
+	if (orKey) providers.push({
+		name: "openrouter",
+		async chat(word, system) {
+			return openAiCompatibleChat("https://openrouter.ai/api/v1/chat/completions", orKey, "qwen/qwen3-next-80b-a3b-instruct", word, system, {
+				"HTTP-Referer": "https://the-united-hell.lovable.app",
+				"X-Title": "The United Hell"
+			});
+		}
+	});
+	return providers;
+}
+async function openAiCompatibleChat(endpoint, key, model, word, system, extraHeaders) {
+	const c = new AbortController();
+	const t = setTimeout(() => c.abort(), 1e4);
+	try {
+		const headers = {
+			"content-type": "application/json",
+			authorization: `Bearer ${key}`
+		};
+		if (extraHeaders) Object.assign(headers, extraHeaders);
+		const r = await fetch(endpoint, {
+			method: "POST",
+			signal: c.signal,
+			headers,
+			body: JSON.stringify({
+				model,
+				temperature: .2,
+				response_format: { type: "json_object" },
+				messages: [{
+					role: "system",
+					content: system
+				}, {
+					role: "user",
+					content: word
+				}]
+			})
+		});
+		if (!r.ok) return null;
+		const content = (await r.json())?.choices?.[0]?.message?.content;
+		if (!content) return null;
+		return parseAiVocabResponse(word, content);
+	} catch {
+		return null;
+	} finally {
+		clearTimeout(t);
+	}
+}
+async function anthropicChat(key, word, system) {
+	const c = new AbortController();
+	const t = setTimeout(() => c.abort(), 1e4);
+	try {
+		const r = await fetch("https://api.anthropic.com/v1/messages", {
+			method: "POST",
+			signal: c.signal,
+			headers: {
+				"content-type": "application/json",
+				"x-api-key": key,
+				"anthropic-version": "2023-06-01"
+			},
+			body: JSON.stringify({
+				model: "claude-sonnet-4-20250514",
+				max_tokens: 500,
+				system: system + " Respond with ONLY the JSON object, no markdown, no explanation.",
+				messages: [{
+					role: "user",
+					content: word
+				}]
+			})
+		});
+		if (!r.ok) return null;
+		const content = (await r.json())?.content?.[0]?.text;
+		if (!content) return null;
+		return parseAiVocabResponse(word, content);
+	} catch {
+		return null;
+	} finally {
+		clearTimeout(t);
+	}
+}
+function parseAiVocabResponse(word, content) {
+	try {
+		const cleaned = content.replace(/```json\s*/gi, "").replace(/```/g, "").trim();
+		const jsonStart = cleaned.search(/\{/);
+		const jsonEnd = cleaned.lastIndexOf("}");
+		if (jsonStart === -1 || jsonEnd === -1) return null;
+		const parsed = JSON.parse(cleaned.slice(jsonStart, jsonEnd + 1));
+		if (!parsed?.meaning) return null;
+		const clean = (v) => Array.isArray(v) ? v.filter(Boolean) : v || void 0;
+		return {
+			word,
+			partOfSpeech: clean(parsed.partOfSpeech),
+			meaning: clean(parsed.meaning),
+			simpleExplanation: clean(parsed.simpleExplanation),
+			example: clean(parsed.example),
+			synonyms: clean(parsed.synonyms),
+			antonyms: clean(parsed.antonyms),
+			pronunciation: clean(parsed.pronunciation)
+		};
+	} catch {
+		return null;
+	}
+}
+async function lookupWords(words) {
+	return (await Promise.all(words.map((w) => lookupWord(w)))).filter((r) => r !== null);
+}
+//#endregion
+export { lookupWord as n, lookupWords as r, getPopularWords as t };

@@ -298,7 +298,9 @@ function ArticlePage() {
                   <EnhancedVocabCard key={`${v.word}-${i}`} entry={v} articleId={article.id} index={i} />
                 ))}
               </div>
-            ) : null}
+            ) : (
+              <p className="text-sm text-muted-foreground">Vocabulary is being generated for this article. Please check back shortly.</p>
+            )}
 
             <WordSearch />
           </div>

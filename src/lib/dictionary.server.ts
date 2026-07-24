@@ -48,16 +48,8 @@ function makeSimpleExplanation(def: string): string {
   return simplifyDefinition(def);
 }
 
-function makeExample(word: string, partOfSpeech: string, def: string): string {
-  const clean = simplifyDefinition(def).toLowerCase();
-  const article = /^[aeiou]/i.test(clean) ? "an" : "a";
-  if (/verb/i.test(partOfSpeech)) {
-    return `Researchers ${word.toLowerCase()} the situation to understand its effects.`;
-  }
-  if (/adjective/i.test(partOfSpeech)) {
-    return `The findings were ${word.toLowerCase()}, surprising many experts.`;
-  }
-  return `The report described ${article} ${word.toLowerCase()} that shaped the outcome.`;
+function makeExample(word: string, partOfSpeech: string, def: string): string | undefined {
+  return undefined;
 }
 
 async function fetchFromDictionaryApi(word: string): Promise<VocabEntry | null> {

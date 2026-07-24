@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { saveWord, unsaveWord, checkSavedWord } from "@/lib/quiz.functions";
@@ -14,9 +14,9 @@ export function EnhancedVocabCard({ entry, articleId, index }: { entry: VocabEnt
   const checkFn = useServerFn(checkSavedWord);
   const qc = useQueryClient();
 
-  useState(() => {
+  useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session));
-  });
+  }, []);
 
   const { data: savedState } = useQuery({
     queryKey: ["saved-word", entry.word],

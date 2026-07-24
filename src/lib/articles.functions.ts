@@ -350,7 +350,7 @@ async function generateFallbackVocab(text: string, existing: VocabEntry[]): Prom
   const candidates = [...freq.entries()]
     .sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)
     .filter(([w]) => !existing.some((e) => e.word?.toLowerCase() === w))
-    .slice(0, 12)
+    .slice(0, 20)
     .map(([w]) => w);
 
   const lookedUp = await lookupWords(candidates);

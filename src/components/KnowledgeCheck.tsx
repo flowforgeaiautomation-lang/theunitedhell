@@ -207,7 +207,7 @@ export function KnowledgeCheck({ articleId, story, title, onReflection }: { arti
       </div>
 
       {!submitted && (
-        <div className="mt-8 text-center">
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <button
             onClick={() => {
               setSubmitted(true);
@@ -219,6 +219,17 @@ export function KnowledgeCheck({ articleId, story, title, onReflection }: { arti
           >
             Check answers
           </button>
+          {reflectionQuestion && answers[reflectionQuestion.id]?.trim() && (
+            <button
+              onClick={() => {
+                const reflectionText = answers[reflectionQuestion.id]?.trim();
+                if (reflectionText && onReflection) onReflection(reflectionText);
+              }}
+              className="border border-foreground/40 px-6 py-2.5 text-xs uppercase tracking-widest hover:bg-foreground hover:text-background transition"
+            >
+              Post reflection
+            </button>
+          )}
         </div>
       )}
     </div>
