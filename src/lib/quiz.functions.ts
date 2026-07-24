@@ -191,16 +191,10 @@ export const toggleCommentLike = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ commentId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { data: existing } = await supabase
-      .from("comment_likes")
-      .select("comment_id")
-      .eq("user_id", userId)
-      .eq("comment_id", data.commentId)
-      .maybeSingle();
-    if (existing) {
-      await supabase.from("comment_likes").delete().eq("user_id", userId).eq("comment_id", data.commentId);
-      return { liked: false };
-    }
-    await supabase.from("comment_likes").insert({ user_id: userId, comment_id: data.commentId });
-    return { liked: true };
+    const { data: result, error } = await supabase.rpc("toggle_comment_like", {
+      p_comment_id: data.commentId,
+      p_user_id: userId,
+    });
+    if (error) throw new Error(error.message);
+    return result as { like_count: number; liked: boolean };
   });

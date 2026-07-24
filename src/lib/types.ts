@@ -129,6 +129,10 @@ export type CommentRow = {
   prompt_type: string | null;
   body: string;
   like_count: number;
+  reply_count?: number;
+  is_edited?: boolean;
+  status?: string;
   created_at: string;
+  updated_at?: string;
   author?: { username: string | null; display_name: string | null; avatar_url: string | null } | null;
 };

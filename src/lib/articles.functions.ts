@@ -758,14 +758,45 @@ export const postReflection = createServerFn({ method: "POST" })
   });
 
 export const bumpLike = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) => z.object({ commentId: z.string().uuid() }).parse(d))
+  .inputValidator((d: unknown) =>
+    z.object({ commentId: z.string().uuid(), userId: z.string().uuid().nullable().optional() }).parse(d),
+  )
   .handler(async ({ data }) => {
     const supabase = publicClient();
-    const { data: likeCount, error } = await supabase.rpc("increment_comment_like", {
+    const { data: result, error } = await supabase.rpc("toggle_comment_like", {
       p_comment_id: data.commentId,
+      p_user_id: data.userId ?? null,
     });
     if (error) throw new Error(error.message);
-    return { ok: true, likeCount };
+    return result as { like_count: number; liked: boolean };
+  });
+
+export const editComment = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z.object({ commentId: z.string().uuid(), body: z.string().trim().min(1).max(4000) }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    const supabase = publicClient();
+    const { error } = await supabase.rpc("edit_comment_by_id", {
+      p_comment_id: data.commentId,
+      p_body: data.body,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const getLikedComments = createServerFn({ method: "GET" })
+  .inputValidator((d: unknown) =>
+    z.object({ articleId: z.string().uuid(), userId: z.string().uuid().nullable().optional() }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    const supabase = publicClient();
+    const { data: result, error } = await supabase.rpc("get_comment_likes_for_user", {
+      p_article_id: data.articleId,
+      p_user_id: data.userId ?? null,
+    });
+    if (error) throw new Error(error.message);
+    return (result ?? []) as string[];
   });
 
 export const deleteCommentAnon = createServerFn({ method: "POST" })
@@ -780,11 +811,14 @@ export const deleteCommentAnon = createServerFn({ method: "POST" })
   });
 
 export const listComments = createServerFn({ method: "GET" })
-  .inputValidator((d: unknown) => z.object({ articleId: z.string().uuid() }).parse(d))
+  .inputValidator((d: unknown) =>
+    z.object({ articleId: z.string().uuid(), sort: z.enum(["newest", "oldest", "top"]).optional() }).parse(d),
+  )
   .handler(async ({ data }) => {
     const supabase = publicClient();
     const { data: raw, error } = await supabase.rpc("list_comments_by_article", {
       p_article_id: data.articleId,
+      p_sort: data.sort ?? "newest",
     });
     if (error) throw new Error(error.message);
     const rows = (raw ?? []) as Record<string, unknown>[];
@@ -796,7 +830,11 @@ export const listComments = createServerFn({ method: "GET" })
       prompt_type: r.prompt_type,
       body: r.body,
       like_count: r.like_count,
+      reply_count: r.reply_count ?? 0,
+      is_edited: r.is_edited ?? false,
+      status: r.status ?? "active",
       created_at: r.created_at,
+      updated_at: r.updated_at,
       author: r.username
         ? { username: r.username, display_name: r.display_name, avatar_url: r.avatar_url }
         : null,

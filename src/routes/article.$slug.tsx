@@ -2,7 +2,7 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useQuery, queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { getArticleBySlug, getRelated, listComments, postReflection, bumpLike, deleteCommentAnon } from "@/lib/articles.functions";
+import { getArticleBySlug, getRelated, listComments, postReflection, bumpLike, deleteCommentAnon, editComment, getLikedComments } from "@/lib/articles.functions";
 
 
 import { ArticleActions } from "@/components/article-actions";
@@ -617,6 +617,7 @@ const PROMPTS = [
 ] as const;
 
 type SortMode = "newest" | "top" | "oldest";
+const COMMENTS_PAGE_SIZE = 20;
 
 function KnowledgeCheckReflection({ articleId, story, title }: { articleId: string; story?: any; title?: string }) {
   const qc = useQueryClient();
@@ -638,6 +639,9 @@ function KnowledgeCheckReflection({ articleId, story, title }: { articleId: stri
           prompt_type: "perspective",
           body: reflectionText,
           like_count: 0,
+          reply_count: 0,
+          is_edited: false,
+          status: "active",
           created_at: new Date().toISOString(),
           author: null,
         };
@@ -662,25 +666,68 @@ function KnowledgeCheckReflection({ articleId, story, title }: { articleId: stri
   );
 }
 
+function CommentAvatar({ author }: { author: CommentRow["author"] }) {
+  const name = author?.display_name || author?.username || "Reader";
+  const initials = name.slice(0, 2).toUpperCase();
+  if (author?.avatar_url) {
+    return <img src={author.avatar_url} alt={name} className="h-8 w-8 rounded-full object-cover" />;
+  }
+  return (
+    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-foreground/10 font-serif text-sm font-medium">
+      {initials}
+    </div>
+  );
+}
+
+function formatTimeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(dateStr).toLocaleDateString();
+}
+
 function Discussion({ articleId }: { articleId: string }) {
   const qc = useQueryClient();
   const fetchComments = useServerFn(listComments);
   const sendReflection = useServerFn(postReflection);
   const likeFn = useServerFn(bumpLike);
   const delFn = useServerFn(deleteCommentAnon);
+  const editFn = useServerFn(editComment);
+  const fetchLiked = useServerFn(getLikedComments);
   const [prompt, setPrompt] = useState<typeof PROMPTS[number]["id"]>("perspective");
   const [body, setBody] = useState("");
   const [sort, setSort] = useState<SortMode>("newest");
   const [likedComments, setLikedComments] = useState<Set<string>>(new Set());
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyBody, setReplyBody] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editBody, setEditBody] = useState("");
+  const [visibleCount, setVisibleCount] = useState(COMMENTS_PAGE_SIZE);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   const { data: comments = [] } = useQuery({
-    queryKey: ["comments", articleId],
-    queryFn: () => fetchComments({ data: { articleId } }),
+    queryKey: ["comments", articleId, sort],
+    queryFn: () => fetchComments({ data: { articleId, sort } }),
+    staleTime: 0,
   });
 
-  // Build threaded structure: top-level comments with nested replies
+  // Restore liked state from server (for authenticated users)
+  useEffect(() => {
+    fetchLiked({ data: { articleId } })
+      .then((ids: string[]) => {
+        if (Array.isArray(ids) && ids.length) {
+          setLikedComments(new Set(ids));
+        }
+      })
+      .catch(() => {});
+  }, [articleId, fetchLiked]);
+
+  // Build threaded structure
   const topLevel = comments.filter((c: CommentRow) => !c.parent_id);
   const repliesOf = (parentId: string) => comments.filter((c: CommentRow) => c.parent_id === parentId);
 
@@ -689,6 +736,29 @@ function Discussion({ articleId }: { articleId: string }) {
     if (sort === "oldest") return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
+
+  // Infinite scroll: show visibleCount top-level comments, load more when sentinel visible
+  const visibleTop = sortedTop.slice(0, visibleCount);
+  const hasMore = sortedTop.length > visibleCount;
+
+  useEffect(() => {
+    setVisibleCount(COMMENTS_PAGE_SIZE);
+  }, [articleId, sort]);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || !hasMore) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount((prev) => prev + COMMENTS_PAGE_SIZE);
+        }
+      },
+      { rootMargin: "600px" },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore]);
 
   const mutation = useMutation({
     mutationFn: (input: { body: string; promptType: typeof PROMPTS[number]["id"]; parentId?: string | null }) =>
@@ -703,10 +773,13 @@ function Discussion({ articleId }: { articleId: string }) {
         prompt_type: input.promptType,
         body: input.body,
         like_count: 0,
+        reply_count: 0,
+        is_edited: false,
+        status: "active",
         created_at: new Date().toISOString(),
         author: null,
       };
-      qc.setQueryData<CommentRow[]>(["comments", articleId], (old = []) => [...old, optimistic]);
+      qc.setQueryData<CommentRow[]>(["comments", articleId, sort], (old = []) => [...old, optimistic]);
       setBody("");
       setReplyBody("");
       setReplyingTo(null);
@@ -724,122 +797,197 @@ function Discussion({ articleId }: { articleId: string }) {
   const likeMutation = useMutation({
     mutationFn: (commentId: string) => likeFn({ data: { commentId } }),
     onMutate: (commentId) => {
+      const wasLiked = likedComments.has(commentId);
       setLikedComments((prev) => {
         const next = new Set(prev);
         if (next.has(commentId)) next.delete(commentId);
         else next.add(commentId);
         return next;
       });
+      // Optimistically update like count
+      qc.setQueryData<CommentRow[]>(["comments", articleId, sort], (old = []) =>
+        old.map((c) =>
+          c.id === commentId
+            ? { ...c, like_count: Math.max(0, (c.like_count ?? 0) + (wasLiked ? -1 : 1)) }
+            : c,
+        ),
+      );
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["comments", articleId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["comments", articleId] });
+    },
     onError: () => {
-      // Like may fail due to RLS but UI already updated optimistically
+      // Revert on error
+      qc.invalidateQueries({ queryKey: ["comments", articleId] });
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (commentId: string) => delFn({ data: { commentId } }),
     onMutate: (commentId) => {
-      qc.setQueryData<CommentRow[]>(["comments", articleId], (old = []) => old.filter((c) => c.id !== commentId));
+      qc.setQueryData<CommentRow[]>(["comments", articleId, sort], (old = []) =>
+        old.filter((c) => c.id !== commentId && c.parent_id !== commentId),
+      );
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["comments", articleId] });
       toast.success("Comment deleted");
     },
     onError: () => {
-      // Non-blocking — comment is already removed from UI
+      qc.invalidateQueries({ queryKey: ["comments", articleId] });
+    },
+  });
+
+  const editMutation = useMutation({
+    mutationFn: ({ commentId, body }: { commentId: string; body: string }) =>
+      editFn({ data: { commentId, body } }),
+    onMutate: ({ commentId, body: newBody }) => {
+      qc.setQueryData<CommentRow[]>(["comments", articleId, sort], (old = []) =>
+        old.map((c) => (c.id === commentId ? { ...c, body: newBody, is_edited: true, updated_at: new Date().toISOString() } : c)),
+      );
+      setEditingId(null);
+      setEditBody("");
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["comments", articleId] });
+      toast.success("Comment edited");
+    },
+    onError: () => {
+      qc.invalidateQueries({ queryKey: ["comments", articleId] });
     },
   });
 
   function renderComment(c: CommentRow, isReply: boolean) {
     const isLiked = likedComments.has(c.id);
     const count = c.like_count ?? 0;
-    const canDelete = false;
+    const replyCount = c.reply_count ?? 0;
     const childReplies = repliesOf(c.id);
+    const isEditing = editingId === c.id;
 
     return (
       <div className={isReply ? "ml-6 border-l border-foreground/10 pl-4" : "border-t rule pt-6"}>
-        <div className="flex items-baseline justify-between mb-2">
-          <div className="font-serif font-medium">
-            {c.author?.display_name || c.author?.username || "Reader"}
-          </div>
-          <div className="text-xs text-muted-foreground">
-            {c.prompt_type && !isReply && (
-              <span className="mr-3 kicker text-[0.6rem]">
-                {PROMPTS.find((p) => p.id === c.prompt_type)?.label ?? c.prompt_type}
-              </span>
-            )}
-            {new Date(c.created_at).toLocaleDateString()}
-          </div>
-        </div>
-        <p className="font-serif text-lg leading-snug whitespace-pre-wrap">{c.body}</p>
-        <div className="mt-3 flex items-center gap-3">
-          <button
-            onClick={() => likeMutation.mutate(c.id)}
-            className={`flex items-center gap-1 text-sm transition ${isLiked ? "text-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}
-          >
-            {isLiked ? <ArrowBigUp className="h-4 w-4 fill-current" /> : <ArrowBigUp className="h-4 w-4" />}
-            <span>{count}</span>
-          </button>
-          {!isReply && (
-            <button
-              onClick={() => {
-                setReplyingTo(replyingTo === c.id ? null : c.id);
-                setReplyBody("");
-              }}
-              className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition"
-            >
-              <MessageCircle className="h-4 w-4" />
-              <span>Reply</span>
-            </button>
-          )}
-          {canDelete && (
-            <button
-              onClick={() => deleteMutation.mutate(c.id)}
-              disabled={deleteMutation.isPending}
-              className="flex items-center gap-1 text-sm text-muted-foreground hover:text-red-600 transition"
-            >
-              <Trash2 className="h-4 w-4" />
-              <span>Delete</span>
-            </button>
-          )}
-        </div>
+        <div className="flex items-start gap-3">
+          <CommentAvatar author={c.author} />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-baseline justify-between mb-1">
+              <div className="font-serif font-medium">
+                {c.author?.display_name || c.author?.username || "Reader"}
+              </div>
+              <div className="text-xs text-muted-foreground flex items-center gap-2">
+                {c.prompt_type && !isReply && (
+                  <span className="kicker text-[0.6rem]">
+                    {PROMPTS.find((p) => p.id === c.prompt_type)?.label ?? c.prompt_type}
+                  </span>
+                )}
+                {formatTimeAgo(c.created_at)}
+                {c.is_edited && <span className="italic">(edited)</span>}
+              </div>
+            </div>
 
-        {replyingTo === c.id && (
-          <div className="mt-4 ml-2">
-            <textarea
-              value={replyBody}
-              onChange={(e) => setReplyBody(e.target.value)}
-              rows={3}
-              maxLength={4000}
-              placeholder={`Reply to ${c.author?.display_name || c.author?.username || "Reader"}…`}
-              className="w-full bg-transparent border rule p-4 font-serif text-base focus:outline-none focus:ring-1 focus:ring-foreground/40"
-            />
-            <div className="flex items-center gap-2 mt-2">
+            {isEditing ? (
+              <div className="mt-2">
+                <textarea
+                  value={editBody}
+                  onChange={(e) => setEditBody(e.target.value)}
+                  rows={3}
+                  maxLength={4000}
+                  className="w-full bg-transparent border rule p-4 font-serif text-base focus:outline-none focus:ring-1 focus:ring-foreground/40"
+                />
+                <div className="flex items-center gap-2 mt-2">
+                  <button
+                    onClick={() => editBody.trim() && editMutation.mutate({ commentId: c.id, body: editBody.trim() })}
+                    disabled={!editBody.trim() || editMutation.isPending}
+                    className="border border-foreground px-4 py-2 text-xs uppercase tracking-widest hover:bg-foreground hover:text-background transition disabled:opacity-40"
+                  >
+                    {editMutation.isPending ? "Saving…" : "Save"}
+                  </button>
+                  <button
+                    onClick={() => { setEditingId(null); setEditBody(""); }}
+                    className="text-xs text-muted-foreground hover:text-foreground transition"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className="font-serif text-lg leading-snug whitespace-pre-wrap">{c.body}</p>
+            )}
+
+            <div className="mt-3 flex items-center gap-4">
               <button
-                onClick={() => replyBody.trim() && mutation.mutate({ body: replyBody.trim(), promptType: prompt, parentId: c.id })}
-                disabled={!replyBody.trim() || mutation.isPending}
-                className="border border-foreground px-4 py-2 text-xs uppercase tracking-widest hover:bg-foreground hover:text-background transition disabled:opacity-40"
+                onClick={() => likeMutation.mutate(c.id)}
+                className={`flex items-center gap-1 text-sm transition ${isLiked ? "text-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}
               >
-                {mutation.isPending ? "Posting…" : "Post reply"}
+                {isLiked ? <ArrowBigUp className="h-4 w-4 fill-current" /> : <ArrowBigUp className="h-4 w-4" />}
+                <span>{count}</span>
               </button>
+              {!isReply && (
+                <button
+                  onClick={() => {
+                    setReplyingTo(replyingTo === c.id ? null : c.id);
+                    setReplyBody("");
+                  }}
+                  className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  <span>Reply{replyCount > 0 && ` (${replyCount})`}</span>
+                </button>
+              )}
+              {!isEditing && (
+                <button
+                  onClick={() => { setEditingId(c.id); setEditBody(c.body); }}
+                  className="text-sm text-muted-foreground hover:text-foreground transition"
+                >
+                  Edit
+                </button>
+              )}
               <button
-                onClick={() => { setReplyingTo(null); setReplyBody(""); }}
-                className="text-xs text-muted-foreground hover:text-foreground transition"
+                onClick={() => deleteMutation.mutate(c.id)}
+                disabled={deleteMutation.isPending}
+                className="flex items-center gap-1 text-sm text-muted-foreground hover:text-red-600 transition"
               >
-                Cancel
+                <Trash2 className="h-4 w-4" />
+                <span>Delete</span>
               </button>
             </div>
-          </div>
-        )}
 
-        {childReplies.length > 0 && (
-          <div className="mt-4 space-y-4">
-            {childReplies.map((r: CommentRow) => (
-              <div key={r.id}>{renderComment(r, true)}</div>
-            ))}
+            {replyingTo === c.id && (
+              <div className="mt-4 ml-2">
+                <textarea
+                  value={replyBody}
+                  onChange={(e) => setReplyBody(e.target.value)}
+                  rows={3}
+                  maxLength={4000}
+                  placeholder={`Reply to ${c.author?.display_name || c.author?.username || "Reader"}…`}
+                  className="w-full bg-transparent border rule p-4 font-serif text-base focus:outline-none focus:ring-1 focus:ring-foreground/40"
+                />
+                <div className="flex items-center gap-2 mt-2">
+                  <button
+                    onClick={() => replyBody.trim() && mutation.mutate({ body: replyBody.trim(), promptType: "reply" as typeof PROMPTS[number]["id"], parentId: c.id })}
+                    disabled={!replyBody.trim() || mutation.isPending}
+                    className="border border-foreground px-4 py-2 text-xs uppercase tracking-widest hover:bg-foreground hover:text-background transition disabled:opacity-40"
+                  >
+                    {mutation.isPending ? "Posting…" : "Post reply"}
+                  </button>
+                  <button
+                    onClick={() => { setReplyingTo(null); setReplyBody(""); }}
+                    className="text-xs text-muted-foreground hover:text-foreground transition"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {childReplies.length > 0 && (
+              <div className="mt-4 space-y-4">
+                {childReplies.map((r: CommentRow) => (
+                  <div key={r.id}>{renderComment(r, true)}</div>
+                ))}
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     );
   }
@@ -905,8 +1053,14 @@ function Discussion({ articleId }: { articleId: string }) {
         {comments.length === 0 && (
           <p className="text-sm text-muted-foreground">No contributions yet. Be the first.</p>
         )}
-        {sortedTop.map((c: CommentRow) => renderComment(c, false))}
+        {visibleTop.map((c: CommentRow) => renderComment(c, false))}
       </div>
+
+      {hasMore && (
+        <div ref={sentinelRef} className="mt-8 flex justify-center">
+          <span className="text-sm text-muted-foreground">Loading more…</span>
+        </div>
+      )}
     </section>
   );
 }
