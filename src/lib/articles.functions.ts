@@ -748,45 +748,35 @@ export const postReflection = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const supabase = publicClient();
-    const { data: row, error } = await supabase
-      .from("comments")
-      .insert({
-        article_id: data.articleId,
-        user_id: null,
-        parent_id: data.parentId ?? null,
-        prompt_type: data.promptType ?? "perspective",
-        body: data.body,
-      })
-      .select("id")
-      .single();
+    const { data: id, error } = await supabase.rpc("insert_comment", {
+      p_article_id: data.articleId,
+      p_body: data.body,
+      p_prompt_type: data.promptType ?? "perspective",
+      p_parent_id: data.parentId ?? null,
+      p_user_id: null,
+    });
     if (error) throw new Error(error.message);
-    return { id: row.id };
+    return { id };
   });
 
 export const bumpLike = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ commentId: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     const supabase = publicClient();
-    const { data: row, error: fetchErr } = await supabase
-      .from("comments")
-      .select("like_count")
-      .eq("id", data.commentId)
-      .maybeSingle();
-    if (fetchErr) throw new Error(fetchErr.message);
-    const newCount = (row?.like_count ?? 0) + 1;
-    const { error } = await supabase
-      .from("comments")
-      .update({ like_count: newCount })
-      .eq("id", data.commentId);
+    const { data: likeCount, error } = await supabase.rpc("increment_comment_like", {
+      p_comment_id: data.commentId,
+    });
     if (error) throw new Error(error.message);
-    return { ok: true, likeCount: newCount };
+    return { ok: true, likeCount };
   });
 
 export const deleteCommentAnon = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ commentId: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     const supabase = publicClient();
-    const { error } = await supabase.from("comments").delete().eq("id", data.commentId);
+    const { error } = await supabase.rpc("delete_comment_by_id", {
+      p_comment_id: data.commentId,
+    });
     if (error) throw new Error(error.message);
     return { deleted: true };
   });
@@ -795,26 +785,22 @@ export const listComments = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ articleId: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     const supabase = publicClient();
-    const { data: rows, error } = await supabase
-      .from("comments")
-      .select("id,article_id,user_id,parent_id,prompt_type,body,like_count,created_at,profiles!comments_user_id_fkey(username,display_name,avatar_url)")
-      .eq("article_id", data.articleId)
-      .eq("is_hidden", false)
-      .order("created_at", { ascending: true })
-      .limit(200);
-    if (error) {
-      // join hint may differ; fall back without profile join
-      const { data: alt } = await supabase
-        .from("comments")
-        .select("id,article_id,user_id,parent_id,prompt_type,body,like_count,created_at")
-        .eq("article_id", data.articleId)
-        .eq("is_hidden", false)
-        .order("created_at", { ascending: true })
-        .limit(200);
-      return (alt ?? []) as CommentRow[];
-    }
-    return (rows ?? []).map((r: Record<string, unknown>) => ({
-      ...(r as object),
-      author: (r as { profiles?: CommentRow["author"] }).profiles ?? null,
+    const { data: raw, error } = await supabase.rpc("list_comments_by_article", {
+      p_article_id: data.articleId,
+    });
+    if (error) throw new Error(error.message);
+    const rows = (raw ?? []) as Record<string, unknown>[];
+    return rows.map((r) => ({
+      id: r.id,
+      article_id: r.article_id,
+      user_id: r.user_id,
+      parent_id: r.parent_id,
+      prompt_type: r.prompt_type,
+      body: r.body,
+      like_count: r.like_count,
+      created_at: r.created_at,
+      author: r.username
+        ? { username: r.username, display_name: r.display_name, avatar_url: r.avatar_url }
+        : null,
     })) as CommentRow[];
   });

@@ -1,0 +1,1653 @@
+import { l as createServerFn } from "./esm-Dova13aH.mjs";
+import { t as createClient } from "../_libs/supabase__supabase-js.mjs";
+import { a as objectType, i as numberType, n as booleanType, o as stringType, r as enumType } from "../_libs/zod.mjs";
+import { t as createServerRpc } from "./createServerRpc-WJgk8O8C.mjs";
+import { o as relatedCategorySlugs } from "./categories-BEROsZZ5.mjs";
+import { r as lookupWords } from "./dictionary.server-CJ6qJACk.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/articles.functions-BkdaWDUl.js
+function isNewSupabaseApiKey(value) {
+	return value.startsWith("sb_publishable_") || value.startsWith("sb_secret_");
+}
+function createSupabaseFetch(supabaseKey) {
+	return (input, init) => {
+		const headers = new Headers(typeof Request !== "undefined" && input instanceof Request ? input.headers : void 0);
+		if (init?.headers) new Headers(init.headers).forEach((value, key) => headers.set(key, value));
+		if (isNewSupabaseApiKey(supabaseKey) && headers.get("Authorization") === `Bearer ${supabaseKey}`) headers.delete("Authorization");
+		headers.set("apikey", supabaseKey);
+		return fetch(input, {
+			...init,
+			headers
+		});
+	};
+}
+function publicClient() {
+	const url = process.env.SUPABASE_URL || "https://myrteqlcfwckgdokzzhg.supabase.co";
+	const key = process.env.SUPABASE_PUBLISHABLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im15cnRlcWxjZndja2dkb2t6emhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3MjE4OTgsImV4cCI6MjA5ODI5Nzg5OH0.lGAyAxmYrJAag1yONChoqV4-A1QQAkdWKxZp5IMJyII";
+	return createClient(url, key, {
+		global: { fetch: createSupabaseFetch(key) },
+		auth: {
+			persistSession: false,
+			autoRefreshToken: false,
+			storage: void 0
+		}
+	});
+}
+var summaryCols = "id,slug,title,dek,category,subcategory,cover_image_url,read_time_minutes,country_code,featured_slot,published_at,created_at,view_count,like_count,bookmark_count,comment_count";
+var NAMED_ENTITIES = {
+	amp: "&",
+	lt: "<",
+	gt: ">",
+	quot: "\"",
+	apos: "'",
+	nbsp: " ",
+	ldquo: "“",
+	rdquo: "”",
+	lsquo: "‘",
+	rsquo: "’",
+	hellip: "…",
+	mdash: "—",
+	ndash: "–",
+	trade: "™",
+	copy: "©",
+	reg: "®",
+	deg: "°",
+	middot: "·"
+};
+function decodeEntities(input) {
+	if (typeof input !== "string" || !input) return input ?? "";
+	return input.replace(/&#(\d+);/g, (_, n) => {
+		const code = parseInt(n, 10);
+		return Number.isFinite(code) ? String.fromCodePoint(code) : "";
+	}).replace(/&#x([0-9a-fA-F]+);/g, (_, h) => {
+		const code = parseInt(h, 16);
+		return Number.isFinite(code) ? String.fromCodePoint(code) : "";
+	}).replace(/&([a-zA-Z]+);/g, (m, name) => NAMED_ENTITIES[name] ?? m).replace(/&#(\d{1,5})(?![;\d])/g, (_, n) => {
+		const code = parseInt(n, 10);
+		return code >= 32 && code <= 1114111 ? String.fromCodePoint(code) : "";
+	}).replace(/&#x([0-9a-fA-F]{1,4})(?![;0-9a-fA-F])/gi, (_, h) => {
+		const code = parseInt(h, 16);
+		return code >= 32 && code <= 1114111 ? String.fromCodePoint(code) : "";
+	});
+}
+function decodeListMaybe(items) {
+	if (!Array.isArray(items)) return items;
+	return items.map((s) => typeof s === "string" ? decodeEntities(s) : s);
+}
+function decodeSummary(row) {
+	return {
+		...row,
+		title: row.title ? decodeEntities(row.title) : row.title,
+		dek: row.dek ? decodeEntities(row.dek) : row.dek
+	};
+}
+function normalizeText(s = "") {
+	return s.toLowerCase().replace(/[^a-z0-9\s]+/g, " ").replace(/\s+/g, " ").trim();
+}
+function dedupeSummaries(rows, limit) {
+	const seen = /* @__PURE__ */ new Set();
+	const out = [];
+	for (const raw of rows) {
+		const row = decodeSummary(raw);
+		const key = normalizeText(row.title || row.dek || row.slug);
+		const softKey = normalizeText(row.dek || row.title).slice(0, 110);
+		if (!key || seen.has(row.id) || seen.has(key) || softKey && seen.has(softKey)) continue;
+		seen.add(row.id);
+		seen.add(key);
+		if (softKey) seen.add(softKey);
+		out.push(row);
+		if (out.length >= limit) break;
+	}
+	return out;
+}
+function looksVague(text) {
+	if (!text) return true;
+	return /original source|the united hell is preserving|broader impact depends|verified new development|reliable, recent information|full primary account|future coverage in this field|published this article|this is a current|readers should check|category:/i.test(text);
+}
+function cleanStoryText(text) {
+	if (!text) return void 0;
+	const cleaned = decodeEntities(text).replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "").replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, "").replace(/<iframe\b[^>]*>[\s\S]*?<\/iframe>/gi, "").replace(/<ins\b[^>]*>[\s\S]*?<\/ins>/gi, "").replace(/<noscript\b[^>]*>[\s\S]*?<\/noscript>/gi, "").replace(/<!--[^]*?-->/g, "").replace(/blogherads\.[^;]*;?/gi, "").replace(/googletag\.[^;]*;?/gi, "").replace(/gpt-dsk[^\s"]*/gi, "").replace(/setTargeting\([^)]*\)\s*;?/gi, "").replace(/defineSlot\([^)]*\)\s*;?/gi, "").replace(/\.addService\([^)]*\)\s*;?/gi, "").replace(/\.collapseEmptyDivs\([^)]*\)\s*;?/gi, "").replace(/\.enableSingleRequest\(\)\s*;?/gi, "").replace(/\.enableLazyLoad\([^)]*\)\s*;?/gi, "").replace(/window\.(googletag|blogherads|adUnits|adthrive)[^;]*;?/gi, "").replace(/adthrive\.[^;]*;?/gi, "").replace(/data-ad-[a-z]+="[^"]*"/gi, "").replace(/<div[^>]*class="[^"]*(?:ad-|ads-|advert|sponsor|promo)[^"]*"[^>]*>[\s\S]*?<\/div>/gi, "").replace(/<aside\b[^>]*>[\s\S]*?<\/aside>/gi, "").replace(/<div[^>]*id="div-gpt-ad-[^"]*"[^>]*>[\s\S]*?<\/div>/gi, "").replace(/pmcCnx\.cmd\.push\(function\s*\{[^}]*\}\)/gi, "").replace(/pmcCnx\(\{[^}]*\}\)\.render\([^)]*\)/gi, "").replace(/window\.pmc\.harmony[^;]*;?/gi, "").replace(/if\s*\(\s*!?\s*window\.pmc[^;]*;?/gi, "").replace(/else\s*\{[^}]*\}/gi, "").replace(/pmcAtlasMG\s*:\s*\{[^}]*\}/gi, "").replace(/iabPlcmt\s*:\s*\d+/gi, "").replace(/playerId\s*:\s*'[^']*'/gi, "").replace(/playlistId\s*:\s*'[^']*'/gi, "").replace(/settings\s*:\s*\{[^}]*\}/gi, "").replace(/plugins\s*:\s*\{[^}]*\}/gi, "").replace(/connatix_contextual_player_div/gi, "").replace(/isEventAdScheduledTime/gi, "").replace(/switchToHarmonyPlayer/gi, "").replace(/\.cmd\.push\(function\s*\{[^}]*\}\)/gi, "").replace(/\}\)\s*;?/g, "").replace(/\}\s*else\s*\{[^}]*\}/gi, "").replace(/Popular on \w+[^\n]*(?:\n|$)/gi, "").replace(/posted by an? \w+ user[^\n]*(?:\n|$)/gi, "").split(/\n/).filter((line) => {
+		const t = line.trim();
+		if (!t) return true;
+		if (/pmcCnx|connatix|pmcAtlasMG|isEventAdScheduledTime|playlistId|playerId|pmc\.harmony|switchToHarmonyPlayer|\.cmd\.push|window\.pmc/i.test(t)) return false;
+		return true;
+	}).join("\n").replace(/<[^>]+>/g, "").replace(/^Expert analysis:\s*/i, "").replace(/^Why it matters:\s*/i, "").replace(/^Did you know\?\s*/i, "").replace(/^Future outlook:\s*/i, "").replace(/^Historical context:\s*/i, "").replace(/^What happens next:\s*/i, "").replace(/\|\s*Photo Credit:[^\n]*/gi, "").replace(/Photo Credit:\s*[^\n.]*/gi, "").replace(/Image Credit:\s*[^\n.]*/gi, "").replace(/Credit:\s*[^\n.]*/gi, "").replace(/Comments have to be in English[^]*(?:accounts on Vuukle\.?|accounts on Vuukle\.?)/gi, "").replace(/We have migrated to a new commenting platform[^]*(?:accounts on Vuukle\.?)/gi, "").replace(/Live news \/(?:[^\n]*)(?:\n|$)/gi, "").replace(/Parliament proceedings[^\n]*(?:\n|$)/gi, "").replace(/Cockroach Janta Party[^\n]*(?:\n|$)/gi, "").replace(/You can save this article by registering[^\n]*(?:\n|$)/gi, "").replace(/Or sign-in if you have an account[^\n]*(?:\n|$)/gi, "").replace(/Register for free[^\n]*(?:\n|$)/gi, "").replace(/Subscribe to (?:read|continue|unlock)[^\n]*(?:\n|$)/gi, "").replace(/Subscription required[^\n]*(?:\n|$)/gi, "").replace(/Continue reading[^\n]*(?:\n|$)/gi, "").replace(/Newsletter sign[^\n]*(?:\n|$)/gi, "").replace(/Cookie (?:notice|policy)[^\n]*(?:\n|$)/gi, "").replace(/We use cookies[^\n]*(?:\n|$)/gi, "").replace(/This site uses cookies[^\n]*(?:\n|$)/gi, "").replace(/Accept cookies[^\n]*(?:\n|$)/gi, "").replace(/Register to read[^\n]*(?:\n|$)/gi, "").replace(/Login to read[^\n]*(?:\n|$)/gi, "").replace(/Sign in to read[^\n]*(?:\n|$)/gi, "").replace(/Create a free account[^\n]*(?:\n|$)/gi, "").replace(/Already a subscriber[^\n]*(?:\n|$)/gi, "").replace(/Subscribe now[^\n]*(?:\n|$)/gi, "").replace(/Unlock full access[^\n]*(?:\n|$)/gi, "").replace(/Premium content[^\n]*(?:\n|$)/gi, "").replace(/Members only[^\n]*(?:\n|$)/gi, "").replace(/Exclusive access[^\n]*(?:\n|$)/gi, "").replace(/Join now[^\n]*(?:\n|$)/gi, "").replace(/Sign up for[^\n]*(?:\n|$)/gi, "").replace(/Sponsored content[^\n]*(?:\n|$)/gi, "").replace(/Sponsored by[^\n]*(?:\n|$)/gi, "").replace(/Promo code[^\n]*(?:\n|$)/gi, "").split(/\n/).filter((line) => {
+		const t = line.trim();
+		if (!t) return true;
+		return !/^(save this article|sign-?in|register|subscribe|log ?in|create.*account|unlock|premium content|members only|cookie|newsletter|email address|password|remember me|forgot password|join now|sign up|sponsored|promo code|continue reading|already a subscriber)/i.test(t);
+	}).join("\n").split(/\n+/).map((line) => line.trim()).filter((line) => line && !/published this article|published by|source says|readers should check|category:|photo credit|image credit|credit:\s*sansad|sansad tv|vuukle|community guidelines|migrated to a new commenting|registered user|older comments|comments have to be|abusive or personal|abide by our|posting your comments|log in to post|engage with our articles|live news \/.*parliament proceedings|parliament proceedings|cockroach janta party|^\s*\d{1,3}\s*$/i.test(line)).filter((line) => {
+		const t = line.trim();
+		if (!t) return false;
+		if (/^(save this article|sign-?in|register|subscribe|log ?in|create.*account|unlock|premium content|members only|cookie|newsletter|email address|password|remember me|forgot password|join now|sign up|sponsored|promo code|continue reading|already a subscriber)/i.test(t)) return false;
+		if (/save this article by registering|sign-in if you have an account|register for free|subscribe to|subscription required|paywall|continue reading|cookie notice|cookie policy|we use cookies|this site uses cookies/i.test(t)) return false;
+		return true;
+	}).filter((line) => {
+		const trimmed = line.trim();
+		if (trimmed.length < 15) return false;
+		if (/^(,|but if|and then|\.\.\.|…|\s+but|\s+and)/i.test(trimmed)) return false;
+		if (/\.{2,}|…$/.test(trimmed) && trimmed.length < 40) return false;
+		return true;
+	}).join("\n\n").replace(/\b(According to|Per|As reported by|Reported by|As per|A report by|Writing for)\s+(the\s+)?[A-Z][A-Za-z0-9 .'&-]{1,40}(,|\s+said|\s+reported|\s+wrote|\s+noted)?\s*/g, "").replace(/\b(Reuters|BBC(?:\s+News)?|GNews|NewsAPI|The Hindu|Times of India|Associated Press|AP News|The Associated Press|The Guardian|New York Times|NYT|CNN|Al Jazeera|Bloomberg|Financial Times|Washington Post|NPR|Fox News|Sky News|France ?24|Deutsche Welle|DW|NDTV|Hindustan Times|Indian Express|Sansad TV|Vuukle)\b/gi, "").replace(/\(\s*\)/g, "").replace(/\s+([,.;:!?])/g, "$1").replace(/[ \t]{2,}/g, " ").replace(/\}\);\s*/g, "").replace(/\(\)\s*;?\s*$/g, "").replace(/\n{3,}/g, "\n\n").trim();
+	return cleaned && !looksVague(cleaned) ? cleaned : void 0;
+}
+function splitParagraphs(text) {
+	return (text || "").split(/\n{2,}|\r?\n/).map((p) => p.trim()).filter(Boolean);
+}
+function similarity(a, b) {
+	const aa = new Set(normalizeText(a).split(" ").filter((w) => w.length > 2));
+	const bb = new Set(normalizeText(b).split(" ").filter((w) => w.length > 2));
+	if (!aa.size || !bb.size) return 0;
+	let overlap = 0;
+	for (const w of aa) if (bb.has(w)) overlap++;
+	return overlap / Math.min(aa.size, bb.size);
+}
+function uniqueList(items, compareAgainst = [], limit = 6) {
+	const out = [];
+	const normalizedAgainst = new Set(compareAgainst.map(normalizeText));
+	for (const item of cleanList(items) || []) {
+		const key = normalizeText(item);
+		if (!key || normalizedAgainst.has(key) || out.some((old) => normalizeText(old) === key)) continue;
+		if (out.some((old) => key.length > 18 && (key.includes(normalizeText(old)) || normalizeText(old).includes(key)))) continue;
+		out.push(item);
+		if (out.length >= limit) break;
+	}
+	return out.length ? out : void 0;
+}
+function splitSentences(text) {
+	if (!text) return [];
+	return text.replace(/\n+/g, " ").split(/(?<=[.!?])\s+(?=[A-Z0-9"'])/).map((s) => s.trim()).filter((s) => s.length > 0);
+}
+function truncateAtSentence(text, maxChars = 300) {
+	if (!text) return void 0;
+	const cleaned = text.replace(/\s+/g, " ").trim();
+	if (cleaned.length <= maxChars) return cleaned;
+	const sentences = splitSentences(cleaned);
+	if (sentences.length === 0) return cleaned.slice(0, maxChars);
+	let result = "";
+	for (const sentence of sentences) {
+		if ((result + " " + sentence).trim().length > maxChars && result) break;
+		result = result ? result + " " + sentence : sentence;
+	}
+	if (!result) result = sentences[0];
+	return result.replace(/\s+/g, " ").trim() || void 0;
+}
+function cleanTitle(text) {
+	if (!text) return void 0;
+	const cleaned = text.replace(/\s+/g, " ").trim();
+	if (!cleaned) return void 0;
+	if (/[.!?]["'')]*$/.test(cleaned)) return cleaned;
+	const sentences = splitSentences(cleaned);
+	if (sentences.length > 1) {
+		const complete = sentences.slice(0, -1).join(" ");
+		if (complete.length > 10) return complete.replace(/\s+/g, " ").trim();
+	}
+	return cleaned;
+}
+function cleanList(items) {
+	if (!Array.isArray(items)) return void 0;
+	const BOILERPLATE_LINE = /photo credit|image credit|credit:\s*sansad|sansad tv|vuukle|community guidelines|migrated to a new commenting|registered user|older comments|comments have to be|abusive or personal|abide by our|posting your comments|log in to post|engage with our articles|live news \/|parliament proceedings|cockroach janta party|^\s*\d+\s*$/i;
+	const cleaned = items.map((s) => typeof s === "string" ? cleanStoryText(s) ?? "" : "").filter((s) => s.length > 0 && !looksVague(s) && !BOILERPLATE_LINE.test(s));
+	return cleaned.length ? cleaned : void 0;
+}
+var FALLBACK_STOP = /* @__PURE__ */ new Set([
+	"the",
+	"a",
+	"an",
+	"and",
+	"or",
+	"but",
+	"in",
+	"on",
+	"at",
+	"to",
+	"for",
+	"of",
+	"with",
+	"by",
+	"from",
+	"is",
+	"was",
+	"are",
+	"were",
+	"be",
+	"been",
+	"being",
+	"have",
+	"has",
+	"had",
+	"do",
+	"does",
+	"did",
+	"will",
+	"would",
+	"could",
+	"should",
+	"may",
+	"might",
+	"can",
+	"this",
+	"that",
+	"these",
+	"those",
+	"it",
+	"its",
+	"as",
+	"if",
+	"then",
+	"than",
+	"so",
+	"not",
+	"no",
+	"yes",
+	"also",
+	"about",
+	"after",
+	"before",
+	"because",
+	"while",
+	"during",
+	"through",
+	"between",
+	"against",
+	"without",
+	"within",
+	"across",
+	"among",
+	"around",
+	"above",
+	"below",
+	"up",
+	"down",
+	"out",
+	"over",
+	"under",
+	"again",
+	"further",
+	"once",
+	"here",
+	"there",
+	"when",
+	"where",
+	"why",
+	"how",
+	"all",
+	"any",
+	"both",
+	"each",
+	"few",
+	"more",
+	"most",
+	"other",
+	"some",
+	"such",
+	"only",
+	"own",
+	"same",
+	"very",
+	"just",
+	"now",
+	"said",
+	"says",
+	"say",
+	"one",
+	"two",
+	"three",
+	"new",
+	"old",
+	"good",
+	"bad",
+	"big",
+	"small",
+	"high",
+	"low",
+	"long",
+	"short",
+	"great",
+	"little",
+	"get",
+	"got",
+	"make",
+	"made",
+	"go",
+	"went",
+	"come",
+	"came",
+	"take",
+	"took",
+	"give",
+	"gave",
+	"find",
+	"found",
+	"think",
+	"thought",
+	"know",
+	"knew",
+	"tell",
+	"told",
+	"ask",
+	"asked",
+	"work",
+	"worked",
+	"look",
+	"looked",
+	"seem",
+	"seemed",
+	"feel",
+	"felt",
+	"try",
+	"tried",
+	"leave",
+	"left",
+	"call",
+	"called",
+	"want",
+	"need",
+	"use",
+	"used",
+	"put",
+	"mean",
+	"meant",
+	"keep",
+	"kept",
+	"let",
+	"begin",
+	"began",
+	"help",
+	"helped",
+	"show",
+	"showed",
+	"run",
+	"play",
+	"move",
+	"live",
+	"believe",
+	"hold",
+	"bring",
+	"happen",
+	"write",
+	"sit",
+	"stand",
+	"lose",
+	"pay",
+	"meet",
+	"include",
+	"continue",
+	"set",
+	"learn",
+	"change",
+	"lead",
+	"understand",
+	"watch",
+	"follow",
+	"stop",
+	"create",
+	"speak",
+	"read",
+	"allow",
+	"add",
+	"spend",
+	"grow",
+	"open",
+	"walk",
+	"win",
+	"offer",
+	"remember",
+	"love",
+	"consider",
+	"appear",
+	"buy",
+	"wait",
+	"serve",
+	"die",
+	"send",
+	"expect",
+	"build",
+	"stay",
+	"fall",
+	"cut",
+	"reach",
+	"kill",
+	"remain",
+	"suggest",
+	"raise",
+	"pass",
+	"sell",
+	"require",
+	"report",
+	"decide",
+	"pull",
+	"break",
+	"receive",
+	"agree",
+	"pick",
+	"wear",
+	"support",
+	"hit",
+	"produce",
+	"eat",
+	"cover",
+	"catch",
+	"draw",
+	"choose",
+	"cause",
+	"point",
+	"hear",
+	"explain",
+	"hope",
+	"develop",
+	"carry",
+	"thank",
+	"improve",
+	"sign",
+	"notice",
+	"prepare",
+	"relate",
+	"represent",
+	"reveal",
+	"secure",
+	"separate",
+	"seek",
+	"share",
+	"spread",
+	"spring",
+	"stick",
+	"strike",
+	"struggle",
+	"supply",
+	"suppose",
+	"survive",
+	"target",
+	"teach",
+	"tend",
+	"test",
+	"threat",
+	"throw",
+	"touch",
+	"trade",
+	"train",
+	"treat",
+	"trouble",
+	"trust",
+	"turn",
+	"vary",
+	"view",
+	"visit",
+	"voice",
+	"vote",
+	"warn",
+	"waste",
+	"wear",
+	"week",
+	"weight",
+	"wish",
+	"wonder",
+	"worry",
+	"year",
+	"yet",
+	"young",
+	"able",
+	"address",
+	"adult",
+	"affect",
+	"age",
+	"ago",
+	"ahead",
+	"aid",
+	"aim",
+	"air",
+	"almost",
+	"alone",
+	"along",
+	"already",
+	"although",
+	"always",
+	"amount",
+	"answer",
+	"anti",
+	"apply",
+	"area",
+	"argue",
+	"arm",
+	"army",
+	"art",
+	"assault",
+	"asset",
+	"attempt",
+	"attention",
+	"attorney",
+	"audience",
+	"author",
+	"authority",
+	"available",
+	"avoid",
+	"award",
+	"aware",
+	"away",
+	"baby",
+	"back",
+	"bag",
+	"ball",
+	"band",
+	"bank",
+	"bar",
+	"base",
+	"battle",
+	"beach",
+	"beat",
+	"beautiful",
+	"bed",
+	"behind",
+	"benefit",
+	"best",
+	"better",
+	"beyond",
+	"bill",
+	"billion",
+	"bit",
+	"black",
+	"blood",
+	"blue",
+	"board",
+	"boat",
+	"body",
+	"book",
+	"born",
+	"box",
+	"boy",
+	"brain",
+	"brand",
+	"bridge",
+	"brief",
+	"broad",
+	"brother",
+	"brown",
+	"budget",
+	"building",
+	"business",
+	"busy",
+	"cabinet",
+	"campaign",
+	"cancer",
+	"candidate",
+	"capital",
+	"car",
+	"card",
+	"care",
+	"career",
+	"case",
+	"cell",
+	"center",
+	"central",
+	"century",
+	"certain",
+	"chain",
+	"chair",
+	"challenge",
+	"chance",
+	"charge",
+	"check",
+	"child",
+	"choice",
+	"church",
+	"city",
+	"civil",
+	"claim",
+	"class",
+	"clean",
+	"clear",
+	"climate",
+	"climb",
+	"clock",
+	"close",
+	"cloth",
+	"clothes",
+	"cloud",
+	"club",
+	"coach",
+	"coast",
+	"code",
+	"coffee",
+	"cold",
+	"collect",
+	"college",
+	"color",
+	"comfort",
+	"common",
+	"community",
+	"company",
+	"compare",
+	"computer",
+	"concern",
+	"condition",
+	"consumer",
+	"contain",
+	"control",
+	"cost",
+	"could",
+	"country",
+	"couple",
+	"course",
+	"court",
+	"cover",
+	"create",
+	"crime",
+	"crisis",
+	"critic",
+	"cross",
+	"crowd",
+	"current",
+	"customer",
+	"dad",
+	"damage",
+	"dance",
+	"danger",
+	"dark",
+	"data",
+	"daughter",
+	"day",
+	"dead",
+	"deal",
+	"death",
+	"debate",
+	"decade",
+	"decision",
+	"deep",
+	"defense",
+	"degree",
+	"democrat",
+	"describe",
+	"design",
+	"despite",
+	"detail",
+	"determine",
+	"development",
+	"device",
+	"difference",
+	"different",
+	"difficult",
+	"dinner",
+	"direction",
+	"director",
+	"discover",
+	"discuss",
+	"disease",
+	"doctor",
+	"dog",
+	"door",
+	"down",
+	"draw",
+	"dream",
+	"drive",
+	"drop",
+	"drug",
+	"dry",
+	"due",
+	"during",
+	"each",
+	"earlier",
+	"early",
+	"earn",
+	"earth",
+	"east",
+	"easy",
+	"economic",
+	"economy",
+	"edge",
+	"education",
+	"effect",
+	"effort",
+	"eight",
+	"either",
+	"election",
+	"electric",
+	"else",
+	"employee",
+	"end",
+	"energy",
+	"enjoy",
+	"enough",
+	"enter",
+	"entire",
+	"environment",
+	"environmental",
+	"especially",
+	"establish",
+	"even",
+	"evening",
+	"event",
+	"ever",
+	"every",
+	"everybody",
+	"everyone",
+	"everything",
+	"evidence",
+	"exactly",
+	"example",
+	"executive",
+	"exist",
+	"experience",
+	"expert",
+	"explain",
+	"eye",
+	"face",
+	"fact",
+	"factor",
+	"fail",
+	"family",
+	"far",
+	"farm",
+	"fast",
+	"father",
+	"fear",
+	"federal",
+	"few",
+	"field",
+	"fight",
+	"figure",
+	"fill",
+	"final",
+	"finally",
+	"financial",
+	"fine",
+	"finger",
+	"finish",
+	"fire",
+	"firm",
+	"first",
+	"fish",
+	"five",
+	"floor",
+	"fly",
+	"focus",
+	"follow",
+	"food",
+	"foot",
+	"force",
+	"foreign",
+	"forest",
+	"forget",
+	"form",
+	"former",
+	"forward",
+	"four",
+	"free",
+	"friend",
+	"front",
+	"full",
+	"fund",
+	"future",
+	"game",
+	"garden",
+	"gas",
+	"gate",
+	"gather",
+	"general",
+	"generation",
+	"girl",
+	"glass",
+	"global",
+	"goal",
+	"god",
+	"gold",
+	"government",
+	"green",
+	"ground",
+	"group",
+	"growth",
+	"guess",
+	"gun",
+	"guy",
+	"hair",
+	"half",
+	"hall",
+	"hand",
+	"handle",
+	"hang",
+	"happy",
+	"hard",
+	"hat",
+	"head",
+	"health",
+	"hear",
+	"heart",
+	"heat",
+	"heavy",
+	"her",
+	"herself",
+	"hide",
+	"him",
+	"himself",
+	"his",
+	"history",
+	"hit",
+	"hold",
+	"home",
+	"hope",
+	"hospital",
+	"hot",
+	"hotel",
+	"hour",
+	"house",
+	"huge",
+	"human",
+	"hundred",
+	"husband",
+	"idea",
+	"identify",
+	"image",
+	"imagine",
+	"impact",
+	"important",
+	"improve",
+	"include",
+	"including",
+	"increase",
+	"indeed",
+	"indicate",
+	"individual",
+	"industry",
+	"information",
+	"inside",
+	"instead",
+	"institution",
+	"interest",
+	"interesting",
+	"international",
+	"interview",
+	"into",
+	"investment",
+	"involve",
+	"issue",
+	"item",
+	"itself",
+	"job",
+	"join",
+	"key",
+	"kid",
+	"kind",
+	"kitchen",
+	"knowledge",
+	"land",
+	"language",
+	"large",
+	"last",
+	"late",
+	"later",
+	"laugh",
+	"law",
+	"lawyer",
+	"lay",
+	"leader",
+	"least",
+	"left",
+	"legal",
+	"less",
+	"letter",
+	"level",
+	"lie",
+	"life",
+	"light",
+	"like",
+	"likely",
+	"line",
+	"list",
+	"listen",
+	"little",
+	"local",
+	"lot",
+	"love",
+	"machine",
+	"magazine",
+	"main",
+	"maintain",
+	"major",
+	"management",
+	"manager",
+	"many",
+	"market",
+	"marriage",
+	"material",
+	"matter",
+	"maybe",
+	"measure",
+	"medical",
+	"meeting",
+	"member",
+	"memory",
+	"mention",
+	"message",
+	"method",
+	"middle",
+	"might",
+	"military",
+	"million",
+	"mind",
+	"minute",
+	"miss",
+	"mission",
+	"model",
+	"modern",
+	"moment",
+	"money",
+	"month",
+	"morning",
+	"mother",
+	"mouth",
+	"movement",
+	"movie",
+	"much",
+	"music",
+	"must",
+	"myself",
+	"name",
+	"nation",
+	"national",
+	"natural",
+	"nature",
+	"near",
+	"nearly",
+	"necessary",
+	"network",
+	"never",
+	"news",
+	"next",
+	"nice",
+	"night",
+	"nine",
+	"none",
+	"normal",
+	"north",
+	"note",
+	"nothing",
+	"notice",
+	"nuclear",
+	"number",
+	"occur",
+	"off",
+	"office",
+	"officer",
+	"official",
+	"often",
+	"oil",
+	"once",
+	"online",
+	"onto",
+	"operation",
+	"opportunity",
+	"option",
+	"order",
+	"organization",
+	"others",
+	"ought",
+	"our",
+	"outside",
+	"page",
+	"pain",
+	"painting",
+	"paper",
+	"parent",
+	"part",
+	"participant",
+	"particular",
+	"partner",
+	"party",
+	"past",
+	"patient",
+	"peace",
+	"per",
+	"perform",
+	"perhaps",
+	"period",
+	"person",
+	"personal",
+	"phone",
+	"physical",
+	"picture",
+	"piece",
+	"place",
+	"plan",
+	"plant",
+	"player",
+	"police",
+	"policy",
+	"political",
+	"politics",
+	"poor",
+	"popular",
+	"population",
+	"position",
+	"positive",
+	"possible",
+	"power",
+	"practice",
+	"prepare",
+	"present",
+	"president",
+	"pressure",
+	"pretty",
+	"prevent",
+	"price",
+	"private",
+	"probably",
+	"problem",
+	"process",
+	"product",
+	"production",
+	"professional",
+	"professor",
+	"program",
+	"project",
+	"property",
+	"protect",
+	"prove",
+	"provide",
+	"public",
+	"pull",
+	"purpose",
+	"push",
+	"quality",
+	"question",
+	"quickly",
+	"quite",
+	"race",
+	"radio",
+	"range",
+	"rate",
+	"rather",
+	"ready",
+	"real",
+	"reality",
+	"realize",
+	"really",
+	"reason",
+	"receive",
+	"recent",
+	"recently",
+	"recognize",
+	"record",
+	"red",
+	"reduce",
+	"reflect",
+	"region",
+	"relationship",
+	"religious",
+	"remove",
+	"republican",
+	"research",
+	"resource",
+	"respond",
+	"response",
+	"responsibility",
+	"rest",
+	"result",
+	"return",
+	"rich",
+	"right",
+	"rise",
+	"risk",
+	"road",
+	"rock",
+	"role",
+	"room",
+	"rule",
+	"safe",
+	"save",
+	"scene",
+	"school",
+	"science",
+	"scientist",
+	"sea",
+	"season",
+	"seat",
+	"second",
+	"section",
+	"security",
+	"sell",
+	"senator",
+	"senior",
+	"sense",
+	"series",
+	"serious",
+	"service",
+	"seven",
+	"several",
+	"shake",
+	"she",
+	"shoot",
+	"shot",
+	"should",
+	"shoulder",
+	"side",
+	"significant",
+	"similar",
+	"simple",
+	"simply",
+	"since",
+	"single",
+	"sister",
+	"site",
+	"situation",
+	"six",
+	"size",
+	"skill",
+	"skin",
+	"smile",
+	"social",
+	"society",
+	"soldier",
+	"somebody",
+	"someone",
+	"something",
+	"sometimes",
+	"somewhat",
+	"son",
+	"song",
+	"soon",
+	"sort",
+	"sound",
+	"source",
+	"south",
+	"space",
+	"special",
+	"specific",
+	"speech",
+	"sport",
+	"staff",
+	"stage",
+	"standard",
+	"star",
+	"start",
+	"state",
+	"statement",
+	"station",
+	"stay",
+	"step",
+	"still",
+	"stock",
+	"store",
+	"story",
+	"street",
+	"strong",
+	"structure",
+	"student",
+	"study",
+	"stuff",
+	"style",
+	"subject",
+	"success",
+	"successful",
+	"suddenly",
+	"suffer",
+	"summer",
+	"support",
+	"sure",
+	"surface",
+	"system",
+	"table",
+	"talk",
+	"task",
+	"teacher",
+	"team",
+	"technology",
+	"television",
+	"ten",
+	"term",
+	"thank",
+	"their",
+	"them",
+	"themselves",
+	"theory",
+	"they",
+	"thing",
+	"third",
+	"though",
+	"thousand",
+	"threat",
+	"through",
+	"throughout",
+	"throw",
+	"thus",
+	"time",
+	"today",
+	"together",
+	"tonight",
+	"too",
+	"top",
+	"total",
+	"tough",
+	"toward",
+	"town",
+	"traditional",
+	"training",
+	"travel",
+	"treatment",
+	"tree",
+	"trial",
+	"trip",
+	"true",
+	"truth",
+	"try",
+	"type",
+	"under",
+	"unit",
+	"until",
+	"upon",
+	"usually",
+	"various",
+	"victim",
+	"violence",
+	"wife",
+	"window",
+	"wind",
+	"wish",
+	"within",
+	"without",
+	"woman",
+	"word",
+	"worker",
+	"world",
+	"would",
+	"writer",
+	"wrong",
+	"yard",
+	"yeah",
+	"yes",
+	"you",
+	"your",
+	"yourself",
+	"zone"
+]);
+async function generateFallbackVocab(text, existing) {
+	const words = text.replace(/[^a-zA-Z\s]/g, " ").split(/\s+/).filter((w) => w.length >= 6 && !FALLBACK_STOP.has(w.toLowerCase()));
+	const freq = /* @__PURE__ */ new Map();
+	for (const w of words) {
+		const lw = w.toLowerCase();
+		freq.set(lw, (freq.get(lw) ?? 0) + 1);
+	}
+	return (await lookupWords([...freq.entries()].sort((a, b) => b[1] - a[1] || b[0].length - a[0].length).filter(([w]) => !existing.some((e) => e.word?.toLowerCase() === w)).slice(0, 20).map(([w]) => w))).filter((v) => v.meaning && !/an important (word|term) used in this story/i.test(v.meaning)).slice(0, 5);
+}
+async function normalizeArticle(article) {
+	const currentStory = article.story ?? {};
+	const dec = (s) => s ? decodeEntities(s) : s;
+	const decClean = (s) => cleanStoryText(s);
+	const fullSourceText = decClean(currentStory.main_story) || decClean(currentStory.summary) || decClean(article.dek);
+	const summary = truncateAtSentence(fullSourceText, 280);
+	const proseParts = [
+		decClean(currentStory.main_story),
+		decClean(currentStory.what),
+		decClean(currentStory.why),
+		decClean(currentStory.how),
+		decClean(currentStory.before),
+		decClean(currentStory.next),
+		decClean(currentStory.why_should_i_care),
+		decClean(currentStory.how_affects_world),
+		decClean(currentStory.what_can_we_learn),
+		decClean(currentStory.why_interesting),
+		decClean(currentStory.did_you_know),
+		decClean(currentStory.future_impact)
+	].filter(Boolean);
+	const summaryNorm = normalizeText(summary || "");
+	const mainStory = proseParts.length ? proseParts.flatMap(splitParagraphs).filter((paragraph, index, arr) => arr.findIndex((other) => normalizeText(other) === normalizeText(paragraph)) === index).filter((paragraph) => {
+		if (!summary || !paragraph) return true;
+		if (normalizeText(paragraph).includes(summaryNorm.slice(0, 80)) && summaryNorm.length > 20) return false;
+		if (similarity(paragraph, summary) >= .55) return false;
+		return true;
+	}).join("\n\n") : void 0;
+	const primarySentences = /* @__PURE__ */ new Set();
+	for (const s of splitSentences(summary)) primarySentences.add(normalizeText(s));
+	for (const s of splitSentences(mainStory)) primarySentences.add(normalizeText(s));
+	const dedupeProse = (text) => {
+		const cleaned = decClean(text);
+		if (!cleaned) return void 0;
+		return splitSentences(cleaned).filter((s) => {
+			const key = normalizeText(s);
+			if (key.length < 24) return true;
+			return !primarySentences.has(key);
+		}).join(" ").replace(/\s+/g, " ").trim() || void 0;
+	};
+	const keyDevelopments = uniqueList(currentStory.key_developments || currentStory.key_facts || currentStory.key_takeaways, [], 5);
+	const quickInsights = uniqueList(currentStory.quick_insights || currentStory.quick_facts || currentStory.insights, keyDevelopments || [], 6);
+	const readerTakeaways = uniqueList(currentStory.reader_takeaways || currentStory.key_takeaways, quickInsights || [], 5);
+	[
+		summary,
+		mainStory,
+		decClean(currentStory.background),
+		decClean(currentStory.expert_analysis),
+		decClean(currentStory.why_it_matters)
+	].filter(Boolean).join(" ");
+	let finalVocab = (currentStory.vocabulary?.map((v) => ({
+		word: dec(v.word) || void 0,
+		partOfSpeech: v.part_of_speech || v.partOfSpeech || void 0,
+		meaning: dec(v.meaning) || void 0,
+		simpleExplanation: (dec(v.simple_explanation) || dec(v.simpleExplanation) || void 0)?.replace(/^In simple terms:\s*/i, ""),
+		example: v.example ? dec(v.example) : void 0,
+		synonyms: Array.isArray(v.synonyms) ? v.synonyms.filter(Boolean) : void 0,
+		antonyms: Array.isArray(v.antonyms) ? v.antonyms.filter(Boolean) : void 0,
+		pronunciation: v.pronunciation || v.phonetic || void 0
+	})).filter((v) => v.word && v.meaning) || []).slice(0, 5);
+	let vocabWasRegenerated = false;
+	if (finalVocab.length < 3) {
+		const fallback = await generateFallbackVocab([
+			summary,
+			mainStory,
+			decClean(currentStory.background),
+			decClean(currentStory.expert_analysis)
+		].filter(Boolean).join(" "), finalVocab);
+		if (fallback.length) {
+			finalVocab = fallback;
+			vocabWasRegenerated = true;
+		}
+	}
+	const normalized = {
+		...article,
+		title: cleanTitle(cleanStoryText(article.title) ?? dec(article.title) ?? article.title),
+		dek: truncateAtSentence(fullSourceText || mainStory || cleanStoryText(article.dek) || dec(article.dek) || article.dek, 280),
+		story: {
+			...currentStory,
+			summary,
+			main_story: mainStory,
+			background: dedupeProse(currentStory.background),
+			key_developments: decodeListMaybe(cleanList(keyDevelopments)),
+			quick_insights: decodeListMaybe(cleanList(quickInsights)),
+			why_it_matters: dedupeProse(currentStory.why_it_matters || currentStory.why_should_i_care || currentStory.how_affects_world),
+			expert_analysis: dedupeProse(currentStory.expert_analysis),
+			timeline: decodeListMaybe(cleanList(currentStory.timeline)),
+			key_numbers: Array.isArray(currentStory.key_numbers) ? currentStory.key_numbers : void 0,
+			people: Array.isArray(currentStory.people) ? currentStory.people : void 0,
+			organizations: Array.isArray(currentStory.organizations) ? currentStory.organizations.filter((o) => {
+				const name = (o?.name ?? "").toLowerCase();
+				return !/reuters|bbc|cnn|the guardian|new york times|nyt|associated press|ap news|the hindu|times of india|al jazeera|bloomberg|fox news|sky news|ndtv|hindustan times|indian express|ani|pti|afp|xinhua|nikkei|the verge|techcrunch|wired|ars technica|engadget|nature|scientific american|new scientist|space\.com|nasa|esa|isro|sansad|vuukle/i.test(name);
+			}) : void 0,
+			countries: Array.isArray(currentStory.countries) ? currentStory.countries : void 0,
+			did_you_know: decClean(currentStory.did_you_know),
+			historical_context: dedupeProse(currentStory.historical_context || currentStory.before),
+			future_outlook: dedupeProse(currentStory.future_outlook || currentStory.future_impact || currentStory.next),
+			reader_takeaways: decodeListMaybe(cleanList(readerTakeaways)),
+			what_happens_next: dedupeProse(currentStory.what_happens_next),
+			vocabulary: finalVocab,
+			sources: decodeListMaybe(cleanList(currentStory.sources)),
+			qa: void 0,
+			what: decClean(currentStory.what),
+			why: decClean(currentStory.why),
+			next: decClean(currentStory.next),
+			why_should_i_care: decClean(currentStory.why_should_i_care),
+			how_affects_world: decClean(currentStory.how_affects_world),
+			what_can_we_learn: decClean(currentStory.what_can_we_learn),
+			why_interesting: decClean(currentStory.why_interesting),
+			how: decClean(currentStory.how),
+			before: decClean(currentStory.before),
+			future_impact: decClean(currentStory.future_impact),
+			key_facts: decodeListMaybe(cleanList(currentStory.key_facts)),
+			quick_facts: decodeListMaybe(cleanList(currentStory.quick_facts)),
+			key_takeaways: decodeListMaybe(cleanList(currentStory.key_takeaways)),
+			insights: decodeListMaybe(cleanList(currentStory.insights))
+		}
+	};
+	if (vocabWasRegenerated && article.id) try {
+		const supabase = publicClient();
+		const vocabJson = finalVocab.map((v) => ({
+			word: v.word,
+			part_of_speech: v.partOfSpeech || null,
+			meaning: v.meaning || null,
+			simple_explanation: v.simpleExplanation || null,
+			example: v.example || null,
+			synonyms: v.synonyms || null,
+			antonyms: v.antonyms || null,
+			pronunciation: v.pronunciation || null
+		}));
+		supabase.from("articles").update({ story: {
+			...normalized.story,
+			vocabulary: vocabJson
+		} }).eq("id", article.id).then(() => {});
+	} catch {}
+	return normalized;
+}
+var listArticles_createServerFn_handler = createServerRpc({
+	id: "36857d6a82c1e7e5b9e2536fed0747f3206ab853ebd40de19651ad9f63f78ef1",
+	name: "listArticles",
+	filename: "src/lib/articles.functions.ts"
+}, (opts) => listArticles.__executeServer(opts));
+var listArticles = createServerFn({ method: "GET" }).inputValidator((d) => objectType({
+	category: stringType().optional(),
+	country: stringType().optional(),
+	limit: numberType().int().min(1).max(200).default(24),
+	offset: numberType().int().min(0).default(0),
+	sort: enumType([
+		"recent",
+		"trending",
+		"most_read",
+		"most_saved"
+	]).default("recent"),
+	todayOnly: booleanType().optional()
+}).parse(d ?? {})).handler(listArticles_createServerFn_handler, async ({ data }) => {
+	const supabase = publicClient();
+	const categorySlugs = relatedCategorySlugs(data.category);
+	let q = supabase.from("articles").select(summaryCols).eq("is_published", true);
+	if (data.category && categorySlugs.length) q = q.in("category", categorySlugs);
+	if (data.country) q = q.eq("country_code", data.country);
+	if (data.todayOnly) {
+		const now = /* @__PURE__ */ new Date();
+		const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+		const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toISOString();
+		q = q.gte("published_at", start).lt("published_at", end);
+	}
+	if (data.sort === "trending") q = q.order("trending_score", { ascending: false });
+	else if (data.sort === "most_read") q = q.order("view_count", { ascending: false });
+	else if (data.sort === "most_saved") q = q.order("bookmark_count", { ascending: false });
+	else q = q.order("published_at", { ascending: false });
+	const { data: rows, error } = await q.range(data.offset, data.offset + data.limit - 1);
+	if (error) throw new Error(error.message);
+	return dedupeSummaries(rows ?? [], data.limit);
+});
+var getFeatured_createServerFn_handler = createServerRpc({
+	id: "730a246a03a39b2b38975c4c452bcbc297431eae6e70ae2cd177961704d819e9",
+	name: "getFeatured",
+	filename: "src/lib/articles.functions.ts"
+}, (opts) => getFeatured.__executeServer(opts));
+var getFeatured = createServerFn({ method: "GET" }).handler(getFeatured_createServerFn_handler, async () => {
+	const { data, error } = await publicClient().from("articles").select(summaryCols).eq("is_published", true).not("featured_slot", "is", null).order("published_at", { ascending: false });
+	if (error) throw new Error(error.message);
+	const bySlot = /* @__PURE__ */ new Map();
+	for (const a of data ?? []) if (a.featured_slot && !bySlot.has(a.featured_slot)) bySlot.set(a.featured_slot, a);
+	return Object.fromEntries(bySlot);
+});
+var getArticleBySlug_createServerFn_handler = createServerRpc({
+	id: "56247e6ee3d304c48058f8d110f119240330676c76ca2e2c888dd810ae82630f",
+	name: "getArticleBySlug",
+	filename: "src/lib/articles.functions.ts"
+}, (opts) => getArticleBySlug.__executeServer(opts));
+var getArticleBySlug = createServerFn({ method: "GET" }).inputValidator((d) => objectType({ slug: stringType().min(1) }).parse(d)).handler(getArticleBySlug_createServerFn_handler, async ({ data }) => {
+	const supabase = publicClient();
+	const { data: row, error } = await supabase.from("articles").select("*").eq("slug", data.slug).eq("is_published", true).maybeSingle();
+	if (error) throw new Error(error.message);
+	if (!row) return null;
+	try {
+		supabase.from("articles").update({ view_count: (row.view_count ?? 0) + 1 }).eq("id", row.id).then(() => {});
+	} catch {}
+	return await normalizeArticle(row);
+});
+var getRelated_createServerFn_handler = createServerRpc({
+	id: "e25c9403148eece084d4cf356a4709b1049a95b5ef6df69d9ef76b41cd4a6ba5",
+	name: "getRelated",
+	filename: "src/lib/articles.functions.ts"
+}, (opts) => getRelated.__executeServer(opts));
+var getRelated = createServerFn({ method: "GET" }).inputValidator((d) => objectType({
+	category: stringType(),
+	excludeSlug: stringType(),
+	limit: numberType().default(4)
+}).parse(d)).handler(getRelated_createServerFn_handler, async ({ data }) => {
+	const { data: rows, error } = await publicClient().from("articles").select(summaryCols).eq("is_published", true).eq("category", data.category).neq("slug", data.excludeSlug).order("published_at", { ascending: false }).limit(data.limit);
+	if (error) throw new Error(error.message);
+	return rows ?? [];
+});
+var searchArticles_createServerFn_handler = createServerRpc({
+	id: "cea6f34fe41f972212f336f91b1a36061f64da913b46460ca71d0b4b065b11ca",
+	name: "searchArticles",
+	filename: "src/lib/articles.functions.ts"
+}, (opts) => searchArticles.__executeServer(opts));
+var searchArticles = createServerFn({ method: "GET" }).inputValidator((d) => objectType({ q: stringType().min(1).max(120) }).parse(d)).handler(searchArticles_createServerFn_handler, async ({ data }) => {
+	const supabase = publicClient();
+	const term = `%${data.q.replace(/[%_]/g, " ")}%`;
+	const { data: rows, error } = await supabase.from("articles").select(summaryCols).eq("is_published", true).or(`title.ilike.${term},dek.ilike.${term},category.ilike.${term}`).order("published_at", { ascending: false }).limit(40);
+	if (error) throw new Error(error.message);
+	return rows ?? [];
+});
+var getCountryStats_createServerFn_handler = createServerRpc({
+	id: "7ced82e0a899846b32d3f906f31115970b70bff08639c2f6b723e8d23bc05476",
+	name: "getCountryStats",
+	filename: "src/lib/articles.functions.ts"
+}, (opts) => getCountryStats.__executeServer(opts));
+var getCountryStats = createServerFn({ method: "GET" }).handler(getCountryStats_createServerFn_handler, async () => {
+	const { data, error } = await publicClient().from("articles").select("country_code").eq("is_published", true).not("country_code", "is", null);
+	if (error) throw new Error(error.message);
+	const counts = {};
+	for (const r of data ?? []) counts[r.country_code] = (counts[r.country_code] ?? 0) + 1;
+	return counts;
+});
+var getBriefingToday_createServerFn_handler = createServerRpc({
+	id: "084030a4cd2e817213cd652ce6c8a6044670e0334199c696586ad9083e86d8a8",
+	name: "getBriefingToday",
+	filename: "src/lib/articles.functions.ts"
+}, (opts) => getBriefingToday.__executeServer(opts));
+var getBriefingToday = createServerFn({ method: "GET" }).handler(getBriefingToday_createServerFn_handler, async () => {
+	const supabase = publicClient();
+	const { data, error } = await supabase.from("briefings").select("*").order("briefing_date", { ascending: false }).limit(1).maybeSingle();
+	if (error) throw new Error(error.message);
+	const briefing = data ?? null;
+	const pickItems = (rows) => rows.map((r) => ({
+		slug: r.slug,
+		title: r.title
+	}));
+	const buildFromArticles = async () => {
+		const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+		const fetchCat = async (cats, limit) => {
+			const { data: rows } = await supabase.from("articles").select(summaryCols).eq("is_published", true).in("category", cats).order("published_at", { ascending: false }).limit(limit);
+			return dedupeSummaries(rows ?? [], limit);
+		};
+		const { data: latest } = await supabase.from("articles").select(summaryCols).eq("is_published", true).order("published_at", { ascending: false }).limit(80);
+		const latestRows = dedupeSummaries(latest ?? [], 60);
+		const top = latestRows.slice(0, 8);
+		const [discoveries, science, success, tech] = await Promise.all([
+			fetchCat([
+				"discovery",
+				"world-discovery",
+				"exploration",
+				"amazing-places"
+			], 6),
+			fetchCat([
+				"science",
+				"scientific-discoveries",
+				"physics",
+				"biology",
+				"medicine",
+				"breakthroughs"
+			], 6),
+			fetchCat([
+				"success-stories",
+				"entrepreneurs",
+				"startups",
+				"billionaires",
+				"business-leaders"
+			], 6),
+			fetchCat([
+				"technology",
+				"artificial-intelligence",
+				"innovation",
+				"future-technology",
+				"robotics"
+			], 6)
+		]);
+		return {
+			id: "live",
+			briefing_date: today,
+			intro: briefing?.intro ?? "Today's most important stories, drawn from the latest published articles.",
+			sections: {
+				top_stories: pickItems(top),
+				discoveries: pickItems(discoveries.length ? discoveries : latestRows.slice(8, 14)),
+				science: pickItems(science.length ? science : latestRows.slice(14, 20)),
+				success: pickItems(success.length ? success : latestRows.slice(20, 26)),
+				tech: pickItems(tech.length ? tech : latestRows.slice(26, 32)),
+				facts: briefing?.sections?.facts
+			}
+		};
+	};
+	if (!briefing) return buildFromArticles();
+	const sections = briefing.sections ?? {};
+	if (!sections.top_stories?.length && !sections.discoveries?.length && !sections.science?.length && !sections.success?.length && !sections.tech?.length) return buildFromArticles();
+	return briefing;
+});
+var postReflection_createServerFn_handler = createServerRpc({
+	id: "fd11f47ee7ab16c033617d9167295d244d0898504a4ef5cac3620d7fdec3c694",
+	name: "postReflection",
+	filename: "src/lib/articles.functions.ts"
+}, (opts) => postReflection.__executeServer(opts));
+var postReflection = createServerFn({ method: "POST" }).inputValidator((d) => objectType({
+	articleId: stringType().uuid(),
+	body: stringType().trim().min(1).max(4e3),
+	promptType: enumType([
+		"learned",
+		"surprised",
+		"question",
+		"perspective",
+		"reply"
+	]).optional(),
+	parentId: stringType().uuid().nullable().optional()
+}).parse(d)).handler(postReflection_createServerFn_handler, async ({ data }) => {
+	const { data: id, error } = await publicClient().rpc("insert_comment", {
+		p_article_id: data.articleId,
+		p_body: data.body,
+		p_prompt_type: data.promptType ?? "perspective",
+		p_parent_id: data.parentId ?? null,
+		p_user_id: null
+	});
+	if (error) throw new Error(error.message);
+	return { id };
+});
+var bumpLike_createServerFn_handler = createServerRpc({
+	id: "a99f29f836fc88007b0fd96eba0dc60d4b0cf77f8a87df2b41968f198dbd0ed3",
+	name: "bumpLike",
+	filename: "src/lib/articles.functions.ts"
+}, (opts) => bumpLike.__executeServer(opts));
+var bumpLike = createServerFn({ method: "POST" }).inputValidator((d) => objectType({ commentId: stringType().uuid() }).parse(d)).handler(bumpLike_createServerFn_handler, async ({ data }) => {
+	const { data: likeCount, error } = await publicClient().rpc("increment_comment_like", { p_comment_id: data.commentId });
+	if (error) throw new Error(error.message);
+	return {
+		ok: true,
+		likeCount
+	};
+});
+var deleteCommentAnon_createServerFn_handler = createServerRpc({
+	id: "2e086ce7af653a07e731d4c87fcbedb957daba8b4363dceb296dc7528f30266b",
+	name: "deleteCommentAnon",
+	filename: "src/lib/articles.functions.ts"
+}, (opts) => deleteCommentAnon.__executeServer(opts));
+var deleteCommentAnon = createServerFn({ method: "POST" }).inputValidator((d) => objectType({ commentId: stringType().uuid() }).parse(d)).handler(deleteCommentAnon_createServerFn_handler, async ({ data }) => {
+	const { error } = await publicClient().rpc("delete_comment_by_id", { p_comment_id: data.commentId });
+	if (error) throw new Error(error.message);
+	return { deleted: true };
+});
+var listComments_createServerFn_handler = createServerRpc({
+	id: "2a1eed519bd2990e9ab65df8ec1a8f99a98bcec6e7beb304b13bd1a4ed4cdfaa",
+	name: "listComments",
+	filename: "src/lib/articles.functions.ts"
+}, (opts) => listComments.__executeServer(opts));
+var listComments = createServerFn({ method: "GET" }).inputValidator((d) => objectType({ articleId: stringType().uuid() }).parse(d)).handler(listComments_createServerFn_handler, async ({ data }) => {
+	const { data: raw, error } = await publicClient().rpc("list_comments_by_article", { p_article_id: data.articleId });
+	if (error) throw new Error(error.message);
+	return (raw ?? []).map((r) => ({
+		id: r.id,
+		article_id: r.article_id,
+		user_id: r.user_id,
+		parent_id: r.parent_id,
+		prompt_type: r.prompt_type,
+		body: r.body,
+		like_count: r.like_count,
+		created_at: r.created_at,
+		author: r.username ? {
+			username: r.username,
+			display_name: r.display_name,
+			avatar_url: r.avatar_url
+		} : null
+	}));
+});
+//#endregion
+export { bumpLike_createServerFn_handler, deleteCommentAnon_createServerFn_handler, getArticleBySlug_createServerFn_handler, getBriefingToday_createServerFn_handler, getCountryStats_createServerFn_handler, getFeatured_createServerFn_handler, getRelated_createServerFn_handler, listArticles_createServerFn_handler, listComments_createServerFn_handler, postReflection_createServerFn_handler, searchArticles_createServerFn_handler };
