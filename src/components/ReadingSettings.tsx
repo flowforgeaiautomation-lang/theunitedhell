@@ -98,6 +98,31 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   return <div className="kicker mb-3 text-muted-foreground">{children}</div>;
 }
 
+function NarrationVoiceSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  useEffect(() => {
+    function load() {
+      const v = window.speechSynthesis?.getVoices() || [];
+      setVoices(v);
+    }
+    load();
+    window.speechSynthesis?.addEventListener?.("voiceschanged", load);
+    return () => window.speechSynthesis?.removeEventListener?.("voiceschanged", load);
+  }, []);
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="border rule px-3 py-2 text-sm rounded-sm w-full bg-background"
+    >
+      <option value="">Default voice</option>
+      {voices.map((v) => (
+        <option key={v.name} value={v.name}>{v.name} ({v.lang})</option>
+      ))}
+    </select>
+  );
+}
+
 export function ReadingSettings() {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("text");
@@ -307,6 +332,8 @@ export function ReadingSettings() {
                   <Toggle label="Larger icons" checked={p.largerIcons} onChange={(v) => set({ largerIcons: v })} />
                   <Toggle label="Focus highlight" checked={p.focusHighlight} onChange={(v) => set({ focusHighlight: v })} />
                   <Toggle label="Color-blind friendly mode" checked={p.colorBlindFriendly} onChange={(v) => set({ colorBlindFriendly: v })} />
+                  <Toggle label="Better keyboard navigation" checked={p.keyboardNavigation} onChange={(v) => set({ keyboardNavigation: v })} />
+                  <Toggle label="Screen reader optimization" checked={p.screenReaderOptimization} onChange={(v) => set({ screenReaderOptimization: v })} />
                 </div>
               )}
 
@@ -320,6 +347,10 @@ export function ReadingSettings() {
                   <Toggle label="Reading ruler" checked={p.readingRuler} onChange={(v) => set({ readingRuler: v })} />
                   <Toggle label="Highlight current paragraph" checked={p.highlightCurrentParagraph} onChange={(v) => set({ highlightCurrentParagraph: v })} />
                   <Toggle label="Focus mode (distraction-free)" checked={p.focusMode} onChange={(v) => set({ focusMode: v })} />
+                  <Toggle label="Full screen reading" checked={p.fullScreenReading} onChange={(v) => set({ fullScreenReading: v })} />
+                  <Toggle label="Sticky table of contents" checked={p.stickyToc} onChange={(v) => set({ stickyToc: v })} />
+                  <Toggle label="Mini map for long articles" checked={p.miniMap} onChange={(v) => set({ miniMap: v })} />
+                  <Toggle label="Reading achievements" checked={p.readingAchievements} onChange={(v) => set({ readingAchievements: v })} />
                 </div>
               )}
 
@@ -327,6 +358,10 @@ export function ReadingSettings() {
               {tab === "media" && (
                 <div className="space-y-2">
                   <Slider label="Narration speed" value={p.narrationSpeed} min={0.5} max={2} step={0.25} onChange={(v) => set({ narrationSpeed: v })} format={(v) => `${v}x`} />
+                  <div>
+                    <SectionLabel>Narration Voice</SectionLabel>
+                    <NarrationVoiceSelect value={p.narrationVoice} onChange={(v) => set({ narrationVoice: v })} />
+                  </div>
                   <Toggle label="Highlight text while narrating" checked={p.highlightWhileNarrating} onChange={(v) => set({ highlightWhileNarrating: v })} />
                   <div>
                     <SectionLabel>Image Quality</SectionLabel>
@@ -411,6 +446,18 @@ export function ReadingSettings() {
                   <Toggle label="Data saver" checked={p.dataSaver} onChange={(v) => set({ dataSaver: v })} />
                   <Toggle label="Lazy load images" checked={p.lazyLoadImages} onChange={(v) => set({ lazyLoadImages: v })} />
                   <Toggle label="Preload next article" checked={p.preloadNextArticle} onChange={(v) => set({ preloadNextArticle: v })} />
+                  <Toggle label="Offline reading (cache articles)" checked={p.offlineReading} onChange={(v) => set({ offlineReading: v })} />
+                  <button
+                    onClick={() => {
+                      if ("caches" in window) {
+                        caches.keys().then((keys) => keys.forEach((k) => caches.delete(k)));
+                      }
+                      toast.success("Reading cache cleared");
+                    }}
+                    className="flex items-center gap-2 w-full border rule px-4 py-3 text-sm hover:bg-foreground/[0.05] rounded-sm"
+                  >
+                    <RotateCcw className="h-4 w-4" /> Clear reading cache
+                  </button>
                 </div>
               )}
 
@@ -430,6 +477,8 @@ export function ReadingSettings() {
                   <Toggle label="Eye comfort mode" checked={p.eyeComfortMode} onChange={(v) => set({ eyeComfortMode: v })} />
                   <Toggle label="Adaptive font size" checked={p.adaptiveFontSize} onChange={(v) => set({ adaptiveFontSize: v })} />
                   <Toggle label="Focus timer" checked={p.focusTimer} onChange={(v) => set({ focusTimer: v })} />
+                  <Toggle label="Immersive reading mode" checked={p.immersiveMode} onChange={(v) => set({ immersiveMode: v })} />
+                  <Toggle label="Zen mode" checked={p.zenMode} onChange={(v) => set({ zenMode: v })} />
                   <div className="pt-4 border-t rule space-y-2">
                     <button
                       onClick={() => { reset(); toast.success("Reading settings restored to defaults"); }}

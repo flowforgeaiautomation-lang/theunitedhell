@@ -42,6 +42,10 @@ export type ReadingPreferences = {
   readingRuler: boolean;
   highlightCurrentParagraph: boolean;
   focusMode: boolean;
+  fullScreenReading: boolean;
+  stickyToc: boolean;
+  miniMap: boolean;
+  readingAchievements: boolean;
   // 6. Media
   narrationSpeed: number; // 0.5-2
   narrationVoice: string; // "" = default
@@ -72,12 +76,17 @@ export type ReadingPreferences = {
   dataSaver: boolean;
   lazyLoadImages: boolean;
   preloadNextArticle: boolean;
+  offlineReading: boolean;
   // 10. Sharing & notes
   enableTextHighlighting: boolean;
   // 12. Premium
   eyeComfortMode: boolean;
   adaptiveFontSize: boolean;
   focusTimer: boolean;
+  immersiveMode: boolean;
+  zenMode: boolean;
+  keyboardNavigation: boolean;
+  screenReaderOptimization: boolean;
 };
 
 export const DEFAULT_READING_PREFS: ReadingPreferences = {
@@ -106,6 +115,10 @@ export const DEFAULT_READING_PREFS: ReadingPreferences = {
   readingRuler: false,
   highlightCurrentParagraph: false,
   focusMode: false,
+  fullScreenReading: false,
+  stickyToc: true,
+  miniMap: true,
+  readingAchievements: true,
   narrationSpeed: 1,
   narrationVoice: "",
   highlightWhileNarrating: true,
@@ -132,10 +145,15 @@ export const DEFAULT_READING_PREFS: ReadingPreferences = {
   dataSaver: false,
   lazyLoadImages: true,
   preloadNextArticle: true,
+  offlineReading: false,
   enableTextHighlighting: true,
   eyeComfortMode: false,
   adaptiveFontSize: false,
   focusTimer: false,
+  immersiveMode: false,
+  zenMode: false,
+  keyboardNavigation: true,
+  screenReaderOptimization: false,
 };
 
 export const FONT_SIZE_PX: Record<FontSize, string> = {

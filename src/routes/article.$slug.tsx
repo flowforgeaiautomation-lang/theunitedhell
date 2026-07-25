@@ -330,7 +330,13 @@ function ArticlePage() {
 
       </section>
 
-      <ReadingExperience articleSlug={article.slug} articleContentRef={articleContentRef} readingTimeSeconds={readingTimeSeconds} />
+      <ReadingExperience
+        articleSlug={article.slug}
+        articleContentRef={articleContentRef}
+        readingTimeSeconds={readingTimeSeconds}
+        articleTitle={article.title}
+        articleSections={story.sections?.map((s: any, i: number) => ({ id: `section-${i}`, label: s.heading || s.title || `Section ${i + 1}` })) || []}
+      />
 
       {/* Comments */}
       <Discussion articleId={article.id} />

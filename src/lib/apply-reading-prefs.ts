@@ -32,6 +32,11 @@ const ALL_A11Y_CLASSES = [
   "tuh-color-blind",
   "tuh-eye-comfort",
   "tuh-focus-mode",
+  "tuh-keyboard-nav",
+  "tuh-screen-reader",
+  "tuh-data-saver",
+  "tuh-immersive",
+  "tuh-zen",
 ];
 
 export function applyReadingPrefs(prefs: ReadingPreferences) {
@@ -65,4 +70,9 @@ export function applyReadingPrefs(prefs: ReadingPreferences) {
   if (prefs.colorBlindFriendly) root.classList.add("tuh-color-blind");
   if (prefs.eyeComfortMode) root.classList.add("tuh-eye-comfort");
   if (prefs.focusMode) root.classList.add("tuh-focus-mode");
+  if (prefs.immersiveMode) root.classList.add("tuh-immersive");
+  if (prefs.zenMode) root.classList.add("tuh-zen");
+  if (prefs.keyboardNavigation) root.classList.add("tuh-keyboard-nav");
+  if (prefs.screenReaderOptimization) root.classList.add("tuh-screen-reader");
+  if (prefs.dataSaver) root.classList.add("tuh-data-saver");
 }

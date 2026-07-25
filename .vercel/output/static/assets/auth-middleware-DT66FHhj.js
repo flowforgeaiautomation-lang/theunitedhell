@@ -1,1 +1,0 @@
-import{St as e}from"./index-B9xMtmz-.js";var t=e({type:`function`});export{t};

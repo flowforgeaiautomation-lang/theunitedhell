@@ -527,3 +527,68 @@
     background: oklch(0.6 0.2 250 / 0.2);
     border-radius: 2px;
   }
+
+  /* Data saver — reduce image quality */
+  .tuh-data-saver img {
+    filter: blur(0.5px) saturate(0.8);
+  }
+  .tuh-data-saver img[loading="lazy"] {
+    content-visibility: auto;
+  }
+
+  /* Screen reader optimization */
+  .tuh-sr-announce {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+
+  /* Immersive mode — hide chrome, center content */
+  .tuh-immersive header,
+  .tuh-immersive nav,
+  .tuh-immersive footer,
+  .tuh-immersive aside {
+    opacity: 0.3;
+    transition: opacity 0.3s;
+  }
+  .tuh-immersive header:hover,
+  .tuh-immersive nav:hover,
+  .tuh-immersive footer:hover {
+    opacity: 1;
+  }
+
+  /* Zen mode — minimal, centered, no distractions */
+  .tuh-zen body {
+    background: oklch(0.98 0.005 80);
+  }
+  .tuh-zen header,
+  .tuh-zen nav,
+  .tuh-zen footer,
+  .tuh-zen aside,
+  .tuh-zen .tuh-hide-on-focus {
+    display: none !important;
+  }
+  .tuh-zen main {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem;
+  }
+
+  /* Keyboard navigation — visible focus rings */
+  .tuh-keyboard-nav *:focus-visible {
+    outline: 2px solid oklch(0.5 0.2 250);
+    outline-offset: 2px;
+  }
+
+  /* Screen reader optimization — enhance aria-live regions */
+  .tuh-screen-reader [aria-live] {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
+  }
