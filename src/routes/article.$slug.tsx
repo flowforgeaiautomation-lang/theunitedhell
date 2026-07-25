@@ -2,7 +2,7 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useQuery, queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { getArticleBySlug, getRelated, getArticleImages, listComments, postReflection, bumpLike, deleteCommentAnon, editComment, getLikedComments } from "@/lib/articles.functions";
+import { getArticleBySlug, getRelated, listComments, postReflection, bumpLike, deleteCommentAnon, editComment, getLikedComments } from "@/lib/articles.functions";
 
 
 import { ArticleActions } from "@/components/article-actions";
@@ -14,6 +14,7 @@ import { motion } from "framer-motion";
 import { Quote, Lightbulb, Clock, TrendingUp, Users, Building2, Globe2, Hash, Sparkles, Info, Bookmark, ChevronRight, ArrowBigUp, MessageCircle, Trash2, CornerDownRight } from "lucide-react";
 import type { CommentRow, ArticleStory, KeyNumber, PersonInvolved, OrganizationInvolved, CountryInvolved, VocabEntry } from "@/lib/types";
 import { SmartImage } from "@/components/SmartImage";
+import { ImageCarousel } from "@/components/ImageCarousel";
 import { ReadingExperience } from "@/components/ReadingExperience";
 import { ArticleAudioPlayer } from "@/components/ArticleAudioPlayer";
 import { useReadingPrefs } from "@/hooks/use-reading-prefs";
@@ -155,14 +156,6 @@ function ArticlePage() {
 
   const { prefs } = useReadingPrefs();
 
-  const inlineImagesQuery = useQuery({
-    queryKey: ["article-images", article?.slug ?? ""],
-    queryFn: () => getArticleImages({ data: { slug: article!.slug, title: article!.title, category: article!.category } }),
-    enabled: !!article,
-    staleTime: 30 * 60 * 1000,
-    gcTime: 60 * 60 * 1000,
-  });
-
   if (isError) {
     return (
       <div className="container-read py-24 text-center">
@@ -182,6 +175,7 @@ function ArticlePage() {
   if (!article) return null;
   const story = article.story ?? {};
   const cover = article.cover_image_url || fallbackCoverUrl(article);
+  const articleImages = [cover].filter(Boolean);
   const related = relatedQuery.data ?? [];
   const readingTimeSeconds = (article.read_time_minutes || 0) * 60;
 
@@ -226,20 +220,14 @@ function ArticlePage() {
         </div>
       </motion.header>
 
-      <motion.figure
+      <motion.div
         initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.6, ease: [0.2, 0.7, 0.2, 1] }}
-        className="container-edit mt-10 group"
+        className="container-edit mt-10"
       >
-        <SmartImage
-          src={cover}
-          alt={article.title}
-          loading="eager"
-          aspectClass="w-full max-h-[70vh]"
-          className="rounded-sm"
-        />
-      </motion.figure>
+        <ImageCarousel images={articleImages} alt={article.title} priority />
+      </motion.div>
 
       {/* Story Mode */}
       <section ref={articleContentRef} className="container-read py-12 md:py-16 article-content">
@@ -247,18 +235,10 @@ function ArticlePage() {
           <StoryBlock label="Quick Summary" body={story.summary} />
           <StoryBlock label="Main Story" body={story.main_story} />
 
-          {inlineImagesQuery.data && inlineImagesQuery.data[0] && (
-            <InlineImage src={inlineImagesQuery.data[0]} alt={article.title} />
-          )}
-
           {story.background && <StoryBlock label="Background" body={story.background} />}
 
           {story.key_developments && story.key_developments.length > 0 && (
             <KeyDevelopmentsBlock items={story.key_developments} />
-          )}
-
-          {inlineImagesQuery.data && inlineImagesQuery.data[1] && (
-            <InlineImage src={inlineImagesQuery.data[1]} alt={`${article.title} — related scene`} />
           )}
 
           {story.quick_insights && story.quick_insights.length > 0 && (
@@ -270,10 +250,6 @@ function ArticlePage() {
           )}
 
           {story.expert_analysis && <StoryBlock label="Expert Insights" body={story.expert_analysis} />}
-
-          {inlineImagesQuery.data && inlineImagesQuery.data[2] && (
-            <InlineImage src={inlineImagesQuery.data[2]} alt={`${article.title} — context`} />
-          )}
 
           {story.timeline && story.timeline.length > 0 && (
             <TimelineBlock items={story.timeline} />
@@ -390,23 +366,6 @@ function ArticlePage() {
         </motion.section>
       )}
     </article>
-  );
-}
-
-function InlineImage({ src, alt }: { src: string; alt: string }) {
-  return (
-    <figure className="border-t rule pt-8">
-      <SmartImage
-        src={src}
-        alt={alt}
-        width={1200}
-        height={750}
-        loading="lazy"
-        aspectClass="w-full"
-        className="rounded-sm"
-      />
-      <figcaption className="mt-3 text-xs text-muted-foreground italic">{alt}</figcaption>
-    </figure>
   );
 }
 
@@ -647,20 +606,8 @@ function EntityBlock({ people, organizations, countries }: { people?: string[]; 
   );
 }
 
-const STOPWORDS = new Set([
-  "the","a","an","and","or","but","in","on","at","to","for","of","with","by","from","is","are","was","were","be","been","being","have","has","had","do","does","did","will","would","could","should","may","might","must","can","this","that","these","those","i","you","he","she","it","we","they","me","him","her","us","them","my","your","his","its","our","their","what","which","who","whom","whose","when","where","why","how","all","any","both","each","few","more","most","other","some","such","no","nor","not","only","own","same","so","than","too","very","just","as","if","about","against","between","into","through","during","before","after","above","below","up","down","out","off","over","under","again","further","then","once","here","there","also","said","says","one","two","three","new","said","also","news","report","according","image","photo","getty","reuters","ap","afp","caption","via","advertisement","story","article","read","more","click","subscribe","sign","up","log","in","out","up","down","like","back","make","made","get","got","go","went","take","took","come","came","see","saw","know","knew","think","thought","say","said","told","tell","tells","telling","week","day","year","month","time","today","yesterday","tomorrow","now","then","still","even","well","much","many","such","very","too","so","just","only","also","always","never","often","sometimes","usually","rarely","here","there","where","when","why","how","what","who","which","whose","whom","percent","million","billion","thousand","hundred","people","person","group","world","country","nations","united","states","state","government","president","minister","leader","official","spokesman","spokeswoman","police","military","army","forces","war","attack","strike","crisis","conflict","issue","problem","solution","plan","policy","law","rule","order","court","judge","case","trial","charge","arrest","kill","killed","death","die","died","injure","injured","wound","wounded","damage","destroy","destroyed","loss","lost","win","won","victory","defeat","fail","failed","failure","success","successful","achieve","achieved","goal","target","aim","purpose","reason","cause","effect","result","impact","change","changed","reform","improve","improved","better","best","good","bad","great","small","large","big","little","high","low","long","short","fast","slow","old","new","young","early","late","first","last","next","previous","former","current","present","past","future","local","national","international","global","public","private","general","specific","particular","certain","sure","clear","unclear","simple","complex","easy","difficult","hard","soft","strong","weak","power","powerful","important","significant","major","minor","main","key","central","primary","secondary","final","initial","original","recent","latest","current","modern","traditional","old","new","right","left","center","middle","side","end","start","begin","beginning","close","closed","open","opened","full","empty","complete","incomplete","whole","part","half","quarter","third","section","area","region","zone","place","location","city","town","village","capital","district","neighborhood","street","road","avenue","building","house","home","office","room","space","land","field","farm","forest","mountain","river","lake","sea","ocean","water","air","fire","earth","ground","sky","weather","rain","snow","wind","storm","cloud","sun","moon","star","light","dark","day","night","morning","evening","afternoon","today","tonight","weekend","holiday","season","spring","summer","autumn","fall","winter","january","february","march","april","may","june","july","august","september","october","november","december","monday","tuesday","wednesday","thursday","friday","saturday","sunday","am","pm","hour","minute","second","moment","while","since","until","till","during","through","throughout","across","along","around","about","above","below","beside","behind","beyond","within","without","among","between","against","toward","towards","upon","onto","into","out","off","away","back","forth","forward","backward","ahead","behind","alongside","near","far","close","distant","remote","nearby","here","there","everywhere","nowhere","somewhere","anywhere","thus","therefore","however","moreover","furthermore","nevertheless","nonetheless","although","though","despite","because","since","unless","whether","either","neither","both","each","every","all","none","some","many","much","few","several","various","particular","certain","one","two","three","four","five","six","seven","eight","nine","ten","hundred","thousand","million","billion","zero","first","second","third","fourth","fifth","last","next","previous","following","preceding","succeeding","existing","remaining","leftover","extra","additional","another","other","same","different","similar","opposite","contrary","reverse","inverse","converse","transverse","obverse","reverse","front","back","side","top","bottom","middle","center","edge","corner","angle","point","line","curve","circle","square","round","flat","sharp","dull","smooth","rough","hard","soft","thick","thin","wide","narrow","tall","short","deep","shallow","heavy","light","dark","bright","dim","clear","cloudy","transparent","opaque","solid","liquid","gas","plasma","matter","energy","force","motion","speed","velocity","acceleration","mass","weight","volume","density","pressure","temperature","heat","cold","warm","cool","hot","freeze","frozen","melt","boil","evaporate","condense","solidify","crystallize","dissolve","solution","mixture","compound","element","atom","molecule","ion","electron","proton","neutron","nucleus","cell","tissue","organ","system","body","brain","heart","lung","blood","bone","muscle","skin","eye","ear","nose","mouth","hand","foot","leg","arm","head","face","neck","back","chest","stomach","waist","hip","knee","ankle","wrist","elbow","shoulder","finger","toe","hair","nail","tooth","teeth","tongue","lip","cheek","chin","forehead","temple","ear","eye","nose","mouth","chin","jaw","throat","voice","sound","noise","music","song","speech","word","letter","number","symbol","sign","mark","note","tag","label","title","name","term","phrase","sentence","paragraph","page","book","chapter","volume","issue","edition","version","copy","original","duplicate","replica","model","pattern","design","style","form","format","type","kind","sort","class","category","group","set","collection","series","sequence","order","arrangement","structure","system","network","web","grid","matrix","array","list","table","chart","graph","map","plan","diagram","figure","image","picture","photo","photograph","drawing","painting","art","artist","work","piece","creation","product","result","outcome","consequence","effect","impact","influence","role","function","purpose","use","usage","application","practice","method","technique","process","procedure","step","stage","phase","level","degree","extent","amount","quantity","number","count","total","sum","average","mean","median","mode","range","scope","scale","size","dimension","measure","measurement","unit","standard","criterion","basis","foundation","core","heart","center","middle","point","focus","target","goal","objective","aim","purpose","intent","intention","plan","scheme","strategy","tactic","approach","way","manner","method","mode","fashion","style","form","shape","outline","contour","profile","silhouette","shadow","reflection","mirror","glass","window","door","gate","entrance","exit","passage","corridor","hall","lobby","room","chamber","hall","court","arena","stadium","field","ground","court","ring","track","course","route","path","way","road","street","avenue","boulevard","highway","freeway","bridge","tunnel","station","stop","terminal","airport","port","harbor","dock","pier","wharf","quay","jetty","breakwater","seawall","dam","levee","dike","embankment","barrier","fence","wall","gate","door","window","roof","floor","ceiling","column","pillar","post","beam","arch","vault","dome","tower","spire","steeple","chimney","smokestack","furnace","oven","stove","heater","boiler","engine","motor","machine","device","tool","instrument","implement","utensil","appliance","equipment","gear","apparatus","mechanism","system","network","circuit","wire","cable","cord","line","pipe","tube","channel","duct","vent","flue","chimney","stack","tower","mast","pole","stick","rod","bar","beam","plank","board","panel","sheet","plate","block","brick","stone","rock","sand","gravel","dust","dirt","soil","earth","clay","mud","mud","clay","silt","sand","gravel","pebble","rock","stone","boulder","mountain","hill","valley","canyon","gorge","cliff","bluff","ridge","peak","summit","slope","side","face","wall","surface","layer","level","stratum","bed","floor","ground","bottom","base","foot","top","crest","crown","cap","cover","lid","top","bottom","side","edge","border","margin","rim","brim","lip","mouth","opening","hole","gap","space","room","area","zone","region","district","territory","province","state","country","nation","kingdom","empire","republic","democracy","monarchy","dictatorship","regime","government","rule","control","power","authority","command","order","direction","guidance","leadership","management","administration","organization","association","society","club","union","league","alliance","coalition","partnership","agreement","treaty","pact","deal","contract","arrangement","settlement","resolution","decision","choice","option","alternative","possibility","opportunity","chance","risk","danger","threat","hazard","peril","jeopardy","crisis","emergency","disaster","catastrophe","tragedy","calamity","misfortune","luck","fortune","fate","destiny","doom","ruin","destruction","creation","birth","life","death","growth","decline","fall","rise","increase","decrease","change","stability","balance","imbalance","equality","inequality","fairness","justice","injustice","right","wrong","good","bad","better","worse","best","worst","perfect","flawed","complete","incomplete","whole","partial","entire","full","empty","heavy","light","dark","bright","color","red","blue","green","yellow","orange","purple","pink","brown","black","white","gray","grey","silver","gold","metal","wood","plastic","rubber","leather","fabric","cloth","cotton","silk","wool","linen","paper","cardboard","glass","ceramic","concrete","asphalt","tar","oil","fuel","gas","petrol","diesel","coal","charcoal","carbon","hydrogen","oxygen","nitrogen","helium","neon","argon","krypton","xenon","radon","fluorine","chlorine","bromine","iodine","sulfur","phosphorus","silicon","boron","arsenic","antimony","bismuth","aluminum","copper","iron","steel","zinc","tin","lead","mercury","sodium","potassium","calcium","magnesium","aluminum","titanium","nickel","cobalt","chromium","manganese","tungsten","platinum","palladium","rhodium","iridium","osmium","ruthenium","silver","gold","brass","bronze","alloy","mixture","compound","solution","suspension","emulsion","colloid","gel","paste","cream","lotion","oil","grease","wax","resin","glue","adhesive","tape","sticker","label","tag","marker","pen","pencil","crayon","chalk","ink","paint","dye","color","shade","tint","hue","tone","gradient","blend","mix","combination","fusion","merger","union","junction","connection","link","bond","tie","knot","loop","ring","circle","sphere","globe","ball","orb","dot","point","spot","mark","stain","blemish","flaw","defect","fault","error","mistake","blunder","slip","lapse","oversight","omission","failure","success","triumph","victory","win","loss","defeat","draw","tie","match","game","sport","play","round","turn","move","action","reaction","interaction","communication","conversation","dialogue","discussion","debate","argument","dispute","conflict","fight","battle","war","peace","truce","ceasefire","armistice","surrender","retreat","advance","progress","development","improvement","enhancement","upgrade","update","revision","correction","fix","repair","mend","patch","restore","renew","refresh","recharge","refill","replenish","stock","supply","provide","deliver","send","ship","transport","carry","bring","take","fetch","get","receive","accept","reject","refuse","decline","deny","confirm","approve","authorize","permit","allow","grant","give","donate","contribute","offer","present","show","display","exhibit","demonstrate","prove","test","try","attempt","endeavor","effort","work","labor","toil","job","task","duty","chore","errand","mission","quest","journey","trip","tour","travel","voyage","expedition","excursion","outing","visit","call","meeting","appointment","interview","consultation","session","period","term","season","phase","stage","step","level","grade","rank","position","status","state","condition","situation","circumstance","case","instance","example","sample","specimen","model","pattern","template","blueprint","guide","manual","handbook","reference","directory","index","catalog","list","register","record","log","journal","diary","calendar","schedule","timetable","agenda","program","plan","scheme","plot","design","layout","blueprint","draft","sketch","outline","summary","brief","abstract","digest","review","critique","analysis","examination","inspection","investigation","inquiry","probe","search","hunt","quest","pursuit","chase","follow","trail","track","trace","mark","sign","signal","clue","hint","suggestion","tip","advice","counsel","guidance","direction","instruction","order","command","rule","law","regulation","policy","guideline","standard","norm","criterion","measure","yardstick","benchmark","test","trial","experiment","study","research","survey","poll","questionnaire","query","question","ask","inquire","request","demand","require","need","want","desire","wish","hope","expect","anticipate","await","wait","stay","remain","leave","depart","arrive","come","go","move","travel","journey","trip","tour","visit","explore","discover","find","locate","search","seek","look","watch","observe","see","view","notice","note","mark","spot","identify","recognize","know","understand","comprehend","grasp","learn","study","read","write","speak","talk","say","tell","inform","notify","report","announce","declare","state","express","convey","communicate","share","exchange","trade","swap","barter","buy","sell","purchase","acquire","obtain","gain","win","earn","make","create","produce","generate","build","construct","assemble","form","shape","make","do","act","perform","execute","implement","apply","use","utilize","employ","operate","run","manage","handle","deal","treat","cure","heal","mend","fix","repair","adjust","modify","change","alter","transform","convert","adapt","adjust","fit","suit","match","pair","couple","join","unite","combine","merge","blend","mix","stir","shake","beat","whip","churn","boil","cook","bake","fry","grill","roast","toast","burn","scorch","char","blacken","darken","lighten","whiten","bleach","color","dye","stain","paint","draw","sketch","trace","copy","duplicate","reproduce","replicate","clone","mimic","imitate","simulate","fake","forge","counterfeit","copy","original","real","true","false","fake","genuine","authentic","valid","legitimate","legal","illegal","lawful","unlawful","right","wrong","correct","incorrect","accurate","inaccurate","exact","precise","vague","specific","general","particular","special","unique","common","ordinary","regular","normal","usual","typical","standard","average","mean","median","extreme","moderate","mild","severe","strong","weak","powerful","feeble","sturdy","fragile","delicate","tough","hard","soft","smooth","rough","sharp","dull","blunt","pointed","flat","round","square","oval","circular","spherical","cylindrical","conical","pyramidal","triangular","rectangular","hexagonal","octagonal","polygonal","geometric","algebraic","mathematical","numerical","digital","analog","electronic","electric","magnetic","gravitational","nuclear","atomic","molecular","cellular","biological","chemical","physical","natural","artificial","synthetic","manmade","human","animal","plant","tree","flower","grass","weed","bush","shrub","vine","moss","fern","fungus","mushroom","mold","bacteria","virus","germ","microbe","organism","creature","beast","monster","pet","dog","cat","fish","bird","insect","bug","spider","snake","lizard","frog","turtle","rabbit","mouse","rat","squirrel","deer","bear","lion","tiger","elephant","monkey","ape","chimp","gorilla","orangutan","baboon","horse","cow","pig","sheep","goat","chicken","duck","goose","turkey","pigeon","dove","sparrow","robin","crow","raven","eagle","hawk","falcon","owl","seagull","pelican","stork","crane","heron","flamingo","penguin","ostrich","peacock","parrot","parakeet","canary","finch","swallow","wren","lark","nightingale","blackbird","starling","myna","magpie","jay","cardinal","bluebird","woodpecker","cuckoo","hummingbird","swift","martin","swallow","wagtail","pipit","lark","bunting","finch","sparrow","warbler","thrush","robin","chat","redstart","nightingale","blackbird","starling","myna","mockingbird","catbird","thrasher","wren","dunnock","accentor","shrike","vireo","tanager","cardinal","grosbeak","bunting","junco","longspur","snowbird","sparrow","towhee","robin","bluebird","thrush","solitaire","mockingbird","catbird","thrasher","wren","kinglet","gnatcatcher","vireo","warbler","tanager","cardinal","grosbeak","bunting","junco","longspur","snowbird","sparrow","towhee","robin","bluebird","thrush","solitaire","mockingbird","catbird","thrasher","wren","kinglet","gnatcatcher","vireo","warbler","tanager","cardinal","grosbeak","bunting","junco","longspur","snowbird","sparrow","towhee"
-]);
 
-function generateLocalVocabFallback(text: string): VocabEntry[] {
-  if (!text || text.trim().length < 10) {
-    return [
-      { word: "analysis", partOfSpeech: "noun", meaning: "Detailed examination of something to understand it better.", simpleExplanation: "A careful study of something.", example: "The analysis revealed important trends.", synonyms: ["study", "examination", "review"], antonyms: [], pronunciation: "əˈnæləsɪs" },
-      { word: "perspective", partOfSpeech: "noun", meaning: "A particular way of viewing things.", simpleExplanation: "How you see or think about something.", example: "She offered a fresh perspective on the issue.", synonyms: ["viewpoint", "outlook", "angle"], antonyms: [], pronunciation: "pərˈspɛktɪv" },
-      { word: "significant", partOfSpeech: "adjective", meaning: "Important or notable.", simpleExplanation: "Big enough to matter.", example: "The change had a significant impact.", synonyms: ["important", "notable", "meaningful"], antonyms: ["minor", "trivial"], pronunciation: "sɪɡˈnɪfɪkənt" },
-      { word: "context", partOfSpeech: "noun", meaning: "The circumstances that help explain something.", simpleExplanation: "The background around an event.", example: "You need context to understand the decision.", synonyms: ["background", "setting", "circumstance"], antonyms: [], pronunciation: "ˈkɒntɛkst" },
-      { word: "implication", partOfSpeech: "noun", meaning: "A possible consequence or effect.", simpleExplanation: "What something might lead to.", example: "The policy has broad implications.", synonyms: ["consequence", "result", "outcome"], antonyms: [], pronunciation: "ˌɪmplɪˈkeɪʃən" },
-    ];
-  }
+function generateLocalVocabFallback(_text: string): VocabEntry[] {
   return [
     { word: "analysis", partOfSpeech: "noun", meaning: "Detailed examination of something to understand it better.", simpleExplanation: "A careful study of something.", example: "The analysis revealed important trends.", synonyms: ["study", "examination", "review"], antonyms: [], pronunciation: "əˈnæləsɪs" },
     { word: "perspective", partOfSpeech: "noun", meaning: "A particular way of viewing things.", simpleExplanation: "How you see or think about something.", example: "She offered a fresh perspective on the issue.", synonyms: ["viewpoint", "outlook", "angle"], antonyms: [], pronunciation: "pərˈspɛktɪv" },

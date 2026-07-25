@@ -352,7 +352,7 @@ async function generateFallbackVocab(text: string, existing: VocabEntry[]): Prom
 
   const lookedUp = await lookupWords(candidates);
   return lookedUp
-    .filter((v) => v.meaning && v.meaning.length > 5 && !/an important (word|term) used in this story|a difficult word from the english language|^\s*of\s*$/i.test(v.meaning))
+    .filter((v) => v.meaning && !/an important (word|term) used in this story/i.test(v.meaning))
     .slice(0, 5);
 }
 
@@ -414,10 +414,6 @@ async function normalizeArticle(article: Article): Promise<Article> {
   const readerTakeaways = uniqueList((currentStory as any).reader_takeaways || currentStory.key_takeaways, quickInsights || [], 5);
   const allText = [summary, mainStory, decClean((currentStory as any).background), decClean((currentStory as any).expert_analysis), decClean((currentStory as any).why_it_matters)].filter(Boolean).join(" ");
 
-  const articleTextNorm = normalizeText([article.title, article.dek, summary, mainStory].filter(Boolean).join(" "));
-  const BAD_MEANINGS = /an important (word|term) used in this story|a difficult word from the english language|word used in|see also|^\s*of\s*$/i;
-  const TRIVIAL_WORDS = new Set(["possibly","actually","really","very","quite","rather","somewhat","instead","perhaps","maybe","although","however","therefore","moreover","furthermore","nevertheless","nonetheless","according","already","always","never","often","sometimes","usually","instead","indeed","instead","else","enough","though","unless","whether","either","neither","whether"]);
-
   const rawVocab = (currentStory as any).vocabulary?.map((v: any) => ({
     word: dec(v.word) || undefined,
     partOfSpeech: v.part_of_speech || v.partOfSpeech || undefined,
@@ -427,17 +423,7 @@ async function normalizeArticle(article: Article): Promise<Article> {
     synonyms: Array.isArray(v.synonyms) ? v.synonyms.filter(Boolean) : undefined,
     antonyms: Array.isArray(v.antonyms) ? v.antonyms.filter(Boolean) : undefined,
     pronunciation: v.pronunciation || v.phonetic || undefined,
-  })).filter((v: any) => {
-    if (!v.word || !v.meaning) return false;
-    const wl = v.word.toLowerCase();
-    if (TRIVIAL_WORDS.has(wl)) return false;
-    if (v.word.length < 4) return false;
-    if (BAD_MEANINGS.test(v.meaning)) return false;
-    if (v.simpleExplanation && v.simpleExplanation.length < 4) return false;
-    if (v.example && normalizeText(v.example) === articleTextNorm) return false;
-    if (v.example && v.example.length > 200 && normalizeText(v.example).includes(normalizeText(article.title))) return false;
-    return true;
-  }) || [];
+  })).filter((v: any) => v.word && v.meaning) || [];
 
   // If AI vocabulary is missing or inadequate, generate from article text.
   // This ensures every article always has vocabulary — no exceptions.
@@ -941,148 +927,6 @@ export const deleteCommentAnon = createServerFn({ method: "POST" })
     });
     if (error) throw new Error(error.message);
     return { deleted: true };
-  });
-
-// Static Pexels image URLs per category — no API key required, always available.
-const CATEGORY_IMAGE_SETS: Record<string, string[]> = {
-  world: [
-    "https://images.pexels.com/photos/1004665/pexels-photo-1004665.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/247786/pexels-photo-247786.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/417074/pexels-photo-417074.jpeg?auto=compress&cs=tinysrgb&w=1200",
-  ],
-  politics: [
-    "https://images.pexels.com/photos/6130304/pexels-photo-6130304.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/28064/pexels-photo-28064.jpg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/460672/pexels-photo-460672.jpeg?auto=compress&cs=tinysrgb&w=1200",
-  ],
-  technology: [
-    "https://images.pexels.com/photos/18108/pexels-photo.jpg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/773471/pexels-photo-773471.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/3568520/pexels-photo-3568520.jpeg?auto=compress&cs=tinysrgb&w=1200",
-  ],
-  science: [
-    "https://images.pexels.com/photos/2280571/pexels-photo-2280571.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/60022/pexels-photo-60022.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/256381/pexels-photo-256381.jpeg?auto=compress&cs=tinysrgb&w=1200",
-  ],
-  health: [
-    "https://images.pexels.com/photos/263402/pexels-photo-263402.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/356040/pexels-photo-356040.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/263326/pexels-photo-263326.jpeg?auto=compress&cs=tinysrgb&w=1200",
-  ],
-  business: [
-    "https://images.pexels.com/photos/3183150/pexels-photo-3183150.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/590022/pexels-photo-590022.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/3183197/pexels-photo-3183197.jpeg?auto=compress&cs=tinysrgb&w=1200",
-  ],
-  markets: [
-    "https://images.pexels.com/photos/534220/pexels-photo-534220.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/210607/pexels-photo-210607.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/7788009/pexels-photo-7788009.jpeg?auto=compress&cs=tinysrgb&w=1200",
-  ],
-  "artificial-intelligence": [
-    "https://images.pexels.com/photos/1034840/pexels-photo-1034840.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/8386440/pexels-photo-8386440.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/8728560/pexels-photo-8728560.jpeg?auto=compress&cs=tinysrgb&w=1200",
-  ],
-  space: [
-    "https://images.pexels.com/photos/110854/pexels-photo-110854.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/73910/pexels-photo-73910.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/41162/pexels-photo-41162.jpeg?auto=compress&cs=tinysrgb&w=1200",
-  ],
-  climate: [
-    "https://images.pexels.com/photos/2280571/pexels-photo-2280571.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/247763/pexels-photo-247763.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/3617500/pexels-photo-3617500.jpeg?auto=compress&cs=tinysrgb&w=1200",
-  ],
-  environment: [
-    "https://images.pexels.com/photos/2280571/pexels-photo-2280571.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/957024/pexels-photo-957024.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/3617500/pexels-photo-3617500.jpeg?auto=compress&cs=tinysrgb&w=1200",
-  ],
-  sport: [
-    "https://images.pexels.com/photos/46798/the-ball-stadion-football-the-pitch-46798.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/274506/pexels-photo-274506.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/47730/the-ball-stadion-football-the-pitch-47730.jpeg?auto=compress&cs=tinysrgb&w=1200",
-  ],
-  football: [
-    "https://images.pexels.com/photos/46798/the-ball-stadion-football-the-pitch-46798.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/274506/pexels-photo-274506.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/47730/the-ball-stadion-football-the-pitch-47730.jpeg?auto=compress&cs=tinysrgb&w=1200",
-  ],
-  cricket: [
-    "https://images.pexels.com/photos/17172382/pexels-photo-17172382.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/274506/pexels-photo-274506.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/46798/the-ball-stadion-football-the-pitch-46798.jpeg?auto=compress&cs=tinysrgb&w=1200",
-  ],
-  india: [
-    "https://images.pexels.com/photos/1004665/pexels-photo-1004665.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/14781805/pexels-photo-14781805.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/15292733/pexels-photo-15292733.jpeg?auto=compress&cs=tinysrgb&w=1200",
-  ],
-  economics: [
-    "https://images.pexels.com/photos/534220/pexels-photo-534220.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/210607/pexels-photo-210607.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/3183197/pexels-photo-3183197.jpeg?auto=compress&cs=tinysrgb&w=1200",
-  ],
-  "electric-vehicles": [
-    "https://images.pexels.com/photos/376361/pexels-photo-376361.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/1592384/pexels-photo-1592384.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/376096/pexels-photo-376096.jpeg?auto=compress&cs=tinysrgb&w=1200",
-  ],
-  physics: [
-    "https://images.pexels.com/photos/2280571/pexels-photo-2280571.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/60022/pexels-photo-60022.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/256381/pexels-photo-256381.jpeg?auto=compress&cs=tinysrgb&w=1200",
-  ],
-  sustainability: [
-    "https://images.pexels.com/photos/2280571/pexels-photo-2280571.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/957024/pexels-photo-957024.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/3617500/pexels-photo-3617500.jpeg?auto=compress&cs=tinysrgb&w=1200",
-  ],
-  books: [
-    "https://images.pexels.com/photos/256541/pexels-photo-256541.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/1370295/pexels-photo-1370295.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/256541/pexels-photo-256541.jpeg?auto=compress&cs=tinysrgb&w=1200",
-  ],
-  robotics: [
-    "https://images.pexels.com/photos/1034840/pexels-photo-1034840.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/8386440/pexels-photo-8386440.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/259915/pexels-photo-259915.jpeg?auto=compress&cs=tinysrgb&w=1200",
-  ],
-  music: [
-    "https://images.pexels.com/photos/1763075/pexels-photo-1763075.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/1370545/pexels-photo-1370545.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/167636/pexels-photo-167636.jpeg?auto=compress&cs=tinysrgb&w=1200",
-  ],
-  movies: [
-    "https://images.pexels.com/photos/65168/pexels-photo-65168.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/723425/pexels-photo-723425.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/65168/pexels-photo-65168.jpeg?auto=compress&cs=tinysrgb&w=1200",
-  ],
-  gaming: [
-    "https://images.pexels.com/photos/442576/pexels-photo-442576.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/1390381/pexels-photo-1390381.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    "https://images.pexels.com/photos/211525/pexels-photo-211525.jpeg?auto=compress&cs=tinysrgb&w=1200",
-  ],
-};
-
-const DEFAULT_IMAGE_SET = CATEGORY_IMAGE_SETS.world;
-
-function hashSlug(slug: string): number {
-  let h = 0;
-  for (let i = 0; i < slug.length; i++) h = ((h << 5) - h + slug.charCodeAt(i)) | 0;
-  return Math.abs(h);
-}
-
-export const getArticleImages = createServerFn({ method: "GET" })
-  .inputValidator((d: unknown) =>
-    z.object({ slug: z.string().min(1), title: z.string(), category: z.string() }).parse(d),
-  )
-  .handler(async ({ data }) => {
-    const pool = CATEGORY_IMAGE_SETS[data.category?.toLowerCase()] ?? DEFAULT_IMAGE_SET;
-    const offset = hashSlug(data.slug) % pool.length;
-    return [pool[offset % pool.length], pool[(offset + 1) % pool.length], pool[(offset + 2) % pool.length]];
   });
 
 export const listComments = createServerFn({ method: "GET" })
