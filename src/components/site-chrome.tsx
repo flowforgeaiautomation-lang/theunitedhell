@@ -40,7 +40,6 @@ export function SiteHeader() {
   const [signedIn, setSignedIn] = useState(false);
   const [location, setLocation] = useState("WORLD");
   const router = useRouter();
-  const [lastScrollY, setLastScrollY] = useState(0);
   const [isHidden, setIsHidden] = useState(false);
   const ticking = useRef(false);
 
@@ -63,22 +62,31 @@ export function SiteHeader() {
     };
   }, []);
 
+  const lastScrollYRef = useRef(0);
+  const isHiddenRef = useRef(false);
+
   const handleScroll = useCallback(() => {
     if (!ticking.current) {
       window.requestAnimationFrame(() => {
         const currentScrollY = window.scrollY;
         if (currentScrollY > 100) {
-          if (currentScrollY > lastScrollY && !isHidden) setIsHidden(true);
-          else if (currentScrollY < lastScrollY && isHidden) setIsHidden(false);
+          if (currentScrollY > lastScrollYRef.current && !isHiddenRef.current) {
+            setIsHidden(true);
+            isHiddenRef.current = true;
+          } else if (currentScrollY < lastScrollYRef.current && isHiddenRef.current) {
+            setIsHidden(false);
+            isHiddenRef.current = false;
+          }
         } else {
           setIsHidden(false);
+          isHiddenRef.current = false;
         }
-        setLastScrollY(currentScrollY);
+        lastScrollYRef.current = currentScrollY;
         ticking.current = false;
       });
       ticking.current = true;
     }
-  }, [lastScrollY, isHidden]);
+  }, []);
 
   useEffect(() => {
     window.addEventListener("scroll", handleScroll, { passive: true });

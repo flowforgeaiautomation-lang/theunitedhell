@@ -153,6 +153,8 @@ function ArticlePage() {
     enabled: !!article,
   });
 
+  const { prefs } = useReadingPrefs();
+
   if (isError) {
     return (
       <div className="container-read py-24 text-center">
@@ -174,7 +176,6 @@ function ArticlePage() {
   const cover = article.cover_image_url || fallbackCoverUrl(article);
   const related = relatedQuery.data ?? [];
   const readingTimeSeconds = (article.read_time_minutes || 0) * 60;
-  const { prefs } = useReadingPrefs();
 
   const tags = (article as any).tags || (story as any).tags || [];
 

@@ -1,0 +1,1 @@
+import{Pt as e}from"./index-B32eroNG.js";var t=e({type:`function`});export{t};

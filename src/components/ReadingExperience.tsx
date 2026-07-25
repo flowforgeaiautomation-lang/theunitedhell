@@ -88,39 +88,46 @@ export function ReadingExperience({
     return () => window.removeEventListener("scroll", onScroll);
   }, [prefs.readingProgressBar, articleContentRef]);
 
+  // Keep latest progress/readSeconds in refs so intervals don't need them as deps
+  const progressRef = useRef(progress);
+  progressRef.current = progress;
+  const readSecondsRef = useRef(readSeconds);
+  readSecondsRef.current = readSeconds;
+
   // Reading time tracker + achievements
   useEffect(() => {
     if (!prefs.focusTimer && !prefs.continueWhereLeftOff) return;
     readTimerRef.current = setInterval(() => {
       setReadSeconds((s) => {
         const next = s + 1;
-        // Reading achievements
+        const p = progressRef.current;
         if (next === 60) setAchievements((a) => a.includes("1min") ? a : [...a, "1min"]);
         if (next === 300) setAchievements((a) => a.includes("5min") ? a : [...a, "5min"]);
         if (next === 600) setAchievements((a) => a.includes("10min") ? a : [...a, "10min"]);
-        if (progress > 50) setAchievements((a) => a.includes("halfway") ? a : [...a, "halfway"]);
-        if (progress > 95) setAchievements((a) => a.includes("finished") ? a : [...a, "finished"]);
+        if (p > 50) setAchievements((a) => a.includes("halfway") ? a : [...a, "halfway"]);
+        if (p > 95) setAchievements((a) => a.includes("finished") ? a : [...a, "finished"]);
         return next;
       });
     }, 1000);
     return () => { if (readTimerRef.current) clearInterval(readTimerRef.current); };
-  }, [prefs.focusTimer, prefs.continueWhereLeftOff, progress]);
+  }, [prefs.focusTimer, prefs.continueWhereLeftOff]);
 
   // Save reading progress
   useEffect(() => {
     if (!signedIn || !prefs.continueWhereLeftOff) return;
     const interval = setInterval(async () => {
-      if (progress > 0) {
+      const p = progressRef.current;
+      if (p > 0) {
         await supabase.from("reading_progress").upsert({
           article_slug: articleSlug,
-          scroll_percent: Math.round(progress),
-          read_seconds: readSeconds,
+          scroll_percent: Math.round(p),
+          read_seconds: readSecondsRef.current,
           updated_at: new Date().toISOString(),
         }, { onConflict: "user_id,article_slug" });
       }
     }, 15000);
     return () => clearInterval(interval);
-  }, [signedIn, prefs.continueWhereLeftOff, progress, readSeconds, articleSlug]);
+  }, [signedIn, prefs.continueWhereLeftOff, articleSlug]);
 
   // Restore scroll position
   useEffect(() => {
@@ -231,12 +238,16 @@ export function ReadingExperience({
         if (document.fullscreenElement) document.exitFullscreen();
         setShowNoteMenu(false);
         setPopupAction("none");
-        stopNarration();
+        window.speechSynthesis.cancel();
+        setIsNarrating(false);
       }
       if (e.key === "f" && !e.metaKey && !e.ctrlKey) {
-        toggleFullscreen();
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen?.().catch(() => {});
+        } else {
+          document.exitFullscreen?.();
+        }
       }
-      // J/K for scroll
       if (e.key === "j") window.scrollBy({ top: 100, behavior: "smooth" });
       if (e.key === "k") window.scrollBy({ top: -100, behavior: "smooth" });
     }
