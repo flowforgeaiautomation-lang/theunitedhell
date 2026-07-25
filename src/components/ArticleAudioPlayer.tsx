@@ -1,16 +1,12 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import {
   Play, Pause, Square, SkipBack, SkipForward,
-  Volume2, VolumeX, Gauge, X, ChevronUp, ChevronDown,
+  Volume2, VolumeX, Gauge, ChevronUp, ChevronDown,
 } from "lucide-react";
 
-declare global {
-  interface Window {
-    puter?: any;
-  }
-}
-
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+
+type VoiceOption = { name: string; lang: string };
 
 export function ArticleAudioPlayer({ articleContentRef, articleTitle }: {
   articleContentRef: React.RefObject<HTMLElement | null>;
@@ -18,23 +14,20 @@ export function ArticleAudioPlayer({ articleContentRef, articleTitle }: {
 }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
   const [speed, setSpeed] = useState(1);
   const [volume, setVolume] = useState(1);
   const [muted, setMuted] = useState(false);
-  const [voice, setVoice] = useState("");
-  const [voices, setVoices] = useState<string[]>([]);
-  const [expanded, setExpanded] = useState(false);
+  const [voiceURI, setVoiceURI] = useState("");
+  const [voices, setVoices] = useState<VoiceOption[]>([]);
   const [minimized, setMinimized] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [currentSentenceIdx, setCurrentSentenceIdx] = useState(-1);
+  const [currentIdx, setCurrentIdx] = useState(-1);
   const [sentences, setSentences] = useState<string[]>([]);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
 
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const sentenceElsRef = useRef<HTMLElement[]>([]);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const highlightElsRef = useRef<HTMLElement[]>([]);
 
   // Load saved prefs
   useEffect(() => {
@@ -42,23 +35,22 @@ export function ArticleAudioPlayer({ articleContentRef, articleTitle }: {
     const savedVoice = localStorage.getItem("tuh-tts-voice") || "";
     const savedVolume = parseFloat(localStorage.getItem("tuh-tts-volume") || "1");
     if (savedSpeed) setSpeed(savedSpeed);
-    if (savedVoice) setVoice(savedVoice);
-    if (savedVolume !== undefined) setVolume(savedVolume);
+    if (savedVoice) setVoiceURI(savedVoice);
+    if (!isNaN(savedVolume)) setVolume(savedVolume);
   }, []);
 
-  // Load Puter.js
+  // Load voices (browser speechSynthesis)
   useEffect(() => {
-    if (window.puter) return;
-    const script = document.createElement("script");
-    script.src = "https://js.puter.com/v2/";
-    script.async = true;
-    document.head.appendChild(script);
-    script.onload = () => {
-      try {
-        const v = window.puter?.print?.() || [];
-        if (Array.isArray(v)) setVoices(v.map((x: any) => x.name || String(x)));
-      } catch {}
-    };
+    function loadVoices() {
+      const v = window.speechSynthesis?.getVoices() || [];
+      const opts = v
+        .filter((voice) => voice.lang.startsWith("en"))
+        .map((voice) => ({ name: voice.name, lang: voice.lang, uri: (voice as any).voiceURI }));
+      setVoices(opts);
+    }
+    loadVoices();
+    window.speechSynthesis?.addEventListener?.("voiceschanged", loadVoices);
+    return () => window.speechSynthesis?.removeEventListener?.("voiceschanged", loadVoices);
   }, []);
 
   const extractSentences = useCallback(() => {
@@ -78,73 +70,25 @@ export function ArticleAudioPlayer({ articleContentRef, articleTitle }: {
     return result;
   }, [articleContentRef]);
 
-  const stop = useCallback(() => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.src = "";
-      audioRef.current = null;
-    }
-    setIsPlaying(false);
-    setIsPaused(false);
-    setCurrentTime(0);
-    setDuration(0);
-    setProgress(0);
-    setCurrentSentenceIdx(-1);
-    setLoading(false);
-    sentenceElsRef.current.forEach((el) => el?.classList?.remove("tuh-tts-highlight"));
-    sentenceElsRef.current = [];
+  const clearHighlights = useCallback(() => {
+    highlightElsRef.current.forEach((el) => el?.classList?.remove("tuh-tts-highlight"));
+    highlightElsRef.current = [];
   }, []);
 
-  const generateAndPlay = useCallback(async (startIdx: number = 0) => {
-    setError("");
-    if (!window.puter) {
-      setError("Audio service is still loading. Please try again in a moment.");
-      return;
-    }
-    const allSentences = extractSentences();
-    if (allSentences.length === 0) {
-      setError("No readable content found.");
-      return;
-    }
-    setSentences(allSentences);
-    setLoading(true);
-
-    const fullText = allSentences.slice(startIdx).join(" ");
-    try {
-      const audioBlob = await window.puter.txt2speech(fullText, {
-        language: "en",
-        voice: voice || undefined,
-      });
-      if (!audioBlob) throw new Error("No audio returned");
-      const url = URL.createObjectURL(audioBlob instanceof Blob ? audioBlob : new Blob([audioBlob]));
-      if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = ""; }
-      const audio = new Audio(url);
-      audio.playbackRate = speed;
-      audio.volume = muted ? 0 : volume;
-      audioRef.current = audio;
-      audio.addEventListener("loadedmetadata", () => setDuration(audio.duration));
-      audio.addEventListener("timeupdate", () => {
-        setCurrentTime(audio.currentTime);
-        setProgress((audio.currentTime / (audio.duration || 1)) * 100);
-      });
-      audio.addEventListener("ended", () => {
-        stop();
-      });
-      await audio.play();
-      setIsPlaying(true);
-      setIsPaused(false);
-      highlightSentence(startIdx);
-    } catch (e) {
-      setError("Could not generate audio. Please try again.");
-      console.error("TTS error:", e);
-    } finally {
-      setLoading(false);
-    }
-  }, [extractSentences, voice, speed, volume, muted, stop]);
+  const stop = useCallback(() => {
+    window.speechSynthesis?.cancel();
+    utteranceRef.current = null;
+    setIsPlaying(false);
+    setIsPaused(false);
+    setProgress(0);
+    setCurrentIdx(-1);
+    setLoading(false);
+    clearHighlights();
+  }, [clearHighlights]);
 
   const highlightSentence = useCallback((idx: number) => {
-    sentenceElsRef.current.forEach((el) => el?.classList?.remove("tuh-tts-highlight"));
-    setCurrentSentenceIdx(idx);
+    clearHighlights();
+    setCurrentIdx(idx);
     const el = articleContentRef.current;
     if (!el) return;
     const blocks = el.querySelectorAll("p, h2, h3, blockquote, li");
@@ -158,100 +102,152 @@ export function ArticleAudioPlayer({ articleContentRef, articleTitle }: {
         if (s.length > 2) {
           if (count === idx) {
             (block as HTMLElement).classList.add("tuh-tts-highlight");
-            sentenceElsRef.current = [block as HTMLElement];
+            highlightElsRef.current = [block as HTMLElement];
             (block as HTMLElement).scrollIntoView({ behavior: "smooth", block: "center" });
           }
           count++;
         }
       });
     });
-  }, [articleContentRef]);
+  }, [articleContentRef, clearHighlights]);
+
+  const speakFrom = useCallback((startIdx: number) => {
+    const allSentences = extractSentences();
+    if (allSentences.length === 0) {
+      setError("No readable content found.");
+      return;
+    }
+    setSentences(allSentences);
+
+    window.speechSynthesis?.cancel();
+    clearHighlights();
+
+    let idx = startIdx;
+    const speakNext = () => {
+      if (idx >= allSentences.length) {
+        stop();
+        return;
+      }
+      const text = allSentences[idx];
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.rate = speed;
+      utter.volume = muted ? 0 : volume;
+      utter.lang = "en-US";
+
+      const allVoices = window.speechSynthesis?.getVoices() || [];
+      const selected = allVoices.find((v) => (v as any).voiceURI === voiceURI);
+      if (selected) utter.voice = selected;
+
+      utter.onstart = () => {
+        setIsPlaying(true);
+        setIsPaused(false);
+        setLoading(false);
+        highlightSentence(idx);
+      };
+      utter.onend = () => {
+        idx++;
+        setProgress((idx / allSentences.length) * 100);
+        speakNext();
+      };
+      utter.onerror = (e) => {
+        if ((e as any).error !== "canceled" && (e as any).error !== "interrupted") {
+          setError("Audio playback error. Try again.");
+        }
+        setIsPlaying(false);
+        setLoading(false);
+      };
+
+      utteranceRef.current = utter;
+      window.speechSynthesis?.speak(utter);
+    };
+
+    setLoading(true);
+    setError("");
+    speakNext();
+  }, [extractSentences, speed, volume, muted, voiceURI, highlightSentence, clearHighlights, stop]);
 
   const togglePlay = useCallback(() => {
     if (isPlaying && !isPaused) {
-      audioRef.current?.pause();
+      window.speechSynthesis?.pause();
       setIsPaused(true);
     } else if (isPlaying && isPaused) {
-      audioRef.current?.play();
+      window.speechSynthesis?.resume();
       setIsPaused(false);
     } else {
-      generateAndPlay(0);
+      speakFrom(0);
     }
-  }, [isPlaying, isPaused, generateAndPlay]);
+  }, [isPlaying, isPaused, speakFrom]);
 
   const skipForward = useCallback(() => {
-    if (!audioRef.current) return;
-    audioRef.current.currentTime = Math.min(audioRef.current.currentTime + 15, audioRef.current.duration || 0);
-  }, []);
+    if (!sentences.length) return;
+    const nextIdx = Math.min(currentIdx + 1, sentences.length - 1);
+    window.speechSynthesis?.cancel();
+    speakFrom(nextIdx);
+  }, [currentIdx, sentences.length, speakFrom]);
 
   const skipBackward = useCallback(() => {
-    if (!audioRef.current) return;
-    audioRef.current.currentTime = Math.max(audioRef.current.currentTime - 15, 0);
-  }, []);
-
-  const restart = useCallback(() => {
-    if (audioRef.current) audioRef.current.currentTime = 0;
-  }, []);
+    if (!sentences.length) return;
+    const prevIdx = Math.max(currentIdx - 1, 0);
+    window.speechSynthesis?.cancel();
+    speakFrom(prevIdx);
+  }, [currentIdx, speakFrom]);
 
   const changeSpeed = useCallback((s: number) => {
     setSpeed(s);
     localStorage.setItem("tuh-tts-speed", String(s));
-    if (audioRef.current) audioRef.current.playbackRate = s;
-  }, []);
+    if (utteranceRef.current) {
+      // Can't change rate mid-utterance; restart from current position
+      window.speechSynthesis?.cancel();
+      speakFrom(currentIdx >= 0 ? currentIdx : 0);
+    }
+  }, [currentIdx, speakFrom]);
 
   const changeVolume = useCallback((v: number) => {
     setVolume(v);
     setMuted(v === 0);
     localStorage.setItem("tuh-tts-volume", String(v));
-    if (audioRef.current) audioRef.current.volume = v;
   }, []);
 
   const toggleMute = useCallback(() => {
     const next = !muted;
     setMuted(next);
-    if (audioRef.current) audioRef.current.volume = next ? 0 : volume;
-  }, [muted, volume]);
+    if (utteranceRef.current) {
+      // Restart from current position with new volume
+      window.speechSynthesis?.cancel();
+      speakFrom(currentIdx >= 0 ? currentIdx : 0);
+    }
+  }, [muted, currentIdx, speakFrom]);
 
-  const changeVoice = useCallback((v: string) => {
-    setVoice(v);
-    localStorage.setItem("tuh-tts-voice", v);
-  }, []);
-
-  const seek = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!audioRef.current || !audioRef.current.duration) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const pct = (e.clientX - rect.left) / rect.width;
-    audioRef.current.currentTime = pct * audioRef.current.duration;
-  }, []);
+  const changeVoice = useCallback((uri: string) => {
+    setVoiceURI(uri);
+    localStorage.setItem("tuh-tts-voice", uri);
+    if (isPlaying) {
+      window.speechSynthesis?.cancel();
+      speakFrom(currentIdx >= 0 ? currentIdx : 0);
+    }
+  }, [isPlaying, currentIdx, speakFrom]);
 
   useEffect(() => () => stop(), [stop]);
 
   if (minimized && !isPlaying) return null;
 
-  const fmtTime = (s: number) => {
-    const m = Math.floor(s / 60);
-    const sec = Math.floor(s % 60);
-    return `${m}:${String(sec).padStart(2, "0")}`;
-  };
+  const fmtPct = Math.round(progress);
 
   return (
     <div className={`tuh-audio-player fixed bottom-0 left-0 right-0 z-50 border-t rule bg-background shadow-2xl transition-transform duration-300 ${minimized ? "translate-y-[calc(100%-3rem)]" : "translate-y-0"}`}>
-      {/* Progress bar */}
-      <div className="h-1 bg-foreground/10 cursor-pointer" onClick={seek}>
+      <div className="h-1 bg-foreground/10">
         <div className="h-full bg-foreground transition-[width] duration-200" style={{ width: `${progress}%` }} />
       </div>
 
       <div className="container-edit px-4 py-3">
         <div className="flex items-center gap-3 md:gap-4">
-          {/* Title */}
           <div className="hidden md:block flex-1 min-w-0">
             <div className="text-xs uppercase tracking-widest text-muted-foreground">Listen</div>
             <div className="text-sm font-medium truncate">{articleTitle}</div>
           </div>
 
-          {/* Controls */}
           <div className="flex items-center gap-1 md:gap-2">
-            <button onClick={restart} className="p-2 hover:bg-foreground/[0.08] rounded-sm" aria-label="Restart" title="Restart">
+            <button onClick={skipBackward} disabled={!isPlaying} className="p-2 hover:bg-foreground/[0.08] rounded-sm disabled:opacity-30" aria-label="Previous sentence" title="Previous sentence">
               <SkipBack className="h-4 w-4" />
             </button>
             <button
@@ -271,19 +267,17 @@ export function ArticleAudioPlayer({ articleContentRef, articleTitle }: {
             <button onClick={stop} className="p-2 hover:bg-foreground/[0.08] rounded-sm" aria-label="Stop" title="Stop">
               <Square className="h-4 w-4" />
             </button>
-            <button onClick={skipForward} className="p-2 hover:bg-foreground/[0.08] rounded-sm" aria-label="Skip forward 15s" title="Skip forward 15s">
+            <button onClick={skipForward} disabled={!isPlaying} className="p-2 hover:bg-foreground/[0.08] rounded-sm disabled:opacity-30" aria-label="Next sentence" title="Next sentence">
               <SkipForward className="h-4 w-4" />
             </button>
           </div>
 
-          {/* Time */}
           <div className="hidden sm:flex items-center gap-1 text-xs tabular-nums text-muted-foreground">
-            <span>{fmtTime(currentTime)}</span>
+            <span>{currentIdx >= 0 ? currentIdx + 1 : 0}</span>
             <span>/</span>
-            <span>{fmtTime(duration)}</span>
+            <span>{sentences.length}</span>
           </div>
 
-          {/* Speed */}
           <div className="hidden md:flex items-center gap-1">
             <Gauge className="h-4 w-4 text-muted-foreground" />
             <select
@@ -296,7 +290,6 @@ export function ArticleAudioPlayer({ articleContentRef, articleTitle }: {
             </select>
           </div>
 
-          {/* Volume */}
           <div className="hidden lg:flex items-center gap-2">
             <button onClick={toggleMute} className="p-1 hover:bg-foreground/[0.08] rounded-sm" aria-label="Mute">
               {muted || volume === 0 ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
@@ -313,25 +306,20 @@ export function ArticleAudioPlayer({ articleContentRef, articleTitle }: {
             />
           </div>
 
-          {/* Voice */}
           {voices.length > 0 && (
             <select
-              value={voice}
+              value={voiceURI}
               onChange={(e) => changeVoice(e.target.value)}
-              className="hidden lg:block bg-background border rule px-2 py-1 text-xs rounded-sm max-w-32"
+              className="hidden lg:block bg-background border rule px-2 py-1 text-xs rounded-sm max-w-40"
               aria-label="Voice"
             >
               <option value="">Default voice</option>
-              {voices.map((v) => <option key={v} value={v}>{v}</option>)}
+              {voices.map((v) => <option key={v.name} value={v.name}>{v.name}</option>)}
             </select>
           )}
 
-          {/* Expand/minimize */}
           <button onClick={() => setMinimized(!minimized)} className="p-2 hover:bg-foreground/[0.08] rounded-sm" aria-label="Minimize">
             {minimized ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-          </button>
-          <button onClick={() => setExpanded(!expanded)} className="p-2 hover:bg-foreground/[0.08] rounded-sm md:hidden" aria-label="More">
-            <X className="h-4 w-4" />
           </button>
         </div>
 
@@ -339,11 +327,14 @@ export function ArticleAudioPlayer({ articleContentRef, articleTitle }: {
           <div className="mt-2 text-xs text-red-500">{error}</div>
         )}
 
-        {/* Current sentence indicator */}
-        {isPlaying && currentSentenceIdx >= 0 && (
+        {isPlaying && currentIdx >= 0 && (
           <div className="mt-2 text-xs text-muted-foreground italic truncate hidden md:block">
-            {sentences[currentSentenceIdx] || ""}
+            {sentences[currentIdx] || ""}
           </div>
+        )}
+
+        {isPlaying && (
+          <div className="mt-1 text-[10px] text-muted-foreground/60 hidden sm:block">{fmtPct}% complete</div>
         )}
       </div>
     </div>

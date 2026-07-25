@@ -139,10 +139,32 @@ async function aiTranslate(texts: string[], target: string): Promise<string[]> {
   return texts.map((t, i) => arr[i] || t);
 }
 
+async function myMemoryTranslate(texts: string[], target: string): Promise<string[] | null> {
+  try {
+    const results: string[] = [];
+    for (const text of texts) {
+      const truncated = text.slice(0, 500);
+      const r = await fetch(
+        `https://api.mymemory.translated.net/get?q=${encodeURIComponent(truncated)}&langpair=en|${target}`,
+        { signal: AbortSignal.timeout(8000) },
+      );
+      if (!r.ok) return null;
+      const d = await r.json();
+      const translated = d?.responseData?.translatedText;
+      if (!translated) return null;
+      results.push(translated);
+    }
+    return results;
+  } catch {
+    return null;
+  }
+}
+
 async function doTranslate(texts: string[], source: string, target: string): Promise<string[]> {
   return (await libreTranslate(texts, source, target)) ??
     (await googleTranslate(texts, target)) ??
     (await deeplTranslate(texts, target)) ??
+    (await myMemoryTranslate(texts, target)) ??
     (await aiTranslate(texts, target));
 }
 

@@ -1,0 +1,1 @@
+import{Ft as e}from"./index-_9fM7vdu.js";var t=e({type:`function`});export{t};

@@ -929,6 +929,27 @@ export const deleteCommentAnon = createServerFn({ method: "POST" })
     return { deleted: true };
   });
 
+export const getArticleImages = createServerFn({ method: "GET" })
+  .inputValidator((d: unknown) =>
+    z.object({ slug: z.string().min(1), title: z.string(), category: z.string() }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { pexelsImage } = await import("./openrouter.server");
+    const exclude = new Set<string>();
+    const images: string[] = [];
+    const queries = [
+      data.title.slice(0, 60),
+      `${data.category} news`,
+      data.title.split(":")[0].slice(0, 40),
+    ];
+    for (const q of queries) {
+      if (images.length >= 3) break;
+      const url = await pexelsImage(q, { excludeUrls: exclude });
+      if (url) { images.push(url); exclude.add(url); }
+    }
+    return images;
+  });
+
 export const listComments = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) =>
     z.object({ articleId: z.string().uuid(), sort: z.enum(["newest", "oldest", "top"]).optional() }).parse(d),
