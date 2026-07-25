@@ -2,7 +2,7 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useQuery, queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { getArticleBySlug, getRelated, listComments, postReflection, bumpLike, deleteCommentAnon, editComment, getLikedComments } from "@/lib/articles.functions";
+import { getArticleBySlug, getRelated, getArticleImages, listComments, postReflection, bumpLike, deleteCommentAnon, editComment, getLikedComments } from "@/lib/articles.functions";
 
 
 import { ArticleActions } from "@/components/article-actions";
@@ -155,6 +155,14 @@ function ArticlePage() {
 
   const { prefs } = useReadingPrefs();
 
+  const inlineImagesQuery = useQuery({
+    queryKey: ["article-images", article?.slug ?? ""],
+    queryFn: () => getArticleImages({ data: { slug: article!.slug, title: article!.title, category: article!.category } }),
+    enabled: !!article,
+    staleTime: 30 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
+  });
+
   if (isError) {
     return (
       <div className="container-read py-24 text-center">
@@ -239,10 +247,18 @@ function ArticlePage() {
           <StoryBlock label="Quick Summary" body={story.summary} />
           <StoryBlock label="Main Story" body={story.main_story} />
 
+          {inlineImagesQuery.data && inlineImagesQuery.data[0] && (
+            <InlineImage src={inlineImagesQuery.data[0]} alt={article.title} />
+          )}
+
           {story.background && <StoryBlock label="Background" body={story.background} />}
 
           {story.key_developments && story.key_developments.length > 0 && (
             <KeyDevelopmentsBlock items={story.key_developments} />
+          )}
+
+          {inlineImagesQuery.data && inlineImagesQuery.data[1] && (
+            <InlineImage src={inlineImagesQuery.data[1]} alt={`${article.title} — related scene`} />
           )}
 
           {story.quick_insights && story.quick_insights.length > 0 && (
@@ -254,6 +270,10 @@ function ArticlePage() {
           )}
 
           {story.expert_analysis && <StoryBlock label="Expert Insights" body={story.expert_analysis} />}
+
+          {inlineImagesQuery.data && inlineImagesQuery.data[2] && (
+            <InlineImage src={inlineImagesQuery.data[2]} alt={`${article.title} — context`} />
+          )}
 
           {story.timeline && story.timeline.length > 0 && (
             <TimelineBlock items={story.timeline} />
@@ -370,6 +390,23 @@ function ArticlePage() {
         </motion.section>
       )}
     </article>
+  );
+}
+
+function InlineImage({ src, alt }: { src: string; alt: string }) {
+  return (
+    <figure className="border-t rule pt-8">
+      <SmartImage
+        src={src}
+        alt={alt}
+        width={1200}
+        height={750}
+        loading="lazy"
+        aspectClass="w-full"
+        className="rounded-sm"
+      />
+      <figcaption className="mt-3 text-xs text-muted-foreground italic">{alt}</figcaption>
+    </figure>
   );
 }
 
