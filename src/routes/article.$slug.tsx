@@ -661,43 +661,13 @@ function generateLocalVocabFallback(text: string): VocabEntry[] {
       { word: "implication", partOfSpeech: "noun", meaning: "A possible consequence or effect.", simpleExplanation: "What something might lead to.", example: "The policy has broad implications.", synonyms: ["consequence", "result", "outcome"], antonyms: [], pronunciation: "ˌɪmplɪˈkeɪʃən" },
     ];
   }
-  const words = text
-    .replace(/[^a-zA-Z\s]/g, " ")
-    .split(/\s+/)
-    .map((w) => w.trim())
-    .filter((w) => w.length >= 6 && w.length <= 16 && !STOPWORDS.has(w.toLowerCase()));
-  const freq = new Map<string, number>();
-  for (const w of words) {
-    const lw = w.toLowerCase();
-    freq.set(lw, (freq.get(lw) || 0) + 1);
-  }
-  const sorted = [...freq.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
-  const picks = sorted.slice(0, 6).map(([w]) => w);
-  const defaults = [
-    { word: "analysis", partOfSpeech: "noun", meaning: "Detailed examination of something to understand it better.", simpleExplanation: "A careful study of something.", example: "The analysis revealed important trends.", synonyms: ["study", "examination"], antonyms: [], pronunciation: "əˈnæləsɪs" },
-    { word: "perspective", partOfSpeech: "noun", meaning: "A particular way of viewing things.", simpleExplanation: "How you see or think about something.", example: "She offered a fresh perspective on the issue.", synonyms: ["viewpoint", "outlook"], antonyms: [], pronunciation: "pərˈspɛktɪv" },
-    { word: "significant", partOfSpeech: "adjective", meaning: "Important or notable.", simpleExplanation: "Big enough to matter.", example: "The change had a significant impact.", synonyms: ["important", "notable"], antonyms: ["minor"], pronunciation: "sɪɡˈnɪfɪkənt" },
-    { word: "context", partOfSpeech: "noun", meaning: "The circumstances that help explain something.", simpleExplanation: "The background around an event.", example: "You need context to understand the decision.", synonyms: ["background", "setting"], antonyms: [], pronunciation: "ˈkɒntɛkst" },
-    { word: "implication", partOfSpeech: "noun", meaning: "A possible consequence or effect.", simpleExplanation: "What something might lead to.", example: "The policy has broad implications.", synonyms: ["consequence", "result"], antonyms: [], pronunciation: "ˌɪmplɪˈkeɪʃən" },
+  return [
+    { word: "analysis", partOfSpeech: "noun", meaning: "Detailed examination of something to understand it better.", simpleExplanation: "A careful study of something.", example: "The analysis revealed important trends.", synonyms: ["study", "examination", "review"], antonyms: [], pronunciation: "əˈnæləsɪs" },
+    { word: "perspective", partOfSpeech: "noun", meaning: "A particular way of viewing things.", simpleExplanation: "How you see or think about something.", example: "She offered a fresh perspective on the issue.", synonyms: ["viewpoint", "outlook", "angle"], antonyms: [], pronunciation: "pərˈspɛktɪv" },
+    { word: "significant", partOfSpeech: "adjective", meaning: "Important or notable.", simpleExplanation: "Big enough to matter.", example: "The change had a significant impact.", synonyms: ["important", "notable", "meaningful"], antonyms: ["minor", "trivial"], pronunciation: "sɪɡˈnɪfɪkənt" },
+    { word: "context", partOfSpeech: "noun", meaning: "The circumstances that help explain something.", simpleExplanation: "The background around an event.", example: "You need context to understand the decision.", synonyms: ["background", "setting", "circumstance"], antonyms: [], pronunciation: "ˈkɒntɛkst" },
+    { word: "implication", partOfSpeech: "noun", meaning: "A possible consequence or effect.", simpleExplanation: "What something might lead to.", example: "The policy has broad implications.", synonyms: ["consequence", "result", "outcome"], antonyms: [], pronunciation: "ˌɪmplɪˈkeɪʃən" },
   ];
-  while (picks.length < 5 && defaults.length > 0) {
-    const d = defaults.shift()!;
-    if (!picks.includes(d.word)) picks.push(d.word);
-  }
-  return picks.slice(0, 8).map((word) => {
-    const d = defaults.find((dd) => dd.word === word);
-    if (d) return d;
-    return {
-      word,
-      partOfSpeech: undefined,
-      meaning: undefined,
-      simpleExplanation: undefined,
-      example: undefined,
-      synonyms: undefined,
-      antonyms: undefined,
-      pronunciation: undefined,
-    } as VocabEntry;
-  });
 }
 
 const PROMPTS = [

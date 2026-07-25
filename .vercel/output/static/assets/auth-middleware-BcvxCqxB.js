@@ -1,1 +1,0 @@
-import{Ft as e}from"./index-CO0UnPfl.js";var t=e({type:`function`});export{t};
