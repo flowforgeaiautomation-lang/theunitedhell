@@ -15,6 +15,7 @@ import { Quote, Lightbulb, Clock, TrendingUp, Users, Building2, Globe2, Hash, Sp
 import type { CommentRow, ArticleStory, KeyNumber, PersonInvolved, OrganizationInvolved, CountryInvolved, VocabEntry } from "@/lib/types";
 import { SmartImage } from "@/components/SmartImage";
 import { ReadingExperience } from "@/components/ReadingExperience";
+import { ArticleAudioPlayer } from "@/components/ArticleAudioPlayer";
 import { useReadingPrefs } from "@/hooks/use-reading-prefs";
 import { fallbackCoverUrl } from "@/lib/article-images";
 import { WordSearch } from "@/components/word-search";
@@ -337,6 +338,7 @@ function ArticlePage() {
         articleTitle={article.title}
         articleSections={story.sections?.map((s: any, i: number) => ({ id: `section-${i}`, label: s.heading || s.title || `Section ${i + 1}` })) || []}
       />
+      <ArticleAudioPlayer articleContentRef={articleContentRef} articleTitle={article.title} />
 
       {/* Comments */}
       <Discussion articleId={article.id} />

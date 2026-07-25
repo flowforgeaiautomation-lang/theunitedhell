@@ -4,6 +4,7 @@ import { Search, Moon, Sun, Menu, X, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PanchangDisplay } from "./PanchangDisplay";
 import { SubNav } from "./SubNav";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 
 // Translation handled by browser's built-in "Translate page" (three-dot menu).
 
@@ -163,6 +164,9 @@ export function SiteHeader() {
             >
               {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>
+            <div className="hidden lg:block">
+              <LanguageSwitcher compact />
+            </div>
             {signedIn ? (
               <Link to="/profile" className="hidden lg:inline-block p-2 hover:opacity-70" aria-label="profile">
                 <User className="h-4 w-4" />

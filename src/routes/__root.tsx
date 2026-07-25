@@ -14,6 +14,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { SiteHeader, SiteFooter } from "@/components/site-chrome";
 import { ReadingSettings } from "@/components/ReadingSettings";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { supabase } from "@/integrations/supabase/client";
 import { SITE_URL, SITE_NAME, SITE_TAGLINE, SITE_LOGO, SITE_DESCRIPTION, organizationJsonLd, websiteJsonLd } from "@/lib/seo";
@@ -88,6 +89,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:image", content: SITE_LOGO },
     ],
     scripts: [
+      {
+        src: "https://js.puter.com/v2/",
+        async: true,
+      },
       {
         src: "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923814665808842",
         async: true,

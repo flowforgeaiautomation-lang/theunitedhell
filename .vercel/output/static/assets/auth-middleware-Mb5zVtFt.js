@@ -1,1 +1,0 @@
-import{Dt as e}from"./index-BW8Hk84o.js";var t=e({type:`function`});export{t};

@@ -1,0 +1,1 @@
+import{Pt as e}from"./index-CabAmAxC.js";var t=e({type:`function`});export{t};

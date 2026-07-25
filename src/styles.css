@@ -592,3 +592,15 @@
     overflow: visible;
     clip: auto;
   }
+
+  /* TTS highlight */
+  .tuh-tts-highlight {
+    background: oklch(0.6 0.2 250 / 0.15);
+    border-radius: 2px;
+    transition: background 0.3s;
+  }
+
+  /* Audio player */
+  .tuh-audio-player {
+    backdrop-filter: blur(12px);
+  }

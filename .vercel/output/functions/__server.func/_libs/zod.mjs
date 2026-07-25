@@ -3513,7 +3513,7 @@ ZodDate.create;
 ZodSymbol.create;
 ZodUndefined.create;
 ZodNull.create;
-ZodAny.create;
+var anyType = ZodAny.create;
 ZodUnknown.create;
 ZodNever.create;
 ZodVoid.create;
@@ -3539,4 +3539,4 @@ ZodNullable.create;
 ZodEffects.createWithPreprocess;
 ZodPipeline.create;
 //#endregion
-export { objectType as a, numberType as i, booleanType as n, stringType as o, enumType as r, arrayType as t };
+export { numberType as a, enumType as i, arrayType as n, objectType as o, booleanType as r, stringType as s, anyType as t };
