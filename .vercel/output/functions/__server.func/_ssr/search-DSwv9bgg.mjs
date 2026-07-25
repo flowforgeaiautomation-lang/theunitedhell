@@ -4,7 +4,7 @@ import { t as useServerFn } from "./useServerFn-CrZF2pjq.mjs";
 import { a as categoryLabel, t as CATEGORIES } from "./categories-BEROsZZ5.mjs";
 import { f as searchArticles, l as listArticles } from "./articles.functions-DnfzX_NI.mjs";
 import { t as ArticleCard } from "./article-card-ZodrjeEE.mjs";
-import { C as Search, r as X, x as SlidersHorizontal } from "../_libs/lucide-react.mjs";
+import { S as SlidersHorizontal, T as Search, r as X } from "../_libs/lucide-react.mjs";
 import { t as ArticleCardSkeletonGrid } from "./ArticleCardSkeleton-CFW4eCvQ.mjs";
 import { t as Route } from "./search-BjL2IiJg.mjs";
 //#region node_modules/.nitro/vite/services/ssr/assets/search-DSwv9bgg.js

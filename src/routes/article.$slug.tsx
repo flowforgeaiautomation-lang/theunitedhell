@@ -14,6 +14,8 @@ import { motion } from "framer-motion";
 import { Quote, Lightbulb, Clock, TrendingUp, Users, Building2, Globe2, Hash, Sparkles, Info, Bookmark, ChevronRight, ArrowBigUp, MessageCircle, Trash2, CornerDownRight } from "lucide-react";
 import type { CommentRow, ArticleStory, KeyNumber, PersonInvolved, OrganizationInvolved, CountryInvolved, VocabEntry } from "@/lib/types";
 import { SmartImage } from "@/components/SmartImage";
+import { ReadingExperience } from "@/components/ReadingExperience";
+import { useReadingPrefs } from "@/hooks/use-reading-prefs";
 import { fallbackCoverUrl } from "@/lib/article-images";
 import { WordSearch } from "@/components/word-search";
 import { KnowledgeCheck } from "@/components/KnowledgeCheck";
@@ -140,6 +142,7 @@ function ReadingProgress() {
 function ArticlePage() {
   const { slug } = Route.useParams();
   const { data: article, isError, refetch } = useQuery(articleQ(slug));
+  const articleContentRef = useRef<HTMLElement>(null);
 
   // All hooks must run unconditionally before any early return,
   // otherwise React throws error #310 (hooks called conditionally).
@@ -169,6 +172,8 @@ function ArticlePage() {
   const story = article.story ?? {};
   const cover = article.cover_image_url || fallbackCoverUrl(article);
   const related = relatedQuery.data ?? [];
+  const readingTimeSeconds = (article.read_time_minutes || 0) * 60;
+  const { prefs } = useReadingPrefs();
 
   const tags = (article as any).tags || (story as any).tags || [];
 
@@ -227,7 +232,7 @@ function ArticlePage() {
       </motion.figure>
 
       {/* Story Mode */}
-      <section className="container-read py-12 md:py-16" style={{ fontSize: "var(--article-font-size, 17px)", lineHeight: "var(--article-line-height, 1.6)" }}>
+      <section ref={articleContentRef} className="container-read py-12 md:py-16 article-content">
         <div className="article-content grid gap-10">
           <StoryBlock label="Quick Summary" body={story.summary} />
           <StoryBlock label="Main Story" body={story.main_story} />
@@ -280,7 +285,7 @@ function ArticlePage() {
             <StoryBlock label="Future Outlook" body={story.future_outlook} />
           )}
 
-          {story.reader_takeaways && story.reader_takeaways.length > 0 && (
+          {prefs.showKeyTakeaways && story.reader_takeaways && story.reader_takeaways.length > 0 && (
             <ListBlock label="Reader Takeaways" items={story.reader_takeaways} />
           )}
 
@@ -293,26 +298,30 @@ function ArticlePage() {
 
         {/* Interactive features (outside article-content for Journey compatibility) */}
         <div className="grid gap-10 mt-10">
-          <div className="border-y rule py-10">
-            <div className="kicker mb-6">Vocabulary Builder</div>
-            {story.vocabulary && story.vocabulary.length > 0 ? (
-              <div className="grid gap-6">
-                {story.vocabulary.map((v, i) => (
-                  <EnhancedVocabCard key={`${v.word}-${i}`} entry={v} articleId={article.id} index={i} />
-                ))}
-              </div>
-            ) : (
-              <div className="grid gap-6">
-                {generateLocalVocabFallback(story.summary || story.main_story || article.dek || article.title || "").map((v, i) => (
-                  <EnhancedVocabCard key={`${v.word}-${i}`} entry={v} articleId={article.id} index={i} />
-                ))}
-              </div>
-            )}
+          {prefs.showVocabulary && (
+            <div className="border-y rule py-10">
+              <div className="kicker mb-6">Vocabulary Builder</div>
+              {story.vocabulary && story.vocabulary.length > 0 ? (
+                <div className="grid gap-6">
+                  {story.vocabulary.map((v, i) => (
+                    <EnhancedVocabCard key={`${v.word}-${i}`} entry={v} articleId={article.id} index={i} />
+                  ))}
+                </div>
+              ) : (
+                <div className="grid gap-6">
+                  {generateLocalVocabFallback(story.summary || story.main_story || article.dek || article.title || "").map((v, i) => (
+                    <EnhancedVocabCard key={`${v.word}-${i}`} entry={v} articleId={article.id} index={i} />
+                  ))}
+                </div>
+              )}
 
-            <WordSearch />
-          </div>
+              <WordSearch />
+            </div>
+          )}
 
-          <KnowledgeCheckReflection articleId={article.id} story={story} title={article.title} />
+          {prefs.enableQuizzes && (
+            <KnowledgeCheckReflection articleId={article.id} story={story} title={article.title} />
+          )}
         </div>
 
         <div className="mt-12 flex justify-center">
@@ -321,11 +330,13 @@ function ArticlePage() {
 
       </section>
 
+      <ReadingExperience articleSlug={article.slug} articleContentRef={articleContentRef} readingTimeSeconds={readingTimeSeconds} />
+
       {/* Comments */}
       <Discussion articleId={article.id} />
 
       {/* Related */}
-      {related.length > 0 && (
+      {prefs.showRelatedArticles && related.length > 0 && (
         <motion.section
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}

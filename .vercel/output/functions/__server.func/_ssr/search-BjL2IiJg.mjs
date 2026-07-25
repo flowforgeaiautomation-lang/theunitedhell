@@ -1,7 +1,7 @@
 import { n as queryOptions } from "../_libs/react+tanstack__react-query.mjs";
 import { m as createFileRoute, p as lazyRouteComponent } from "../_libs/@tanstack/react-router+[...].mjs";
-import { l as listArticles } from "./articles.functions-DnfzX_NI.mjs";
 import { c as canonicalUrl, n as SITE_LOGO, r as SITE_NAME } from "./seo-Bz6NKkDJ.mjs";
+import { l as listArticles } from "./articles.functions-DnfzX_NI.mjs";
 //#region node_modules/.nitro/vite/services/ssr/assets/search-BjL2IiJg.js
 var $$splitComponentImporter = () => import("./search-DSwv9bgg.mjs");
 var Route = createFileRoute("/search")({

@@ -13,7 +13,7 @@ import { Toaster } from "sonner";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { SiteHeader, SiteFooter } from "@/components/site-chrome";
-import { AccessibilitySettings } from "@/components/AccessibilitySettings";
+import { ReadingSettings } from "@/components/ReadingSettings";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { supabase } from "@/integrations/supabase/client";
 import { SITE_URL, SITE_NAME, SITE_TAGLINE, SITE_LOGO, SITE_DESCRIPTION, organizationJsonLd, websiteJsonLd } from "@/lib/seo";
@@ -204,7 +204,7 @@ function RootComponent() {
           <Outlet />
         </main>
         <SiteFooter />
-        <AccessibilitySettings />
+        <ReadingSettings />
         <ScrollToTop />
       </div>
       <Toaster

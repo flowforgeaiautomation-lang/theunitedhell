@@ -8,7 +8,7 @@ import { a as categoryLabel, i as HOMEPAGE_CATEGORIES } from "./categories-BEROs
 import { t as supabase } from "./client-d8MeWTAO.mjs";
 import { l as listArticles } from "./articles.functions-DnfzX_NI.mjs";
 import { t as ArticleCard } from "./article-card-ZodrjeEE.mjs";
-import { ct as ArrowRight, j as LoaderCircle, t as lucide_react_exports } from "../_libs/lucide-react.mjs";
+import { P as LoaderCircle, gt as ArrowRight, t as lucide_react_exports } from "../_libs/lucide-react.mjs";
 import { t as motion } from "../_libs/framer-motion.mjs";
 import { n as ScrollToTop, t as CategoryModal } from "./ScrollToTop-DRtZjwEu.mjs";
 import { t as discoverQuery } from "./discover-Bdl3paMc.mjs";

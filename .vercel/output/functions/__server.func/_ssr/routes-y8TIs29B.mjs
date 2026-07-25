@@ -8,7 +8,7 @@ import { a as categoryLabel } from "./categories-BEROsZZ5.mjs";
 import { t as supabase } from "./client-d8MeWTAO.mjs";
 import { l as listArticles } from "./articles.functions-DnfzX_NI.mjs";
 import { t as ArticleCard } from "./article-card-ZodrjeEE.mjs";
-import { j as LoaderCircle } from "../_libs/lucide-react.mjs";
+import { P as LoaderCircle } from "../_libs/lucide-react.mjs";
 import { t as motion } from "../_libs/framer-motion.mjs";
 import { n as ScrollToTop, t as CategoryModal } from "./ScrollToTop-DRtZjwEu.mjs";
 import { t as ArticleCardSkeletonGrid } from "./ArticleCardSkeleton-CFW4eCvQ.mjs";
