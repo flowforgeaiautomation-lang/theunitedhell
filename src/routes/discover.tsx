@@ -3,6 +3,7 @@ import { useQuery, queryOptions } from "@tanstack/react-query";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Loader2 } from "lucide-react";
+import { ArticleCardSkeletonGrid } from "@/components/ArticleCardSkeleton";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { listArticles } from "@/lib/articles.functions";
@@ -233,6 +234,7 @@ function DiscoverPage() {
         </div>
         <Link
           to="/search"
+          preload="intent"
           className="inline-flex items-center gap-2 border border-foreground px-3 py-1.5 text-xs uppercase tracking-widest hover:bg-foreground hover:text-background transition"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -252,13 +254,13 @@ function DiscoverPage() {
 
       {articles.length === 0 && !articlesQuery.isLoading && !articlesQuery.isError && articlesQuery.isFetched && (
         <div className="text-center py-16">
-          <p className="dek">No stories found in this category yet. Try curating fresh content.</p>
+          <p className="dek">No stories found in this category yet.</p>
           <Link
-            to="/search"
-            className="mt-4 inline-flex items-center gap-2 border border-foreground px-4 py-2 text-xs uppercase tracking-widest hover:bg-foreground hover:text-background transition"
+            to="/"
+            preload="intent"
+            className="mt-4 inline-block border border-foreground px-4 py-2 text-xs uppercase tracking-widest hover:bg-foreground hover:text-background transition"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-            Search stories
+            Back to homepage
           </Link>
         </div>
       )}
@@ -275,17 +277,8 @@ function DiscoverPage() {
         </div>
       )}
 
-      {articlesQuery.isLoading && (
-        <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="animate-pulse">
-              <div className="aspect-[4/3] w-full bg-foreground/10" />
-              <div className="mt-4 h-4 w-1/3 bg-foreground/10" />
-              <div className="mt-3 h-6 w-full bg-foreground/10" />
-              <div className="mt-2 h-4 w-2/3 bg-foreground/10" />
-            </div>
-          ))}
-        </div>
+      {articlesQuery.isLoading && articles.length === 0 && (
+        <ArticleCardSkeletonGrid count={6} />
       )}
 
       <div ref={sentinelRef} className="h-1" />

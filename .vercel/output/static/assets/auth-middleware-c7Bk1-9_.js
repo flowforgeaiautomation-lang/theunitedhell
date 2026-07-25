@@ -1,1 +1,0 @@
-import{xt as e}from"./index-DpGh0nkL.js";var t=e({type:`function`});export{t};

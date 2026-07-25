@@ -815,18 +815,15 @@ VOCABULARY BUILDER — MANDATORY, STRICT QUALITY
   The example sentence MUST be grammatically correct, use the word with the correct meaning, and NOT be copied from the article.
   BAD example: "Researchers ambushed the situation." (wrong usage)
   GOOD example: "The convoy was ambushed on the road to Gao, killing three soldiers."
-  NEVER choose proper nouns (people's names, place names, organisation acronyms) as vocabulary words.
-  NEVER choose common everyday words (said, report, centre, english, comments, personal, education, cannot, sentences, national, official, available, different, possible, important, including, according, following, together, although, however, because, between, another, through, against, without, already).
   For each word provide:
     - word: the exact word used in the article
     - partOfSpeech: Noun, Verb, Adjective, Adverb, or Phrase
     - meaning: the exact dictionary definition
     - simpleExplanation: a plain-English explanation a school student can understand
-    - context_meaning: one sentence explaining exactly how this word is being used IN THIS ARTICLE specifically
     - example: a NEW, correct, natural example sentence (NOT from the article)
     - synonyms: 2-5 relevant synonyms
     - antonyms: 1-5 antonyms if applicable (omit if none)
-    - pronunciation: IPA phonetic notation (e.g. /ɪmˈbɑːrɡoʊ/)
+    - pronunciation: simple phonetic form (e.g. "em-BAR-go")
 
 SOURCE NAMES
   Do not include a visible sources section in any story field.
@@ -874,7 +871,7 @@ No markdown. No commentary. No code fences. Return this exact structure:
     "future_outlook": "What could happen next based on verified info — omit if speculative",
     "reader_takeaways": ["Biggest lesson 1", "Biggest lesson 2", "Biggest lesson 3"],
     "timeline": ["Earliest event", "Next event", "Most recent event"],
-    "vocabulary": [{"word":"exact word from article","partOfSpeech":"Noun","meaning":"exact dictionary definition","simpleExplanation":"plain-English explanation","context_meaning":"how this word is used in this specific article","example":"NEW correct example sentence","synonyms":["syn1","syn2"],"antonyms":["ant1"],"pronunciation":"/ɪpˈhɒnɛtɪk/"}]
+    "vocabulary": [{"word":"exact word from article","partOfSpeech":"Noun","meaning":"exact dictionary definition","simpleExplanation":"plain-English explanation","example":"NEW correct example sentence","synonyms":["syn1","syn2"],"antonyms":["ant1"],"pronunciation":"phonetic"}]
   }
 }`;
 

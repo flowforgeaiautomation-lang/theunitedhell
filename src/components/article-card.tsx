@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import type { ArticleSummary } from "@/lib/types";
 import { categoryLabel } from "@/lib/categories";
 import { fallbackCoverUrl } from "@/lib/article-images";
+import { SmartImage } from "@/components/SmartImage";
 
 export function ArticleCard({
   article,
@@ -34,14 +35,15 @@ function HeroCard({ article }: { article: ArticleSummary }) {
       className="group block hover-lift"
     >
       <div className="grid gap-8 md:grid-cols-12">
-        <div className="md:col-span-7 overflow-hidden">
-          <img
+        <div className="md:col-span-7">
+          <SmartImage
             src={cover}
             alt={article.title}
-            loading="eager"
             width={800}
             height={500}
-            className="aspect-[16/10] w-full object-cover"
+            loading="eager"
+            aspectClass="aspect-[16/10] w-full"
+            className="rounded-sm"
           />
         </div>
         <div className="md:col-span-5 flex flex-col justify-center">
@@ -66,16 +68,15 @@ function DefaultCard({ article }: { article: ArticleSummary }) {
       preload="intent"
       className="group flex flex-col hover-lift"
     >
-      <div className="overflow-hidden">
-        <img
-          src={cover}
-          alt={article.title}
-          loading="lazy"
-          width={600}
-          height={450}
-          className="aspect-[4/3] w-full object-cover"
-        />
-      </div>
+      <SmartImage
+        src={cover}
+        alt={article.title}
+        width={600}
+        height={450}
+        loading="lazy"
+        aspectClass="w-full"
+        className="rounded-sm"
+      />
       <div className="mt-4 flex flex-col gap-3">
         <Meta article={article} />
         <h3 className="display-3 group-hover:underline decoration-1 underline-offset-4">
@@ -96,14 +97,15 @@ function WideCard({ article }: { article: ArticleSummary }) {
       preload="intent"
       className="group grid gap-6 md:grid-cols-12 hover-lift border-t rule pt-8"
     >
-      <div className="md:col-span-5 overflow-hidden">
-        <img
+      <div className="md:col-span-5">
+        <SmartImage
           src={cover}
           alt={article.title}
-          loading="lazy"
           width={600}
           height={450}
-          className="aspect-[4/3] w-full object-cover"
+          loading="lazy"
+          aspectClass="w-full"
+          className="rounded-sm"
         />
       </div>
       <div className="md:col-span-7 flex flex-col justify-center">
@@ -124,13 +126,13 @@ function CompactCard({ article }: { article: ArticleSummary }) {
       preload="intent"
       className="group flex gap-4 items-start border-t rule pt-4"
     >
-      <img
+      <SmartImage
         src={cover}
         alt={article.title}
-        loading="lazy"
         width={80}
         height={80}
-        className="h-20 w-20 flex-none object-cover"
+        loading="lazy"
+        className="h-20 w-20 flex-none rounded-sm"
       />
       <div className="min-w-0">
         <span className="kicker text-[0.65rem]">{categoryLabel(article.category)}</span>

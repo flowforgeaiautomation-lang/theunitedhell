@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { listArticles, searchArticles } from "@/lib/articles.functions";
 import { ArticleCard } from "@/components/article-card";
 import { Search as SearchIcon, SlidersHorizontal, X } from "lucide-react";
+import { ArticleCardSkeletonGrid } from "@/components/ArticleCardSkeleton";
 import { categoryLabel, CATEGORIES } from "@/lib/categories";
 import { canonicalUrl, SITE_NAME, SITE_LOGO } from "@/lib/seo";
 
@@ -205,7 +206,7 @@ function SearchPage() {
             {submitted ? `Results for "${submitted}"` : category ? categoryLabel(category) : "All stories"}
             {displayed.length > 0 && <span className="ml-2 text-muted-foreground/60">({displayed.length})</span>}
           </div>
-          {query.isLoading && <p className="dek">Searching…</p>}
+          {query.isLoading && <ArticleCardSkeletonGrid count={4} />}
           {query.data && displayed.length === 0 && <p className="dek">No matches. Try different keywords or filters.</p>}
           <div className="grid gap-10 sm:grid-cols-2">
             {displayed.map((a) => (
@@ -218,7 +219,7 @@ function SearchPage() {
       {!submitted && !category && !country && (
         <div className="mt-10">
           <div className="kicker mb-6">Trending now</div>
-          {query.isLoading && <p className="dek">Loading…</p>}
+          {query.isLoading && <ArticleCardSkeletonGrid count={4} />}
           <div className="grid gap-10 sm:grid-cols-2">
             {displayed.slice(0, 6).map((a) => (
               <ArticleCard key={a.id} article={a} variant="default" />

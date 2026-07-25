@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { Quote, Lightbulb, Clock, TrendingUp, Users, Building2, Globe2, Hash, Sparkles, Info, Bookmark, ChevronRight, ArrowBigUp, MessageCircle, Trash2, CornerDownRight } from "lucide-react";
 import type { CommentRow, ArticleStory, KeyNumber, PersonInvolved, OrganizationInvolved, CountryInvolved, VocabEntry } from "@/lib/types";
+import { SmartImage } from "@/components/SmartImage";
 import { fallbackCoverUrl } from "@/lib/article-images";
 import { WordSearch } from "@/components/word-search";
 import { KnowledgeCheck } from "@/components/KnowledgeCheck";
@@ -216,15 +217,12 @@ function ArticlePage() {
         transition={{ duration: 0.6, ease: [0.2, 0.7, 0.2, 1] }}
         className="container-edit mt-10 group"
       >
-        <img
+        <SmartImage
           src={cover}
           alt={article.title}
-          className="w-full max-h-[70vh] object-cover transition-transform duration-700 ease-out group-hover:scale-[1.01]"
           loading="eager"
-          onError={(e) => {
-            const img = e.currentTarget;
-            if (img.src !== fallbackCoverUrl(article)) img.src = fallbackCoverUrl(article);
-          }}
+          aspectClass="w-full max-h-[70vh]"
+          className="rounded-sm"
         />
       </motion.figure>
 

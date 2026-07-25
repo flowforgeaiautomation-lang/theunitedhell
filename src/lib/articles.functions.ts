@@ -336,14 +336,7 @@ async function generateFallbackVocab(text: string, existing: VocabEntry[]): Prom
   const words = text
     .replace(/[^a-zA-Z\s]/g, " ")
     .split(/\s+/)
-    .filter((w) => {
-      if (w.length < 8) return false;
-      const lw = w.toLowerCase();
-      if (FALLBACK_STOP.has(lw)) return false;
-      if (/^(continuing|comments|english|sentences|personal|central|national|federal|general|special|official|typical|natural|medical|cultural|digital|global|social|visual|local|whether|another|through|between|against|without|already|however|because|although|together|available|important|different|possible|necessary|including|following|according|particular|additional|significant|political|economic|financial|academic|physical|technical|practical|critical|potential|traditional|international|environmental|educational|historical|professional)$/.test(lw)) return false;
-      if (/^[A-Z][a-z]+$/.test(w)) return false;
-      return true;
-    });
+    .filter((w) => w.length >= 6 && !FALLBACK_STOP.has(w.toLowerCase()));
 
   const freq = new Map<string, number>();
   for (const w of words) {
@@ -426,7 +419,6 @@ async function normalizeArticle(article: Article): Promise<Article> {
     partOfSpeech: v.part_of_speech || v.partOfSpeech || undefined,
     meaning: dec(v.meaning) || undefined,
     simpleExplanation: (dec(v.simple_explanation) || dec(v.simpleExplanation) || undefined)?.replace(/^In simple terms:\s*/i, ""),
-    contextMeaning: dec(v.context_meaning) || dec(v.contextMeaning) || undefined,
     example: v.example ? dec(v.example) : undefined,
     synonyms: Array.isArray(v.synonyms) ? v.synonyms.filter(Boolean) : undefined,
     antonyms: Array.isArray(v.antonyms) ? v.antonyms.filter(Boolean) : undefined,
