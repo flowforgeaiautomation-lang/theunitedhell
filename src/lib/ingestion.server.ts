@@ -849,7 +849,7 @@ RETURN FORMAT — STRICT JSON ONLY
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 No markdown. No commentary. No code fences. Return this exact structure:
 {
-  "title": "Journalistic headline, max 90 chars, active voice, no colon-essay style",
+  "title": "Complete journalistic headline, 70-110 chars, active voice, title case, no trailing period, must read as a complete thought, never cut mid-sentence, never leave quotes unbalanced",
   "dek": "One-sentence summary of the full story, max 150 chars",
   "category": "<single slug from allowed list>",
   "subcategory": "Short descriptive label",
@@ -1165,13 +1165,29 @@ function splitSentences(text: string) {
 // the last complete sentence.
 function cleanTitleBoundary(text: string | undefined | null): string {
   if (!text) return "";
-  const cleaned = text.replace(/\s+/g, " ").trim();
+  let cleaned = text.replace(/\s+/g, " ").trim();
   if (!cleaned) return "";
-  if (/[.!?]["'')]*$/.test(cleaned)) return cleaned;
-  const sentences = cleaned.split(/(?<=[.!?])\s+/);
-  if (sentences.length > 1) {
-    const complete = sentences.slice(0, -1).join(" ").trim();
-    if (complete.length > 10) return complete;
+  // Balance single and double quotes — a stray opening quote makes a headline feel cut off.
+  const singleOpen = (cleaned.match(/'/g) || []).length;
+  if (singleOpen % 2 === 1) {
+    // If the title starts with an unmatched quote, close it at the end.
+    if (cleaned.startsWith("'") && !cleaned.endsWith("'")) cleaned += "'";
+    else if (cleaned.startsWith('"') && !cleaned.endsWith('"')) cleaned += '"';
+    else cleaned = cleaned.replace(/'([^']*)$/, "'$1'");
+  }
+  const doubleOpen = (cleaned.match(/"/g) || []).length;
+  if (doubleOpen % 2 === 1) {
+    if (cleaned.startsWith('"') && !cleaned.endsWith('"')) cleaned += '"';
+    else cleaned = cleaned.replace(/"([^"]*)$/, '"$1"');
+  }
+  // If the headline ends mid-sentence (no terminal punctuation) and contains
+  // multiple sentences, cut back to the last complete sentence.
+  if (!/[.!?]["'')]*$/.test(cleaned)) {
+    const sentences = cleaned.split(/(?<=[.!?])\s+/);
+    if (sentences.length > 1) {
+      const complete = sentences.slice(0, -1).join(" ").trim();
+      if (complete.length > 10) return complete;
+    }
   }
   return cleaned;
 }
