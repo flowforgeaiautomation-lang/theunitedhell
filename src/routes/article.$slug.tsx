@@ -239,6 +239,41 @@ function ArticlePage() {
 
           {story.background && <StoryBlock label="Background" body={story.background} />}
 
+          {/* Also Read — always visible, placed before Key Developments */}
+          {related.length > 0 && (
+            <div className="border-t rule pt-8">
+              <div className="kicker mb-6">Also Read</div>
+              <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {related.slice(0, 6).map((a) => (
+                  <li key={a.id}>
+                    <a
+                      href={`/article/${a.slug}`}
+                      className="group flex flex-col gap-2 hover-lift cursor-pointer"
+                    >
+                      <SmartImage
+                        src={a.cover_image_url || fallbackCoverUrl(a)}
+                        alt={a.title}
+                        width={400}
+                        height={300}
+                        loading="lazy"
+                        aspectClass="w-full"
+                        className="rounded-sm"
+                      />
+                      <span className="kicker">{categoryLabel(a.category)}</span>
+                      <h3 className="font-serif text-lg leading-snug group-hover:underline decoration-1 underline-offset-4">
+                        {a.title}
+                      </h3>
+                      {a.dek && <p className="text-sm text-muted-foreground line-clamp-2">{a.dek}</p>}
+                      {a.read_time_minutes && (
+                        <span className="text-xs text-muted-foreground">{a.read_time_minutes} min read</span>
+                      )}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {story.key_developments && story.key_developments.length > 0 && (
             <KeyDevelopmentsBlock items={story.key_developments} />
           )}
@@ -342,49 +377,6 @@ function ArticlePage() {
       {/* Comments */}
       <Discussion articleId={article.id} />
 
-      {/* Related */}
-      {prefs.showRelatedArticles && related.length > 0 && (
-        <motion.section
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.5 }}
-          className="container-edit py-16 border-t rule"
-        >
-          <h2 className="display-3 mb-8">Also read</h2>
-          <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {related.slice(0, 4).map((a, i) => (
-              <motion.li
-                key={a.id}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.4, delay: i * 0.1 }}
-              >
-                <a
-                  href={`/article/${a.slug}`}
-                  className="group flex flex-col gap-3 hover-lift cursor-pointer"
-                >
-                  <SmartImage
-                    src={a.cover_image_url || fallbackCoverUrl(a)}
-                    alt={a.title}
-                    width={600}
-                    height={450}
-                    loading="lazy"
-                    aspectClass="w-full"
-                    className="rounded-sm"
-                  />
-                  <span className="kicker">{categoryLabel(a.category)}</span>
-                  <h3 className="display-3 group-hover:underline decoration-1 underline-offset-4">
-                    {a.title}
-                  </h3>
-                  {a.dek && <p className="text-sm text-muted-foreground line-clamp-2">{a.dek}</p>}
-                </a>
-              </motion.li>
-            ))}
-          </ul>
-        </motion.section>
-      )}
     </article>
   );
 }

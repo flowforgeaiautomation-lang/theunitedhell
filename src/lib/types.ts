@@ -6,10 +6,12 @@ export type VocabEntry = {
   partOfSpeech?: string;
   meaning?: string;
   simpleExplanation?: string;
+  contextInArticle?: string;
   example?: string;
   synonyms?: string[];
   antonyms?: string[];
   pronunciation?: string;
+  wordOrigin?: string;
 };
 
 export type KeyNumber = {

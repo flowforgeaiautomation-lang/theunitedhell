@@ -81,14 +81,21 @@ export function EnhancedVocabCard({ entry, articleId, index }: { entry: VocabEnt
         </p>
       )}
       {entry.simpleExplanation && (
-        <p className="mt-1 text-sm text-foreground/70 leading-relaxed">{entry.simpleExplanation}</p>
+        <p className="mt-1 text-sm text-foreground/70 leading-relaxed">
+          <span className="font-semibold text-foreground/80">Easy meaning:</span> {entry.simpleExplanation}
+        </p>
+      )}
+      {entry.contextInArticle && (
+        <p className="mt-2 text-sm text-foreground/80 leading-relaxed border-l-2 border-foreground/15 pl-3">
+          <span className="font-semibold text-foreground/80">In this article:</span> {entry.contextInArticle}
+        </p>
       )}
       {entry.example && (
         <p className="mt-2 text-sm text-muted-foreground italic leading-relaxed border-l-2 border-foreground/10 pl-3">
-          {entry.example}
+          <span className="font-semibold not-italic text-foreground/80">Example:</span> {entry.example}
         </p>
       )}
-      {(entry.synonyms?.length || entry.antonyms?.length) && (
+      {(entry.synonyms?.length || entry.antonyms?.length || entry.wordOrigin) && (
         <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm">
           {entry.synonyms?.length ? (
             <div>
@@ -102,6 +109,12 @@ export function EnhancedVocabCard({ entry, articleId, index }: { entry: VocabEnt
               <span className="text-muted-foreground">{entry.antonyms.join(", ")}</span>
             </div>
           ) : null}
+          {entry.wordOrigin && (
+            <div className="basis-full">
+              <span className="font-semibold text-foreground/80">Origin:</span>{" "}
+              <span className="text-muted-foreground italic">{entry.wordOrigin}</span>
+            </div>
+          )}
         </div>
       )}
     </div>

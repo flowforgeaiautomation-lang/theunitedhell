@@ -419,10 +419,12 @@ async function normalizeArticle(article: Article): Promise<Article> {
     partOfSpeech: v.part_of_speech || v.partOfSpeech || undefined,
     meaning: dec(v.meaning) || undefined,
     simpleExplanation: (dec(v.simple_explanation) || dec(v.simpleExplanation) || undefined)?.replace(/^In simple terms:\s*/i, ""),
+    contextInArticle: dec(v.contextInArticle) || dec(v.context_in_article) || undefined,
     example: v.example ? dec(v.example) : undefined,
     synonyms: Array.isArray(v.synonyms) ? v.synonyms.filter(Boolean) : undefined,
     antonyms: Array.isArray(v.antonyms) ? v.antonyms.filter(Boolean) : undefined,
     pronunciation: v.pronunciation || v.phonetic || undefined,
+    wordOrigin: dec(v.wordOrigin) || dec(v.word_origin) || undefined,
   })).filter((v: any) => v.word && v.meaning) || [];
 
   // If AI vocabulary is missing or inadequate, generate from article text.

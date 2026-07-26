@@ -1,0 +1,1 @@
+import{Ft as e}from"./index-CNk8S6fP.js";var t=e({type:`function`});export{t};

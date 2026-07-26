@@ -806,7 +806,7 @@ TIMELINE (3-6 items, when the story benefits from chronology)
   Chronological events, brief and factual.
 
 VOCABULARY BUILDER — MANDATORY, STRICT QUALITY
-  Choose exactly 5 words that ACTUALLY APPEAR in the article text.
+  Choose 5-10 words that ACTUALLY APPEAR in the article text.
   Each word must be genuinely educational (not trivial words like "said", "the", "important", "report").
   Generate fresh vocabulary every article — never repeat generic words across articles.
   Each word MUST have a REAL, ACCURATE, EXACT dictionary definition.
@@ -815,15 +815,22 @@ VOCABULARY BUILDER — MANDATORY, STRICT QUALITY
   The example sentence MUST be grammatically correct, use the word with the correct meaning, and NOT be copied from the article.
   BAD example: "Researchers ambushed the situation." (wrong usage)
   GOOD example: "The convoy was ambushed on the road to Gao, killing three soldiers."
+  The contextInArticle MUST quote the exact sentence from the article where the word appears, showing how it is used in this specific news story.
+  BAD contextInArticle: "This word is used to explain the event."
+  GOOD contextInArticle: "The government imposed sanctions on several companies after the investigation."
+  The pronunciation MUST be proper IPA notation (e.g. /ˈsæŋkʃən/, /ɪmˈbɑːɡoʊ/).
+  The wordOrigin should give the etymology when known (e.g. "From Latin 'sanctio' meaning a decree").
   For each word provide:
     - word: the exact word used in the article
     - partOfSpeech: Noun, Verb, Adjective, Adverb, or Phrase
     - meaning: the exact dictionary definition
     - simpleExplanation: a plain-English explanation a school student can understand
+    - contextInArticle: the EXACT sentence from the article where the word appears
     - example: a NEW, correct, natural example sentence (NOT from the article)
     - synonyms: 2-5 relevant synonyms
     - antonyms: 1-5 antonyms if applicable (omit if none)
-    - pronunciation: simple phonetic form (e.g. "em-BAR-go")
+    - pronunciation: proper IPA notation (e.g. /ˈsæŋkʃən/)
+    - wordOrigin: brief etymology if known (omit if unknown)
 
 SOURCE NAMES
   Do not include a visible sources section in any story field.
@@ -849,7 +856,7 @@ RETURN FORMAT — STRICT JSON ONLY
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 No markdown. No commentary. No code fences. Return this exact structure:
 {
-  "title": "Complete journalistic headline, 70-110 chars, active voice, title case, no trailing period, must read as a complete thought, never cut mid-sentence, never leave quotes unbalanced",
+  "title": "Complete journalistic headline, 60-110 chars, active voice, title case, no trailing period, must read as a complete thought, never cut mid-sentence, never leave quotes unbalanced, never end with ... or an abrupt cut, must be a self-contained headline that conveys the full story angle",
   "dek": "One-sentence summary of the full story, max 150 chars",
   "category": "<single slug from allowed list>",
   "subcategory": "Short descriptive label",
@@ -871,7 +878,7 @@ No markdown. No commentary. No code fences. Return this exact structure:
     "future_outlook": "What could happen next based on verified info — omit if speculative",
     "reader_takeaways": ["Biggest lesson 1", "Biggest lesson 2", "Biggest lesson 3"],
     "timeline": ["Earliest event", "Next event", "Most recent event"],
-    "vocabulary": [{"word":"exact word from article","partOfSpeech":"Noun","meaning":"exact dictionary definition","simpleExplanation":"plain-English explanation","example":"NEW correct example sentence","synonyms":["syn1","syn2"],"antonyms":["ant1"],"pronunciation":"phonetic"}]
+    "vocabulary": [{"word":"exact word from article","partOfSpeech":"Noun","meaning":"exact dictionary definition","simpleExplanation":"plain-English explanation","contextInArticle":"exact sentence from the article where the word appears","example":"NEW correct example sentence","synonyms":["syn1","syn2"],"antonyms":["ant1"],"pronunciation":"/IPA/","wordOrigin":"brief etymology"}]
   }
 }`;
 
@@ -1435,7 +1442,7 @@ Do NOT label paragraphs with "What happened" / "Why it matters" / "Why should I 
 
 Fill in why_it_matters, key_numbers, people, organizations, countries, did_you_know, historical_context, future_outlook, and reader_takeaways from verified facts in the source. Omit any section the source does not support. For organizations and people, EXPLAIN who/what they are — a reader must learn what each one is, not just see a name.
 
-Vocabulary: pick 5 words that ACTUALLY APPEAR in the article. Each MUST have an EXACT dictionary definition and a CORRECT, natural example sentence that uses the word properly. Never write "an important word used in this story". Never write nonsensical example sentences. The example must NOT be copied from the article.`;
+Vocabulary: pick 5-10 words that ACTUALLY APPEAR in the article. Each MUST have an EXACT dictionary definition, a CORRECT natural example sentence (NOT from the article), the EXACT sentence from the article as contextInArticle, proper IPA pronunciation, and word origin if known. Never write "an important word used in this story". Never write nonsensical example sentences. Never write generic context like "this word is used in the story".`;
 
     let out = await orJson<Processed>({ system: SYSTEM, prompt: basePrompt });
     if (!out?.title) return null;
