@@ -19,7 +19,7 @@ import { t as discoverQuery } from "./discover-FOSavmKR.mjs";
 import { t as statsQ } from "./map-IDz5fq0f.mjs";
 import { t as Route$21 } from "./search-SSnTRrMF.mjs";
 import { t as homeQuery } from "./routes-CXV355NV.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/router-CAYUMPW9.js
+//#region node_modules/.nitro/vite/services/ssr/assets/router-C8P6qiZk.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var styles_default = "/assets/styles-CRXvNGEh.css";
@@ -2330,7 +2330,7 @@ var Route$11 = createFileRoute("/briefing")({
 	errorComponent: lazyRouteComponent($$splitErrorComponentImporter$1, "errorComponent"),
 	notFoundComponent: lazyRouteComponent($$splitNotFoundComponentImporter$1, "notFoundComponent")
 });
-var $$splitComponentImporter$5 = () => import("./auth-Bf6_hDqr.mjs");
+var $$splitComponentImporter$5 = () => import("./auth-BoGEnckY.mjs");
 var Route$10 = createFileRoute("/auth")({
 	head: () => ({ meta: [{ title: "Sign in — The United Hell" }, {
 		name: "description",

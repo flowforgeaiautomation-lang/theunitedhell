@@ -4,25 +4,9 @@ import { v as useNavigate } from "../_libs/@tanstack/react-router+[...].mjs";
 import { n as toast } from "../_libs/sonner.mjs";
 import { t as supabase } from "./client-d8MeWTAO.mjs";
 import { at as EyeOff, it as Eye } from "../_libs/lucide-react.mjs";
-import { t as createLovableAuth } from "../_libs/lovable.dev__cloud-auth-js.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/auth-Bf6_hDqr.js
+//#region node_modules/.nitro/vite/services/ssr/assets/auth-BoGEnckY.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
-var lovableAuth = createLovableAuth();
-var lovable = { auth: { signInWithOAuth: async (provider, opts) => {
-	const result = await lovableAuth.signInWithOAuth(provider, {
-		redirect_uri: opts?.redirect_uri,
-		extraParams: { ...opts?.extraParams }
-	});
-	if (result.redirected) return result;
-	if (result.error) return result;
-	try {
-		await supabase.auth.setSession(result.tokens);
-	} catch (e) {
-		return { error: e instanceof Error ? e : new Error(String(e)) };
-	}
-	return result;
-} } };
 function AuthPage() {
 	const navigate = useNavigate();
 	const [mode, setMode] = (0, import_react.useState)("sign-in");
@@ -83,12 +67,11 @@ function AuthPage() {
 	async function onGoogle() {
 		setBusy(true);
 		try {
-			const r = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
-			if (r.error) throw r.error instanceof Error ? r.error : new Error(String(r.error));
-			if (!r.redirected) navigate({
-				to: "/",
-				search: { category: void 0 }
+			const { error } = await supabase.auth.signInWithOAuth({
+				provider: "google",
+				options: { redirectTo: window.location.origin }
 			});
+			if (error) throw error;
 		} catch (e) {
 			toast.error(e.message);
 		} finally {
