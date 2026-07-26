@@ -20,13 +20,11 @@ type PopupAction = "none" | "explain" | "translate" | "dictionary";
 export function ReadingExperience({
   articleSlug,
   articleContentRef,
-  readingTimeSeconds,
   articleTitle,
   articleSections,
 }: {
   articleSlug: string;
   articleContentRef: React.RefObject<HTMLElement | null>;
-  readingTimeSeconds: number;
   articleTitle: string;
   articleSections?: { id: string; label: string }[];
 }) {
@@ -527,11 +525,6 @@ export function ReadingExperience({
       {prefs.focusTimer && (
         <div className="fixed bottom-6 left-6 z-40 border rule bg-background px-3 py-2 text-xs tabular-nums rounded-sm shadow-sm">
           {Math.floor(readSeconds / 60)}:{String(readSeconds % 60).padStart(2, "0")} read
-          {readingTimeSeconds > 0 && (
-            <span className="text-muted-foreground ml-2">
-              ~{Math.max(0, Math.ceil((readingTimeSeconds - readSeconds) / 60))} min left
-            </span>
-          )}
         </div>
       )}
 

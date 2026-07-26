@@ -1,0 +1,1 @@
+import{Pt as e}from"./index-BgOA_U_r.js";var t=e({type:`function`});export{t};

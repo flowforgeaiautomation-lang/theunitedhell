@@ -179,7 +179,6 @@ function ArticlePage() {
   const cover = article.cover_image_url || fallbackCoverUrl(article);
   const articleImages = [cover].filter(Boolean);
   const related = relatedQuery.data ?? [];
-  const readingTimeSeconds = (article.read_time_minutes || 0) * 60;
 
   const tags = (article as any).tags || (story as any).tags || [];
 
@@ -207,15 +206,7 @@ function ArticlePage() {
         {article.dek && <p className="dek mt-6 text-balance">{article.dek}</p>}
         <div className="mt-4 flex items-center justify-center gap-3 text-sm text-muted-foreground">
           {addedDate && <span>{addedDate}</span>}
-          {article.read_time_minutes > 0 && (
-            <>
-              <span className="text-muted-foreground/40">•</span>
-              <span className="inline-flex items-center gap-1">
-                <Clock className="h-3.5 w-3.5" />
-                {article.read_time_minutes} min read
-              </span>
-            </>
-          )}
+
         </div>
         <div className="mt-6 flex justify-center">
           <ArticleActions articleId={article.id} title={article.title} />
@@ -264,9 +255,7 @@ function ArticlePage() {
                         {a.title}
                       </h3>
                       {a.dek && <p className="text-sm text-muted-foreground line-clamp-2">{a.dek}</p>}
-                      {a.read_time_minutes && (
-                        <span className="text-xs text-muted-foreground">{a.read_time_minutes} min read</span>
-                      )}
+
                     </a>
                   </li>
                 ))}
@@ -368,7 +357,6 @@ function ArticlePage() {
       <ReadingExperience
         articleSlug={article.slug}
         articleContentRef={articleContentRef}
-        readingTimeSeconds={readingTimeSeconds}
         articleTitle={article.title}
         articleSections={story.sections?.map((s: any, i: number) => ({ id: `section-${i}`, label: s.heading || s.title || `Section ${i + 1}` })) || []}
       />
