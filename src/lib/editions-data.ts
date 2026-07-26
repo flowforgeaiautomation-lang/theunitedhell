@@ -33,7 +33,7 @@ export interface EditionBook {
 
 export const AUTHOR = {
   name: "Altair Veda",
-  logo: "/THEUH.LOGO.png",
+  logo: "/covers/author.webp",
   shortBio:
     "Altair Veda is an author, thinker, and creator of the Powerful Mind Series, a collection of books that explores the hidden dimensions of human potential through practical thinking, self-mastery, and purposeful action.",
   longBio: [
@@ -201,8 +201,7 @@ export const BOOKS: EditionBook[] = [
     seriesOrder: 1,
     amazonLink: "https://www.amazon.com",
     books2ReadLink: "https://books2read.com",
-    coverImage:
-      "https://m.media-amazon.com/images/I/71R5vGK-URL._SL1200_.jpg",
+    coverImage: "/covers/book-1.webp",
     readingTime: "6 hours",
     tags: ["Intelligence", "Psychology", "Self-Help", "Leadership", "Cognitive Science"],
     collections: ["Mental Power", "Psychology", "Mindset", "Learning", "Thinking"],
@@ -308,8 +307,7 @@ export const BOOKS: EditionBook[] = [
     seriesOrder: 2,
     amazonLink: "https://www.amazon.com",
     books2ReadLink: "https://books2read.com",
-    coverImage:
-      "https://m.media-amazon.com/images/I/81z0hJ-3ZAL._SL1200_.jpg",
+    coverImage: "/covers/book-2.webp",
     readingTime: "5 hours",
     tags: ["Discipline", "Productivity", "Habits", "Success", "Self-Control"],
     collections: ["Mental Power", "Productivity", "Success", "Focus", "Mindset"],
@@ -412,8 +410,7 @@ export const BOOKS: EditionBook[] = [
     seriesOrder: 3,
     amazonLink: "https://www.amazon.com",
     books2ReadLink: "https://books2read.com",
-    coverImage:
-      "https://m.media-amazon.com/images/I/71QyQ4J-URL._SL1200_.jpg",
+    coverImage: "/covers/book-3.webp",
     readingTime: "5 hours",
     tags: ["Focus", "Productivity", "Attention", "Mental Clarity", "Psychology"],
     collections: ["Mental Power", "Productivity", "Focus", "Success", "Mindset"],
@@ -515,8 +512,7 @@ export const BOOKS: EditionBook[] = [
     seriesOrder: 4,
     amazonLink: "https://www.amazon.com",
     books2ReadLink: "https://books2read.com",
-    coverImage:
-      "https://m.media-amazon.com/images/I/71YyQ4J-URL._SL1200_.jpg",
+    coverImage: "/covers/book-4.webp",
     readingTime: "5 hours",
     tags: ["Strategy", "Leadership", "Decision Making", "Planning", "Business"],
     collections: ["Mental Power", "Leadership", "Strategy", "Success", "Thinking"],
@@ -618,8 +614,7 @@ export const BOOKS: EditionBook[] = [
     seriesOrder: 5,
     amazonLink: "https://www.amazon.com",
     books2ReadLink: "https://books2read.com",
-    coverImage:
-      "https://m.media-amazon.com/images/I/81ZyQ4J-URL._SL1200_.jpg",
+    coverImage: "/covers/book-5.webp",
     readingTime: "5 hours",
     tags: ["Leadership", "Vision", "Influence", "Impact", "Future"],
     collections: ["Leadership", "Mental Power", "Success", "Mindset", "Strategy"],

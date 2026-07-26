@@ -160,7 +160,7 @@ function BookDetailPage() {
             <p className="text-lg md:text-xl text-[#E6C17D]/80 font-serif italic">{book.subtitle}</p>
 
             <div className="flex items-center gap-3 pt-2">
-              <img src={AUTHOR.logo} alt={AUTHOR.name} className="w-8 h-8 object-contain rounded-full border border-[#E6C17D]/20" />
+              <img src={AUTHOR.logo} alt={AUTHOR.name} className="w-8 h-8 object-cover rounded-full border border-[#E6C17D]/20" />
               <span className="text-sm text-[#FFF2D8]/70">by <Link to="/editions" className="text-[#E6C17D] hover:underline">{AUTHOR.name}</Link></span>
             </div>
 
@@ -344,7 +344,7 @@ function BookDetailPage() {
       <section className="relative z-10 py-16 px-4">
         <div className="max-w-3xl mx-auto text-center">
           <SectionDivider label="About the Author" />
-          <img src={AUTHOR.logo} alt={AUTHOR.name} className="w-24 h-24 object-contain rounded-full border border-[#E6C17D]/25 mx-auto mb-6" />
+          <img src={AUTHOR.logo} alt={AUTHOR.name} className="w-20 h-20 object-cover rounded-full border border-[#E6C17D]/25 mx-auto mb-4" />
           <h3 className="font-serif text-3xl font-bold text-[#FFF2D8] mb-4">{AUTHOR.name}</h3>
           <p className="text-sm text-[#FFF2D8]/60 leading-relaxed">{AUTHOR.shortBio}</p>
           <div className="mt-6 p-6 border border-[#E6C17D]/20 rounded-sm bg-[#0F0906]/50">
