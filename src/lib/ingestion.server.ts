@@ -856,7 +856,7 @@ RETURN FORMAT — STRICT JSON ONLY
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 No markdown. No commentary. No code fences. Return this exact structure:
 {
-  "title": "Complete journalistic headline, 60-110 chars, active voice, title case, no trailing period, must read as a complete thought, never cut mid-sentence, never leave quotes unbalanced, never end with ... or an abrupt cut, must be a self-contained headline that conveys the full story angle",
+  "title": "Complete journalistic headline, 60-110 chars, active voice, title case, no trailing period, must read as a complete thought, never cut mid-sentence, never leave quotes unbalanced, never end with ... or an abrupt cut, never end with a dangling 'vs.' or ':' that leaves the reader hanging, must be a self-contained headline that conveys the full story angle and is attractive and unique — avoid generic phrasing like 'New developments in X', make it specific and vivid",
   "dek": "One-sentence summary of the full story, max 150 chars",
   "category": "<single slug from allowed list>",
   "subcategory": "Short descriptive label",
@@ -1174,10 +1174,19 @@ function cleanTitleBoundary(text: string | undefined | null): string {
   if (!text) return "";
   let cleaned = text.replace(/\s+/g, " ").trim();
   if (!cleaned) return "";
-  // Balance single and double quotes — a stray opening quote makes a headline feel cut off.
+
+  // Strip trailing ellipsis / dots / dashes that signal truncation
+  cleaned = cleaned.replace(/(?:\s*\.\.\.|\s*\u2026|\s*\.\s*\.\s*\.|\s*[-\u2014]\s*)$/i, "").trim();
+  // Strip a trailing lone "vs." or "vs" that signals an incomplete comparison
+  cleaned = cleaned.replace(/\s+vs\.?\s*$/i, "").trim();
+  // Strip trailing colon (incomplete list headline)
+  cleaned = cleaned.replace(/[:\s]+$/, "").trim();
+
+  if (!cleaned) return "";
+
+  // Balance single quotes
   const singleOpen = (cleaned.match(/'/g) || []).length;
   if (singleOpen % 2 === 1) {
-    // If the title starts with an unmatched quote, close it at the end.
     if (cleaned.startsWith("'") && !cleaned.endsWith("'")) cleaned += "'";
     else if (cleaned.startsWith('"') && !cleaned.endsWith('"')) cleaned += '"';
     else cleaned = cleaned.replace(/'([^']*)$/, "'$1'");

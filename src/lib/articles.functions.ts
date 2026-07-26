@@ -288,18 +288,42 @@ function truncateAtSentence(text: string | undefined | null, maxChars = 300): st
 // end with proper punctuation, cut it back to the last complete sentence.
 function cleanTitle(text: string | undefined | null): string | undefined {
   if (!text) return undefined;
-  const cleaned = text.replace(/\s+/g, " ").trim();
+  let cleaned = text.replace(/\s+/g, " ").trim();
   if (!cleaned) return undefined;
+
+  // Strip trailing ellipsis / dots / dashes that signal truncation
+  cleaned = cleaned.replace(/(?:\s*\.\.\.|\s*\u2026|\s*\.\s*\.\s*\.|\s*[-\u2014]\s*)$/i, "").trim();
+  // Strip a trailing lone "vs." or "vs" that signals an incomplete comparison
+  cleaned = cleaned.replace(/\s+vs\.?\s*$/i, "").trim();
+  // Strip trailing colon (incomplete list headline)
+  cleaned = cleaned.replace(/[:\s]+$/, "").trim();
+
+  if (!cleaned) return undefined;
+
+  // Balance single quotes
+  const singleQ = (cleaned.match(/'/g) || []).length;
+  if (singleQ % 2 === 1) {
+    if (cleaned.startsWith("'") && !cleaned.endsWith("'")) cleaned += "'";
+    else cleaned = cleaned.replace(/'([^']*)$/, "'$1'");
+  }
+  // Balance double quotes
+  const doubleQ = (cleaned.match(/"/g) || []).length;
+  if (doubleQ % 2 === 1) {
+    if (cleaned.startsWith('"') && !cleaned.endsWith('"')) cleaned += '"';
+    else cleaned = cleaned.replace(/"([^"]*)$/, '"$1"');
+  }
+
   // If it ends with proper punctuation, it's complete
   if (/[.!?]["'')]*$/.test(cleaned)) return cleaned;
-  // If it ends with an ellipsis or trailing fragment, trim back to last sentence boundary
+
+  // If it contains multiple sentences, cut back to the last complete one
   const sentences = splitSentences(cleaned);
   if (sentences.length > 1) {
-    // Keep all complete sentences, drop the last incomplete fragment
     const complete = sentences.slice(0, -1).join(" ");
     if (complete.length > 10) return complete.replace(/\s+/g, " ").trim();
   }
-  // Single sentence with no ending punctuation — return as-is (it's a headline, not truncated)
+
+  // Single sentence, no terminal punctuation — it's a headline, return as-is
   return cleaned;
 }
 
