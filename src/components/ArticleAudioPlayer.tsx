@@ -6,7 +6,7 @@ import {
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 
-type VoiceOption = { name: string; lang: string };
+type VoiceOption = { name: string; lang: string; uri: string };
 
 export function ArticleAudioPlayer({ articleContentRef, articleTitle }: {
   articleContentRef: React.RefObject<HTMLElement | null>;
@@ -14,10 +14,10 @@ export function ArticleAudioPlayer({ articleContentRef, articleTitle }: {
 }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  const [speed, setSpeed] = useState(1);
-  const [volume, setVolume] = useState(1);
-  const [muted, setMuted] = useState(false);
-  const [voiceURI, setVoiceURI] = useState("");
+  const [speed, setSpeedState] = useState(1);
+  const [volume, setVolumeState] = useState(1);
+  const [muted, setMutedState] = useState(false);
+  const [voiceURI, setVoiceURIState] = useState("");
   const [voices, setVoices] = useState<VoiceOption[]>([]);
   const [minimized, setMinimized] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -29,14 +29,42 @@ export function ArticleAudioPlayer({ articleContentRef, articleTitle }: {
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const highlightElsRef = useRef<HTMLElement[]>([]);
 
-  // Load saved prefs
+  // Refs mirror state so speakFrom always reads the latest values,
+  // even when called immediately after a setState (which hasn't flushed yet).
+  const speedRef = useRef(speed);
+  const volumeRef = useRef(volume);
+  const mutedRef = useRef(muted);
+  const voiceURIRef = useRef(voiceURI);
+  const currentIdxRef = useRef(-1);
+
+  speedRef.current = speed;
+  volumeRef.current = volume;
+  mutedRef.current = muted;
+  voiceURIRef.current = voiceURI;
+  currentIdxRef.current = currentIdx;
+
+  // Load saved prefs — sync with reading preferences (narrationSpeed/narrationVoice)
   useEffect(() => {
-    const savedSpeed = parseFloat(localStorage.getItem("tuh-tts-speed") || "1");
-    const savedVoice = localStorage.getItem("tuh-tts-voice") || "";
+    let savedSpeed = parseFloat(localStorage.getItem("tuh-tts-speed") || "1");
+    let savedVoice = localStorage.getItem("tuh-tts-voice") || "";
     const savedVolume = parseFloat(localStorage.getItem("tuh-tts-volume") || "1");
-    if (savedSpeed) setSpeed(savedSpeed);
-    if (savedVoice) setVoiceURI(savedVoice);
-    if (!isNaN(savedVolume)) setVolume(savedVolume);
+    try {
+      const rp = JSON.parse(localStorage.getItem("tuh-reading-prefs") || "{}");
+      if (rp.narrationSpeed && !isNaN(rp.narrationSpeed)) savedSpeed = rp.narrationSpeed;
+      if (rp.narrationVoice) savedVoice = rp.narrationVoice;
+    } catch {}
+    if (savedSpeed && !isNaN(savedSpeed)) {
+      setSpeedState(savedSpeed);
+      speedRef.current = savedSpeed;
+    }
+    if (savedVoice) {
+      setVoiceURIState(savedVoice);
+      voiceURIRef.current = savedVoice;
+    }
+    if (!isNaN(savedVolume)) {
+      setVolumeState(savedVolume);
+      volumeRef.current = savedVolume;
+    }
   }, []);
 
   // Load voices (browser speechSynthesis)
@@ -130,12 +158,13 @@ export function ArticleAudioPlayer({ articleContentRef, articleTitle }: {
       }
       const text = allSentences[idx];
       const utter = new SpeechSynthesisUtterance(text);
-      utter.rate = speed;
-      utter.volume = muted ? 0 : volume;
+      // Read from refs so we always get the latest values
+      utter.rate = speedRef.current;
+      utter.volume = mutedRef.current ? 0 : volumeRef.current;
       utter.lang = "en-US";
 
       const allVoices = window.speechSynthesis?.getVoices() || [];
-      const selected = allVoices.find((v) => (v as any).voiceURI === voiceURI);
+      const selected = allVoices.find((v) => (v as any).voiceURI === voiceURIRef.current);
       if (selected) utter.voice = selected;
 
       utter.onstart = () => {
@@ -164,7 +193,7 @@ export function ArticleAudioPlayer({ articleContentRef, articleTitle }: {
     setLoading(true);
     setError("");
     speakNext();
-  }, [extractSentences, speed, volume, muted, voiceURI, highlightSentence, clearHighlights, stop]);
+  }, [extractSentences, highlightSentence, clearHighlights, stop]);
 
   const togglePlay = useCallback(() => {
     if (isPlaying && !isPaused) {
@@ -180,52 +209,54 @@ export function ArticleAudioPlayer({ articleContentRef, articleTitle }: {
 
   const skipForward = useCallback(() => {
     if (!sentences.length) return;
-    const nextIdx = Math.min(currentIdx + 1, sentences.length - 1);
+    const nextIdx = Math.min(currentIdxRef.current + 1, sentences.length - 1);
     window.speechSynthesis?.cancel();
     speakFrom(nextIdx);
-  }, [currentIdx, sentences.length, speakFrom]);
+  }, [sentences.length, speakFrom]);
 
   const skipBackward = useCallback(() => {
     if (!sentences.length) return;
-    const prevIdx = Math.max(currentIdx - 1, 0);
+    const prevIdx = Math.max(currentIdxRef.current - 1, 0);
     window.speechSynthesis?.cancel();
     speakFrom(prevIdx);
-  }, [currentIdx, speakFrom]);
+  }, [sentences.length, speakFrom]);
 
   const changeSpeed = useCallback((s: number) => {
-    setSpeed(s);
+    speedRef.current = s;
+    setSpeedState(s);
     localStorage.setItem("tuh-tts-speed", String(s));
     if (utteranceRef.current) {
-      // Can't change rate mid-utterance; restart from current position
       window.speechSynthesis?.cancel();
-      speakFrom(currentIdx >= 0 ? currentIdx : 0);
+      speakFrom(currentIdxRef.current >= 0 ? currentIdxRef.current : 0);
     }
-  }, [currentIdx, speakFrom]);
+  }, [speakFrom]);
 
   const changeVolume = useCallback((v: number) => {
-    setVolume(v);
-    setMuted(v === 0);
+    volumeRef.current = v;
+    setVolumeState(v);
+    setMutedState(v === 0);
     localStorage.setItem("tuh-tts-volume", String(v));
   }, []);
 
   const toggleMute = useCallback(() => {
-    const next = !muted;
-    setMuted(next);
+    const next = !mutedRef.current;
+    mutedRef.current = next;
+    setMutedState(next);
     if (utteranceRef.current) {
-      // Restart from current position with new volume
       window.speechSynthesis?.cancel();
-      speakFrom(currentIdx >= 0 ? currentIdx : 0);
+      speakFrom(currentIdxRef.current >= 0 ? currentIdxRef.current : 0);
     }
-  }, [muted, currentIdx, speakFrom]);
+  }, [speakFrom]);
 
   const changeVoice = useCallback((uri: string) => {
-    setVoiceURI(uri);
+    voiceURIRef.current = uri;
+    setVoiceURIState(uri);
     localStorage.setItem("tuh-tts-voice", uri);
     if (isPlaying) {
       window.speechSynthesis?.cancel();
-      speakFrom(currentIdx >= 0 ? currentIdx : 0);
+      speakFrom(currentIdxRef.current >= 0 ? currentIdxRef.current : 0);
     }
-  }, [isPlaying, currentIdx, speakFrom]);
+  }, [isPlaying, speakFrom]);
 
   useEffect(() => () => stop(), [stop]);
 
@@ -314,7 +345,7 @@ export function ArticleAudioPlayer({ articleContentRef, articleTitle }: {
               aria-label="Voice"
             >
               <option value="">Default voice</option>
-              {voices.map((v) => <option key={v.name} value={v.name}>{v.name}</option>)}
+              {voices.map((v) => <option key={v.uri} value={v.uri}>{v.name}</option>)}
             </select>
           )}
 

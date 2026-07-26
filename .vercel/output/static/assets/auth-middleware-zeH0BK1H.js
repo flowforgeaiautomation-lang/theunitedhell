@@ -1,0 +1,1 @@
+import{Ft as e}from"./index-DSAPKxyd.js";var t=e({type:`function`});export{t};
