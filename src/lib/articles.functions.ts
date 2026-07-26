@@ -730,28 +730,57 @@ export const getRelated = createServerFn({ method: "GET" })
   )
   .handler(async ({ data }) => {
     const supabase = publicClient();
-    const { data: rows, error } = await supabase
+    const excludeSlug = data.excludeSlug;
+    const limit = data.limit;
+
+    // 1. Same category
+    const { data: sameCat } = await supabase
       .from("articles")
       .select(summaryCols)
       .eq("is_published", true)
       .eq("category", data.category)
-      .neq("slug", data.excludeSlug)
+      .neq("slug", excludeSlug)
       .order("published_at", { ascending: false })
       .order("id", { ascending: false })
-      .limit(data.limit);
-    if (error) throw new Error(error.message);
-    let result = (rows ?? []) as ArticleSummary[];
-    if (result.length === 0) {
-      const { data: fallback } = await supabase
+      .limit(limit);
+
+    let result = dedupeSummaries((sameCat ?? []) as ArticleSummary[], limit);
+
+    // 2. Same country (if not enough)
+    if (result.length < limit) {
+      const { data: currentRow } = await supabase
+        .from("articles")
+        .select("country_code")
+        .eq("slug", excludeSlug)
+        .maybeSingle();
+      const cc = (currentRow as { country_code: string | null } | null)?.country_code;
+      if (cc) {
+        const { data: byCountry } = await supabase
+          .from("articles")
+          .select(summaryCols)
+          .eq("is_published", true)
+          .eq("country_code", cc)
+          .neq("slug", excludeSlug)
+          .order("published_at", { ascending: false })
+          .order("id", { ascending: false })
+          .limit(limit * 2);
+        result = dedupeSummaries([...result, ...((byCountry ?? []) as ArticleSummary[])], limit);
+      }
+    }
+
+    // 3. Recent from any category (final fallback)
+    if (result.length < limit) {
+      const { data: recent } = await supabase
         .from("articles")
         .select(summaryCols)
         .eq("is_published", true)
-        .neq("slug", data.excludeSlug)
+        .neq("slug", excludeSlug)
         .order("published_at", { ascending: false })
         .order("id", { ascending: false })
-        .limit(data.limit);
-      result = (fallback ?? []) as ArticleSummary[];
+        .limit(limit * 3);
+      result = dedupeSummaries([...result, ...((recent ?? []) as ArticleSummary[])], limit);
     }
+
     return result;
   });
 

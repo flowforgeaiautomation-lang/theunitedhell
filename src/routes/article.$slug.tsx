@@ -361,11 +361,9 @@ function ArticlePage() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.4, delay: i * 0.1 }}
               >
-                <Link
-                  to="/article/$slug"
-                  params={{ slug: a.slug }}
-                  preload="intent"
-                  className="group flex flex-col gap-3 hover-lift"
+                <a
+                  href={`/article/${a.slug}`}
+                  className="group flex flex-col gap-3 hover-lift cursor-pointer"
                 >
                   <SmartImage
                     src={a.cover_image_url || fallbackCoverUrl(a)}
@@ -377,11 +375,11 @@ function ArticlePage() {
                     className="rounded-sm"
                   />
                   <span className="kicker">{categoryLabel(a.category)}</span>
-                  <h3 className="display-3 group-hover:underline decoration-1 underline-offset-4 text-[var(--color-link,currentColor)] hover:text-[var(--color-link-hover,currentColor)]">
+                  <h3 className="display-3 group-hover:underline decoration-1 underline-offset-4">
                     {a.title}
                   </h3>
                   {a.dek && <p className="text-sm text-muted-foreground line-clamp-2">{a.dek}</p>}
-                </Link>
+                </a>
               </motion.li>
             ))}
           </ul>

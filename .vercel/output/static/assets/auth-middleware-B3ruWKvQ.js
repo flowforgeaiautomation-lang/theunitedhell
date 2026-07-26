@@ -1,0 +1,1 @@
+import{Ft as e}from"./index-2sFox6ol.js";var t=e({type:`function`});export{t};

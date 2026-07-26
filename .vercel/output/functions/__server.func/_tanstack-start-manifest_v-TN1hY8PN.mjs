@@ -1,0 +1,185 @@
+//#region node_modules/.nitro/vite/services/ssr/assets/_tanstack-start-manifest_v-TN1hY8PN.js
+var tsrStartManifest = () => ({ routes: {
+	__root__: {
+		filePath: "/tmp/cc-agent/68356398/project/src/routes/__root.tsx",
+		children: [
+			"/",
+			"/_authenticated",
+			"/auth",
+			"/briefing",
+			"/discover",
+			"/information",
+			"/map",
+			"/reset-password",
+			"/search",
+			"/sitemap.xml",
+			"/trending",
+			"/world",
+			"/article/$slug",
+			"/api/public/hooks/backfill-quizzes",
+			"/api/public/hooks/backfill-vocab",
+			"/api/public/hooks/debug-env",
+			"/api/public/hooks/ingest",
+			"/api/public/hooks/reprocess"
+		],
+		preloads: [
+			"/assets/index-2sFox6ol.js",
+			"/assets/jsx-runtime-CZcjcDnw.js",
+			"/assets/react-DQyofxZ5.js",
+			"/assets/react-dom-UJG8Qsxk.js",
+			"/assets/createServerFn-DkG4n-zv.js",
+			"/assets/ClientOnly-BjxB0Z1S.js",
+			"/assets/invariant-DEEwAagU.js",
+			"/assets/redirect-Coy-z-9D.js",
+			"/assets/root-DLTE-HSj.js",
+			"/assets/link-Dmi4wi3-.js",
+			"/assets/utils-Dk5T6iHk.js",
+			"/assets/useRouter-B7YGYrEu.js",
+			"/assets/matchContext-TpPmCRW2.js",
+			"/assets/preload-helper-CRcSbJSs.js"
+		],
+		scripts: [{ attrs: {
+			type: "module",
+			async: !0,
+			src: "/assets/index-2sFox6ol.js"
+		} }]
+	},
+	"/": {
+		filePath: "/tmp/cc-agent/68356398/project/src/routes/index.tsx",
+		children: void 0,
+		preloads: [
+			"/assets/routes-DMLX_4ye.js",
+			"/assets/routes-DU8vnwBu.js",
+			"/assets/routes-DxNpH-h3.js",
+			"/assets/useQuery-DvFbLUPi.js",
+			"/assets/ai.functions-CRTbmJOW.js",
+			"/assets/article-card-DmXA2eIJ.js",
+			"/assets/proxy-HnSdN3hB.js",
+			"/assets/ArticleCardSkeleton-DNf5paeq.js"
+		]
+	},
+	"/_authenticated": {
+		filePath: "/tmp/cc-agent/68356398/project/src/routes/_authenticated/route.tsx",
+		children: [
+			"/_authenticated/admin",
+			"/_authenticated/bookmarks",
+			"/_authenticated/profile"
+		],
+		preloads: ["/assets/route-DelzBao4.js"]
+	},
+	"/auth": {
+		filePath: "/tmp/cc-agent/68356398/project/src/routes/auth.tsx",
+		children: void 0,
+		preloads: ["/assets/auth-CAqhBjSI.js"]
+	},
+	"/briefing": {
+		filePath: "/tmp/cc-agent/68356398/project/src/routes/briefing.tsx",
+		children: void 0,
+		preloads: [
+			"/assets/briefing--yxFY013.js",
+			"/assets/briefing-CAiycpv-.js",
+			"/assets/useSuspenseQuery-vFsPbSsH.js",
+			"/assets/briefing-DMLX_4ye.js"
+		]
+	},
+	"/discover": {
+		filePath: "/tmp/cc-agent/68356398/project/src/routes/discover.tsx",
+		children: void 0,
+		preloads: [
+			"/assets/discover-DgmAuuAl.js",
+			"/assets/useQuery-DvFbLUPi.js",
+			"/assets/ai.functions-CRTbmJOW.js",
+			"/assets/article-card-DmXA2eIJ.js",
+			"/assets/proxy-HnSdN3hB.js",
+			"/assets/ArticleCardSkeleton-DNf5paeq.js"
+		]
+	},
+	"/information": {
+		filePath: "/tmp/cc-agent/68356398/project/src/routes/information.tsx",
+		children: void 0,
+		preloads: ["/assets/information-DU_fSA0Z.js"]
+	},
+	"/map": {
+		filePath: "/tmp/cc-agent/68356398/project/src/routes/map.tsx",
+		children: void 0,
+		preloads: [
+			"/assets/map-B7GIcTo7.js",
+			"/assets/useQuery-DvFbLUPi.js",
+			"/assets/useSuspenseQuery-vFsPbSsH.js",
+			"/assets/article-card-DmXA2eIJ.js",
+			"/assets/map-DMLX_4ye.js",
+			"/assets/map-SpmEMUux.js"
+		]
+	},
+	"/reset-password": {
+		filePath: "/tmp/cc-agent/68356398/project/src/routes/reset-password.tsx",
+		children: void 0,
+		preloads: ["/assets/reset-password-p5Eopd0c.js"]
+	},
+	"/search": {
+		filePath: "/tmp/cc-agent/68356398/project/src/routes/search.tsx",
+		children: void 0,
+		preloads: [
+			"/assets/search-BMMBfn4h.js",
+			"/assets/useQuery-DvFbLUPi.js",
+			"/assets/article-card-DmXA2eIJ.js",
+			"/assets/ArticleCardSkeleton-DNf5paeq.js"
+		]
+	},
+	"/trending": {
+		filePath: "/tmp/cc-agent/68356398/project/src/routes/trending.tsx",
+		children: void 0,
+		preloads: [
+			"/assets/trending-BRVUn6mE.js",
+			"/assets/useSuspenseQuery-vFsPbSsH.js",
+			"/assets/article-card-DmXA2eIJ.js",
+			"/assets/trending-DMLX_4ye.js",
+			"/assets/trending-SpmEMUux.js"
+		]
+	},
+	"/world": {
+		filePath: "/tmp/cc-agent/68356398/project/src/routes/world.tsx",
+		children: void 0,
+		preloads: ["/assets/world-rGKn6UUv.js"]
+	},
+	"/_authenticated/admin": {
+		filePath: "/tmp/cc-agent/68356398/project/src/routes/_authenticated/admin.tsx",
+		children: void 0,
+		preloads: ["/assets/admin-CelN3Zqd.js", "/assets/ai.functions-CRTbmJOW.js"]
+	},
+	"/_authenticated/bookmarks": {
+		filePath: "/tmp/cc-agent/68356398/project/src/routes/_authenticated/bookmarks.tsx",
+		children: void 0,
+		preloads: [
+			"/assets/bookmarks-CExueuGd.js",
+			"/assets/useQuery-DvFbLUPi.js",
+			"/assets/interactions.functions-C9ztNdgZ.js",
+			"/assets/article-card-DmXA2eIJ.js"
+		]
+	},
+	"/_authenticated/profile": {
+		filePath: "/tmp/cc-agent/68356398/project/src/routes/_authenticated/profile.tsx",
+		children: void 0,
+		preloads: [
+			"/assets/profile-TXEd0aPz.js",
+			"/assets/useQuery-DvFbLUPi.js",
+			"/assets/interactions.functions-C9ztNdgZ.js"
+		]
+	},
+	"/article/$slug": {
+		filePath: "/tmp/cc-agent/68356398/project/src/routes/article.$slug.tsx",
+		children: void 0,
+		preloads: [
+			"/assets/article._slug-CCcliGXR.js",
+			"/assets/article._slug-Cb4jHAk9.js",
+			"/assets/article._slug-D8tR3PGX.js",
+			"/assets/useQuery-DvFbLUPi.js",
+			"/assets/auth-middleware-B3ruWKvQ.js",
+			"/assets/interactions.functions-C9ztNdgZ.js",
+			"/assets/SmartImage-B-pp-jiC.js",
+			"/assets/proxy-HnSdN3hB.js"
+		]
+	}
+} });
+//#endregion
+export { tsrStartManifest };
