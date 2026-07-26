@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import {
-  Play, Pause, Square, SkipBack, SkipForward,
+  Play, Pause, SkipBack, SkipForward,
   Volume2, VolumeX, Gauge, ChevronUp, ChevronDown,
 } from "lucide-react";
 
@@ -151,6 +151,13 @@ export function ArticleAudioPlayer({ articleContentRef, articleTitle }: {
     clearHighlights();
 
     let idx = startIdx;
+    let cancelled = false;
+    // Small delay after cancel() — Chrome reuses the old utterance's rate if we
+    // call speak() immediately, which makes the speed feel one step behind.
+    const startPlayback = () => {
+      if (cancelled) return;
+      speakNext();
+    };
     const speakNext = () => {
       if (idx >= allSentences.length) {
         stop();
@@ -192,7 +199,10 @@ export function ArticleAudioPlayer({ articleContentRef, articleTitle }: {
 
     setLoading(true);
     setError("");
-    speakNext();
+    // 120ms delay lets the browser fully release the previous utterance
+    // so the new rate is respected.
+    setTimeout(startPlayback, 120);
+    return () => { cancelled = true; };
   }, [extractSentences, highlightSentence, clearHighlights, stop]);
 
   const togglePlay = useCallback(() => {
@@ -225,6 +235,13 @@ export function ArticleAudioPlayer({ articleContentRef, articleTitle }: {
     speedRef.current = s;
     setSpeedState(s);
     localStorage.setItem("tuh-tts-speed", String(s));
+    // Keep reading prefs in sync so the inline narration matches.
+    try {
+      const rp = JSON.parse(localStorage.getItem("tuh-reading-prefs") || "{}");
+      rp.narrationSpeed = s;
+      localStorage.setItem("tuh-reading-prefs", JSON.stringify(rp));
+      window.dispatchEvent(new Event("tuh-preferences"));
+    } catch {}
     if (utteranceRef.current) {
       window.speechSynthesis?.cancel();
       speakFrom(currentIdxRef.current >= 0 ? currentIdxRef.current : 0);
@@ -294,9 +311,6 @@ export function ArticleAudioPlayer({ articleContentRef, articleTitle }: {
               ) : (
                 <Play className="h-4 w-4" />
               )}
-            </button>
-            <button onClick={stop} className="p-2 hover:bg-foreground/[0.08] rounded-sm" aria-label="Stop" title="Stop">
-              <Square className="h-4 w-4" />
             </button>
             <button onClick={skipForward} disabled={!isPlaying} className="p-2 hover:bg-foreground/[0.08] rounded-sm disabled:opacity-30" aria-label="Next sentence" title="Next sentence">
               <SkipForward className="h-4 w-4" />

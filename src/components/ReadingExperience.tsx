@@ -355,7 +355,7 @@ export function ReadingExperience({
       if (v) utter.voice = v;
     }
     window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utter);
+    setTimeout(() => window.speechSynthesis.speak(utter), 120);
     setShowNoteMenu(false);
   }, [prefs.narrationSpeed, prefs.narrationVoice, getSelectedText]);
 
@@ -370,7 +370,7 @@ export function ReadingExperience({
       if (v) utter.voice = v;
     }
     window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utter);
+    setTimeout(() => window.speechSynthesis.speak(utter), 120);
     setShowNoteMenu(false);
   }, [prefs.narrationSpeed, prefs.narrationVoice, getSelectedText]);
 
@@ -402,8 +402,10 @@ export function ReadingExperience({
       setNarratingEl(null);
     };
     window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utter);
-    setIsNarrating(true);
+    setTimeout(() => {
+      window.speechSynthesis.speak(utter);
+      setIsNarrating(true);
+    }, 120);
     setShowNoteMenu(false);
   }, [prefs.narrationSpeed, prefs.narrationVoice, narratingEl]);
 
