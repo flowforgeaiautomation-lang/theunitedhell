@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
-import { ChevronDown, LayoutGrid, Menu as MenuIcon } from "lucide-react";
+import { ChevronDown, LayoutGrid, Menu as MenuIcon, BookOpen } from "lucide-react";
 import { CategoryModal } from "./CategoryModal";
 
 const NAV = [
@@ -9,6 +9,7 @@ const NAV = [
   { to: "/discover", label: "Discover" },
   { to: "/world", label: "World" },
   { to: "/trending", label: "Trending" },
+  { to: "/editions", label: "Editions", icon: "book" },
   { to: "/information", label: "Information" },
   { to: "/bookmarks", label: "Library" },
 ];
@@ -69,8 +70,9 @@ export function SubNav() {
                     <Link
                       to={n.to}
                       onClick={() => setMenuOpen(false)}
-                      className="block px-4 py-2.5 text-[0.78rem] uppercase tracking-[0.16em] hover:bg-foreground hover:text-background transition"
+                      className="flex items-center gap-2 px-4 py-2.5 text-[0.78rem] uppercase tracking-[0.16em] hover:bg-foreground hover:text-background transition"
                     >
+                      {n.to === "/editions" && <BookOpen className="h-3.5 w-3.5" />}
                       {n.label}
                     </Link>
                   </li>

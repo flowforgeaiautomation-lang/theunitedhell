@@ -3,8 +3,9 @@ import { useQuery, queryOptions } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { listArticles, searchArticles } from "@/lib/articles.functions";
+import { searchEditions } from "@/lib/editions-data";
 import { ArticleCard } from "@/components/article-card";
-import { Search as SearchIcon, SlidersHorizontal, X } from "lucide-react";
+import { Search as SearchIcon, SlidersHorizontal, X, BookOpen } from "lucide-react";
 import { ArticleCardSkeletonGrid } from "@/components/ArticleCardSkeleton";
 import { categoryLabel, CATEGORIES } from "@/lib/categories";
 import { canonicalUrl, SITE_NAME, SITE_LOGO } from "@/lib/seo";
@@ -93,6 +94,7 @@ function SearchPage() {
   const displayed = isSearching
     ? (category ? results.filter((a) => a.category === category) : results)
     : results;
+  const editionResults = isSearching ? searchEditions(submitted) : [];
 
   function reset() {
     setCategory(undefined);
@@ -207,7 +209,27 @@ function SearchPage() {
             {displayed.length > 0 && <span className="ml-2 text-muted-foreground/60">({displayed.length})</span>}
           </div>
           {query.isLoading && <ArticleCardSkeletonGrid count={4} />}
-          {query.data && displayed.length === 0 && <p className="dek">No matches. Try different keywords or filters.</p>}
+          {query.data && displayed.length === 0 && editionResults.length === 0 && <p className="dek">No matches. Try different keywords or filters.</p>}
+          {editionResults.length > 0 && (
+            <div className="mb-12">
+              <div className="flex items-center gap-2 mb-4">
+                <BookOpen className="h-4 w-4 text-[#E6C17D]" />
+                <span className="text-xs uppercase tracking-widest text-muted-foreground">Editions</span>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {editionResults.map((b) => (
+                  <Link key={b.slug} to="/editions/$slug" params={{ slug: b.slug }} className="group flex gap-3 p-4 border rule hover:bg-foreground/5 transition">
+                    <img src={b.coverImage} alt={b.title} className="w-12 h-18 object-cover rounded-sm" loading="lazy" />
+                    <div>
+                      <div className="font-serif text-sm font-bold group-hover:text-[#E6C17D] transition">{b.title}</div>
+                      <div className="text-xs text-muted-foreground">{b.subtitle}</div>
+                      <div className="text-[0.6rem] uppercase tracking-widest text-muted-foreground/60 mt-1">{b.readingTime} · {b.language}</div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="grid gap-10 sm:grid-cols-2">
             {displayed.map((a) => (
               <ArticleCard key={a.id} article={a} variant="default" />

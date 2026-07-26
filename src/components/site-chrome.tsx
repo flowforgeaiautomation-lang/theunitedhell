@@ -1,6 +1,6 @@
 import { Link, useRouter } from "@tanstack/react-router";
 import { useEffect, useState, useCallback, useRef } from "react";
-import { Search, Moon, Sun, Menu, X, User } from "lucide-react";
+import { Search, Moon, Sun, Menu, X, User, BookOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PanchangDisplay } from "./PanchangDisplay";
 import { SubNav } from "./SubNav";
@@ -31,6 +31,7 @@ const NAV = [
   { to: "/discover", label: "Discover" },
   { to: "/world", label: "World" },
   { to: "/trending", label: "Trending" },
+  { to: "/editions", label: "Editions" },
   { to: "/information", label: "Information" },
 ];
 
@@ -238,6 +239,11 @@ export function SiteHeader() {
                 </Link>
               </li>
               <li>
+                <Link to="/editions" onClick={() => setOpen(false)} className="flex items-center gap-3 py-1 hover:opacity-60">
+                  <BookOpen className="h-4 w-4" /> Editions
+                </Link>
+              </li>
+              <li>
                 <button
                   onClick={() => {
                     toggleTheme();
@@ -300,6 +306,7 @@ export function SiteFooter({ signedIn = false }: SiteFooterProps) {
             <li><Link to="/discover" search={{ category: undefined }} className="hover:underline">Discover</Link></li>
             <li><Link to="/world" className="hover:underline">World</Link></li>
             <li><Link to="/trending" className="hover:underline">Trending</Link></li>
+            <li><Link to="/editions" className="hover:underline">Editions</Link></li>
             <li><Link to="/information" className="hover:underline">Information & Policies</Link></li>
           </ul>
         </div>

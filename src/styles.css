@@ -296,6 +296,31 @@
     transform: translateY(0);
   }
 
+  /* Editions page animations */
+  @keyframes twinkle {
+    0%, 100% { opacity: 0.15; }
+    50% { opacity: 0.7; }
+  }
+  @keyframes float-particle {
+    0%, 100% { transform: translate(0, 0); opacity: 0.2; }
+    25% { transform: translate(10px, -15px); opacity: 0.5; }
+    50% { transform: translate(-5px, -25px); opacity: 0.3; }
+    75% { transform: translate(-12px, -10px); opacity: 0.4; }
+  }
+  @keyframes bounce-slow {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(8px); }
+  }
+  .animate-bounce-slow {
+    animation: bounce-slow 2.5s ease-in-out infinite;
+  }
+  .animation-delay-200 {
+    animation-delay: 200ms;
+  }
+  .animation-delay-400 {
+    animation-delay: 400ms;
+  }
+
   /* Glassmorphism header */
   .glass-header {
     background: color-mix(in oklch, var(--color-background) 75%, transparent);

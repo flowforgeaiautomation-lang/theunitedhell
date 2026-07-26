@@ -16,11 +16,13 @@ import { Route as SearchRouteImport } from './routes/search'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as MapRouteImport } from './routes/map'
 import { Route as InformationRouteImport } from './routes/information'
+import { Route as EditionsRouteImport } from './routes/editions'
 import { Route as DiscoverRouteImport } from './routes/discover'
 import { Route as BriefingRouteImport } from './routes/briefing'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as EditionsSlugRouteImport } from './routes/editions.$slug'
 import { Route as ArticleSlugRouteImport } from './routes/article.$slug'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedBookmarksRouteImport } from './routes/_authenticated/bookmarks'
@@ -66,6 +68,11 @@ const InformationRoute = InformationRouteImport.update({
   path: '/information',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EditionsRoute = EditionsRouteImport.update({
+  id: '/editions',
+  path: '/editions',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DiscoverRoute = DiscoverRouteImport.update({
   id: '/discover',
   path: '/discover',
@@ -89,6 +96,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const EditionsSlugRoute = EditionsSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => EditionsRoute,
 } as any)
 const ArticleSlugRoute = ArticleSlugRouteImport.update({
   id: '/article/$slug',
@@ -143,6 +155,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/briefing': typeof BriefingRoute
   '/discover': typeof DiscoverRoute
+  '/editions': typeof EditionsRouteWithChildren
   '/information': typeof InformationRoute
   '/map': typeof MapRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -154,6 +167,7 @@ export interface FileRoutesByFullPath {
   '/bookmarks': typeof AuthenticatedBookmarksRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/article/$slug': typeof ArticleSlugRoute
+  '/editions/$slug': typeof EditionsSlugRoute
   '/api/public/hooks/backfill-quizzes': typeof ApiPublicHooksBackfillQuizzesRoute
   '/api/public/hooks/backfill-vocab': typeof ApiPublicHooksBackfillVocabRoute
   '/api/public/hooks/debug-env': typeof ApiPublicHooksDebugEnvRoute
@@ -165,6 +179,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/briefing': typeof BriefingRoute
   '/discover': typeof DiscoverRoute
+  '/editions': typeof EditionsRouteWithChildren
   '/information': typeof InformationRoute
   '/map': typeof MapRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -176,6 +191,7 @@ export interface FileRoutesByTo {
   '/bookmarks': typeof AuthenticatedBookmarksRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/article/$slug': typeof ArticleSlugRoute
+  '/editions/$slug': typeof EditionsSlugRoute
   '/api/public/hooks/backfill-quizzes': typeof ApiPublicHooksBackfillQuizzesRoute
   '/api/public/hooks/backfill-vocab': typeof ApiPublicHooksBackfillVocabRoute
   '/api/public/hooks/debug-env': typeof ApiPublicHooksDebugEnvRoute
@@ -189,6 +205,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/briefing': typeof BriefingRoute
   '/discover': typeof DiscoverRoute
+  '/editions': typeof EditionsRouteWithChildren
   '/information': typeof InformationRoute
   '/map': typeof MapRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -200,6 +217,7 @@ export interface FileRoutesById {
   '/_authenticated/bookmarks': typeof AuthenticatedBookmarksRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/article/$slug': typeof ArticleSlugRoute
+  '/editions/$slug': typeof EditionsSlugRoute
   '/api/public/hooks/backfill-quizzes': typeof ApiPublicHooksBackfillQuizzesRoute
   '/api/public/hooks/backfill-vocab': typeof ApiPublicHooksBackfillVocabRoute
   '/api/public/hooks/debug-env': typeof ApiPublicHooksDebugEnvRoute
@@ -213,6 +231,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/briefing'
     | '/discover'
+    | '/editions'
     | '/information'
     | '/map'
     | '/reset-password'
@@ -224,6 +243,7 @@ export interface FileRouteTypes {
     | '/bookmarks'
     | '/profile'
     | '/article/$slug'
+    | '/editions/$slug'
     | '/api/public/hooks/backfill-quizzes'
     | '/api/public/hooks/backfill-vocab'
     | '/api/public/hooks/debug-env'
@@ -235,6 +255,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/briefing'
     | '/discover'
+    | '/editions'
     | '/information'
     | '/map'
     | '/reset-password'
@@ -246,6 +267,7 @@ export interface FileRouteTypes {
     | '/bookmarks'
     | '/profile'
     | '/article/$slug'
+    | '/editions/$slug'
     | '/api/public/hooks/backfill-quizzes'
     | '/api/public/hooks/backfill-vocab'
     | '/api/public/hooks/debug-env'
@@ -258,6 +280,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/briefing'
     | '/discover'
+    | '/editions'
     | '/information'
     | '/map'
     | '/reset-password'
@@ -269,6 +292,7 @@ export interface FileRouteTypes {
     | '/_authenticated/bookmarks'
     | '/_authenticated/profile'
     | '/article/$slug'
+    | '/editions/$slug'
     | '/api/public/hooks/backfill-quizzes'
     | '/api/public/hooks/backfill-vocab'
     | '/api/public/hooks/debug-env'
@@ -282,6 +306,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   BriefingRoute: typeof BriefingRoute
   DiscoverRoute: typeof DiscoverRoute
+  EditionsRoute: typeof EditionsRouteWithChildren
   InformationRoute: typeof InformationRoute
   MapRoute: typeof MapRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
@@ -348,6 +373,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InformationRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/editions': {
+      id: '/editions'
+      path: '/editions'
+      fullPath: '/editions'
+      preLoaderRoute: typeof EditionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/discover': {
       id: '/discover'
       path: '/discover'
@@ -382,6 +414,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/editions/$slug': {
+      id: '/editions/$slug'
+      path: '/$slug'
+      fullPath: '/editions/$slug'
+      preLoaderRoute: typeof EditionsSlugRouteImport
+      parentRoute: typeof EditionsRoute
     }
     '/article/$slug': {
       id: '/article/$slug'
@@ -464,12 +503,25 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
+interface EditionsRouteChildren {
+  EditionsSlugRoute: typeof EditionsSlugRoute
+}
+
+const EditionsRouteChildren: EditionsRouteChildren = {
+  EditionsSlugRoute: EditionsSlugRoute,
+}
+
+const EditionsRouteWithChildren = EditionsRoute._addFileChildren(
+  EditionsRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   BriefingRoute: BriefingRoute,
   DiscoverRoute: DiscoverRoute,
+  EditionsRoute: EditionsRouteWithChildren,
   InformationRoute: InformationRoute,
   MapRoute: MapRoute,
   ResetPasswordRoute: ResetPasswordRoute,

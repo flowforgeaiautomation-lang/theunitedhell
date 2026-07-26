@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable/index";
 import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react";
 
@@ -70,11 +71,9 @@ function AuthPage() {
   async function onGoogle() {
     setBusy(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo: window.location.origin },
-      });
-      if (error) throw error;
+      const r = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
+      if (r.error) throw r.error instanceof Error ? r.error : new Error(String(r.error));
+      if (!r.redirected) navigate({ to: "/", search: { category: undefined } });
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
