@@ -352,19 +352,39 @@ function ArticlePage() {
           className="container-edit py-16 border-t rule"
         >
           <h2 className="display-3 mb-8">Also read</h2>
-          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+          <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {related.slice(0, 4).map((a, i) => (
-              <motion.div
+              <motion.li
                 key={a.id}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.4, delay: i * 0.1 }}
               >
-                <ArticleCard article={a} variant="default" />
-              </motion.div>
+                <Link
+                  to="/article/$slug"
+                  params={{ slug: a.slug }}
+                  preload="intent"
+                  className="group flex flex-col gap-3 hover-lift"
+                >
+                  <SmartImage
+                    src={a.cover_image_url || fallbackCoverUrl(a)}
+                    alt={a.title}
+                    width={600}
+                    height={450}
+                    loading="lazy"
+                    aspectClass="w-full"
+                    className="rounded-sm"
+                  />
+                  <span className="kicker">{categoryLabel(a.category)}</span>
+                  <h3 className="display-3 group-hover:underline decoration-1 underline-offset-4 text-[var(--color-link,currentColor)] hover:text-[var(--color-link-hover,currentColor)]">
+                    {a.title}
+                  </h3>
+                  {a.dek && <p className="text-sm text-muted-foreground line-clamp-2">{a.dek}</p>}
+                </Link>
+              </motion.li>
             ))}
-          </div>
+          </ul>
         </motion.section>
       )}
     </article>
