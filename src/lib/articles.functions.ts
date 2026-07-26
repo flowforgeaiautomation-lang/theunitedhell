@@ -740,7 +740,19 @@ export const getRelated = createServerFn({ method: "GET" })
       .order("id", { ascending: false })
       .limit(data.limit);
     if (error) throw new Error(error.message);
-    return (rows ?? []) as ArticleSummary[];
+    let result = (rows ?? []) as ArticleSummary[];
+    if (result.length === 0) {
+      const { data: fallback } = await supabase
+        .from("articles")
+        .select(summaryCols)
+        .eq("is_published", true)
+        .neq("slug", data.excludeSlug)
+        .order("published_at", { ascending: false })
+        .order("id", { ascending: false })
+        .limit(data.limit);
+      result = (fallback ?? []) as ArticleSummary[];
+    }
+    return result;
   });
 
 export const searchArticles = createServerFn({ method: "GET" })

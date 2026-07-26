@@ -1,1 +1,0 @@
-import{Ft as e}from"./index-Cjm-U7Jl.js";var t=e({type:`function`});export{t};

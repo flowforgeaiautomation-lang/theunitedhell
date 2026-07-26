@@ -351,7 +351,7 @@ function ArticlePage() {
           transition={{ duration: 0.5 }}
           className="container-edit py-16 border-t rule"
         >
-          <h2 className="display-3 mb-8">Keep reading</h2>
+          <h2 className="display-3 mb-8">Also read</h2>
           <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
             {related.slice(0, 4).map((a, i) => (
               <motion.div
