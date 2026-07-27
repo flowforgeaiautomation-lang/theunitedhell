@@ -676,7 +676,42 @@ const COMMENTS_PAGE_SIZE = 20;
 function KnowledgeCheckReflection({ articleId, story, title }: { articleId: string; story?: any; title?: string }) {
   const qc = useQueryClient();
   const sendReflection = useServerFn(postReflection);
-  const [posted, setPosted] = useState(false);
+
+  const reflectionMutation = useMutation({
+    mutationFn: (text: string) =>
+      sendReflection({ data: { articleId, body: text, promptType: "perspective", parentId: null } }),
+    onMutate: (text) => {
+      const tempId = `temp-${Date.now()}`;
+      const optimistic: CommentRow = {
+        id: tempId,
+        article_id: articleId,
+        user_id: null,
+        parent_id: null,
+        prompt_type: "perspective",
+        body: text,
+        like_count: 0,
+        reply_count: 0,
+        is_edited: false,
+        status: "active",
+        created_at: new Date().toISOString(),
+        author: null,
+      };
+      (["newest", "top", "oldest"] as SortMode[]).forEach((s) => {
+        qc.setQueryData<CommentRow[]>(["comments", articleId, s], (old = []) => [optimistic, ...old]);
+      });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["comments", articleId] });
+      toast.success("Your reflection was posted to the discussion");
+      requestAnimationFrame(() => {
+        document.getElementById("discussion")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    },
+    onError: () => {
+      qc.invalidateQueries({ queryKey: ["comments", articleId] });
+      toast.error("Could not post your reflection. Please try again.");
+    },
+  });
 
   return (
     <KnowledgeCheck
@@ -684,39 +719,7 @@ function KnowledgeCheckReflection({ articleId, story, title }: { articleId: stri
       story={story}
       title={title}
       onReflection={(reflectionText: string) => {
-        const tempId = `temp-${Date.now()}`;
-        const optimisticComment: CommentRow = {
-          id: tempId,
-          article_id: articleId,
-          user_id: null,
-          parent_id: null,
-          prompt_type: "perspective",
-          body: reflectionText,
-          like_count: 0,
-          reply_count: 0,
-          is_edited: false,
-          status: "active",
-          created_at: new Date().toISOString(),
-          author: null,
-        };
-
-        qc.setQueryData<CommentRow[]>(["comments", articleId, "newest"], (old = []) => [optimisticComment, ...old]);
-        qc.setQueryData<CommentRow[]>(["comments", articleId, "top"], (old = []) => [optimisticComment, ...old]);
-        qc.setQueryData<CommentRow[]>(["comments", articleId, "oldest"], (old = []) => [optimisticComment, ...old]);
-        setPosted(true);
-        requestAnimationFrame(() => {
-          document.getElementById("discussion")?.scrollIntoView({ behavior: "smooth", block: "start" });
-        });
-
-        sendReflection({ data: { articleId, body: reflectionText } })
-          .then(() => {
-            qc.invalidateQueries({ queryKey: ["comments", articleId] });
-            toast.success("Your reflection was posted to the discussion");
-          })
-          .catch(() => {
-            qc.invalidateQueries({ queryKey: ["comments", articleId] });
-            toast.success("Your reflection was posted to the discussion");
-          });
+        reflectionMutation.mutate(reflectionText);
       }}
     />
   );
