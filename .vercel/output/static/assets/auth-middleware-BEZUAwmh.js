@@ -1,1 +1,0 @@
-import{qt as e}from"./index-BAxnMo22.js";var t=e({type:`function`});export{t};

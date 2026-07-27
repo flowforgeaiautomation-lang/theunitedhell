@@ -2,7 +2,7 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useQuery, queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { getArticleBySlug, getRelated, listComments, postReflection, bumpLike, deleteCommentAnon, editComment, getLikedComments } from "@/lib/articles.functions";
+import { getArticleBySlug, getRelated, listComments, postReflection, bumpLike, getLikedComments } from "@/lib/articles.functions";
 
 
 import { ArticleActions } from "@/components/article-actions";
@@ -11,7 +11,7 @@ import { categoryLabel } from "@/lib/categories";
 
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { Quote, Lightbulb, Clock, TrendingUp, Users, Building2, Globe2, Hash, Sparkles, Info, Bookmark, ChevronRight, ArrowBigUp, MessageCircle, Trash2, CornerDownRight } from "lucide-react";
+import { Quote, Lightbulb, Clock, TrendingUp, Users, Building2, Globe2, Hash, Sparkles, Info, Bookmark, ChevronRight, ArrowBigUp, MessageCircle, CornerDownRight } from "lucide-react";
 import type { CommentRow, ArticleStory, KeyNumber, PersonInvolved, OrganizationInvolved, CountryInvolved, VocabEntry } from "@/lib/types";
 import { SmartImage } from "@/components/SmartImage";
 import { ReadingExperience } from "@/components/ReadingExperience";
@@ -754,8 +754,6 @@ function Discussion({ articleId }: { articleId: string }) {
   const fetchComments = useServerFn(listComments);
   const sendReflection = useServerFn(postReflection);
   const likeFn = useServerFn(bumpLike);
-  const delFn = useServerFn(deleteCommentAnon);
-  const editFn = useServerFn(editComment);
   const fetchLiked = useServerFn(getLikedComments);
   const [prompt, setPrompt] = useState<typeof PROMPTS[number]["id"]>("perspective");
   const [body, setBody] = useState("");
@@ -763,8 +761,6 @@ function Discussion({ articleId }: { articleId: string }) {
   const [likedComments, setLikedComments] = useState<Set<string>>(new Set());
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyBody, setReplyBody] = useState("");
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editBody, setEditBody] = useState("");
   const [visibleCount, setVisibleCount] = useState(COMMENTS_PAGE_SIZE);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -880,48 +876,11 @@ function Discussion({ articleId }: { articleId: string }) {
     },
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: (commentId: string) => delFn({ data: { commentId } }),
-    onMutate: (commentId) => {
-      qc.setQueryData<CommentRow[]>(["comments", articleId, sort], (old = []) =>
-        old.filter((c) => c.id !== commentId && c.parent_id !== commentId),
-      );
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["comments", articleId] });
-      toast.success("Comment deleted");
-    },
-    onError: () => {
-      qc.invalidateQueries({ queryKey: ["comments", articleId] });
-    },
-  });
-
-  const editMutation = useMutation({
-    mutationFn: ({ commentId, body }: { commentId: string; body: string }) =>
-      editFn({ data: { commentId, body } }),
-    onMutate: ({ commentId, body: newBody }) => {
-      qc.setQueryData<CommentRow[]>(["comments", articleId, sort], (old = []) =>
-        old.map((c) => (c.id === commentId ? { ...c, body: newBody, is_edited: true, updated_at: new Date().toISOString() } : c)),
-      );
-      setEditingId(null);
-      setEditBody("");
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["comments", articleId] });
-      toast.success("Comment edited");
-    },
-    onError: () => {
-      qc.invalidateQueries({ queryKey: ["comments", articleId] });
-    },
-  });
-
   function renderComment(c: CommentRow, isReply: boolean) {
     const isLiked = likedComments.has(c.id);
     const count = c.like_count ?? 0;
     const replyCount = c.reply_count ?? 0;
     const childReplies = repliesOf(c.id);
-    const isEditing = editingId === c.id;
-
     return (
       <div className={isReply ? "ml-6 border-l border-foreground/10 pl-4" : "border-t rule pt-6"}>
         <div className="flex items-start gap-3">
@@ -938,38 +897,10 @@ function Discussion({ articleId }: { articleId: string }) {
                   </span>
                 )}
                 {formatTimeAgo(c.created_at)}
-                {c.is_edited && <span className="italic">(edited)</span>}
               </div>
             </div>
 
-            {isEditing ? (
-              <div className="mt-2">
-                <textarea
-                  value={editBody}
-                  onChange={(e) => setEditBody(e.target.value)}
-                  rows={3}
-                  maxLength={4000}
-                  className="w-full bg-transparent border rule p-4 font-serif text-base focus:outline-none focus:ring-1 focus:ring-foreground/40"
-                />
-                <div className="flex items-center gap-2 mt-2">
-                  <button
-                    onClick={() => editBody.trim() && editMutation.mutate({ commentId: c.id, body: editBody.trim() })}
-                    disabled={!editBody.trim() || editMutation.isPending}
-                    className="border border-foreground px-4 py-2 text-xs uppercase tracking-widest hover:bg-foreground hover:text-background transition disabled:opacity-40"
-                  >
-                    {editMutation.isPending ? "Saving…" : "Save"}
-                  </button>
-                  <button
-                    onClick={() => { setEditingId(null); setEditBody(""); }}
-                    className="text-xs text-muted-foreground hover:text-foreground transition"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <p className="font-serif text-lg leading-snug whitespace-pre-wrap">{c.body}</p>
-            )}
+            <p className="font-serif text-lg leading-snug whitespace-pre-wrap">{c.body}</p>
 
             <div className="mt-3 flex items-center gap-4">
               <button
@@ -991,22 +922,6 @@ function Discussion({ articleId }: { articleId: string }) {
                   <span>Reply{replyCount > 0 && ` (${replyCount})`}</span>
                 </button>
               )}
-              {!isEditing && (
-                <button
-                  onClick={() => { setEditingId(c.id); setEditBody(c.body); }}
-                  className="text-sm text-muted-foreground hover:text-foreground transition"
-                >
-                  Edit
-                </button>
-              )}
-              <button
-                onClick={() => deleteMutation.mutate(c.id)}
-                disabled={deleteMutation.isPending}
-                className="flex items-center gap-1 text-sm text-muted-foreground hover:text-red-600 transition"
-              >
-                <Trash2 className="h-4 w-4" />
-                <span>Delete</span>
-              </button>
             </div>
 
             {replyingTo === c.id && (
