@@ -13,6 +13,7 @@ import { Toaster } from "sonner";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { SiteHeader, SiteFooter } from "@/components/site-chrome";
+import { BookAnchorCard } from "@/components/BookAnchorCard";
 import { ReadingSettings } from "@/components/ReadingSettings";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ScrollToTop } from "@/components/ScrollToTop";
@@ -213,6 +214,7 @@ function RootComponent() {
         <SiteFooter />
         <ReadingSettings />
         <ScrollToTop />
+        <BookAnchorCard />
       </div>
       <Toaster
         position="top-center"

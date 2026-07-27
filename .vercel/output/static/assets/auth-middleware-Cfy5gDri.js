@@ -1,1 +1,0 @@
-import{Jt as e}from"./index-BlYFf121.js";var t=e({type:`function`});export{t};

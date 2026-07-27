@@ -1,6 +1,7 @@
 import { Link, useRouter } from "@tanstack/react-router";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Search, Moon, Sun, Menu, X, User, BookOpen } from "lucide-react";
+import { BookAnchorCard } from "./BookAnchorCard";
 import { supabase } from "@/integrations/supabase/client";
 import { PanchangDisplay } from "./PanchangDisplay";
 import { SubNav } from "./SubNav";
@@ -28,13 +29,13 @@ const LOCATIONS = [
 ];
 
 const NAV = [
-  { to: "/", label: "Today" },
-  { to: "/briefing", label: "Daily Briefing" },
-  { to: "/discover", label: "Discover" },
-  { to: "/world", label: "World" },
-  { to: "/trending", label: "Trending" },
-  { to: "/editions", label: "Editions" },
-  { to: "/information", label: "Information" },
+  { to: "/", label: "Today", icon: undefined },
+  { to: "/briefing", label: "Daily Briefing", icon: undefined },
+  { to: "/discover", label: "Discover", icon: undefined },
+  { to: "/world", label: "World", icon: undefined },
+  { to: "/trending", label: "Trending", icon: undefined },
+  { to: "/editions", label: "Editions", icon: "BookOpen" },
+  { to: "/information", label: "Information", icon: undefined },
 ];
 
 export function SiteHeader() {
@@ -203,8 +204,9 @@ export function SiteHeader() {
                   <Link
                     to={n.to}
                     preload="intent"
-                    className={`block py-1 hover:opacity-60 ${active ? "underline underline-offset-8 decoration-1" : ""}`}
+                    className={`flex items-center gap-1.5 py-1 hover:opacity-60 ${active ? "underline underline-offset-8 decoration-1" : ""}`}
                   >
+                    {n.icon === "BookOpen" && <BookOpen className="h-3.5 w-3.5" />}
                     {n.label}
                   </Link>
                 </li>

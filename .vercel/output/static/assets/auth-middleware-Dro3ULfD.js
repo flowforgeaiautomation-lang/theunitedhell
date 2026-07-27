@@ -1,0 +1,1 @@
+import{Yt as e}from"./index-quV-1CHX.js";var t=e({type:`function`});export{t};
