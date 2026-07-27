@@ -81,7 +81,7 @@ function DiscoverPage() {
   const [articles, setArticles] = useState<ArticleSummary[]>([]);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const cursorRef = useRef<string | undefined>(undefined);
+  const offsetRef = useRef(0);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const isFetchingRef = useRef(false);
   const filterKeyRef = useRef<string>("");
@@ -95,8 +95,8 @@ function DiscoverPage() {
     if (!result) return;
     const items = (result as any).items ?? (Array.isArray(result) ? result : []);
     setArticles(items);
-    cursorRef.current = (result as any).nextCursor;
-    setHasMore((result as any).hasMore ?? false);
+    offsetRef.current = items.length;
+    setHasMore((result as any).hasMore ?? true);
   }, [articlesQuery.data]);
 
   useEffect(() => {
@@ -121,7 +121,7 @@ function DiscoverPage() {
       filterKeyRef.current = currentFilterKey;
       setArticles([]);
       setHasMore(true);
-      cursorRef.current = undefined;
+      offsetRef.current = 0;
     }
   }, [currentFilterKey]);
 
@@ -133,25 +133,24 @@ function DiscoverPage() {
       const result = await listArticles({
         data: {
           limit: PAGE_SIZE,
-          cursor: cursorRef.current,
+          offset: offsetRef.current,
           category: active,
           country: countryParam,
         },
       });
       const newItems = (result as any).items ?? [];
-      const newHasMore = (result as any).hasMore ?? false;
-
+      const newHasMore = (result as any).hasMore ?? true;
       if (newItems.length > 0) {
         setArticles((prev) => {
           const existingIds = new Set(prev.map((a) => a.id));
           const unique = newItems.filter((a: ArticleSummary) => !existingIds.has(a.id));
           return [...prev, ...unique];
         });
-        cursorRef.current = (result as any).nextCursor;
+        offsetRef.current += newItems.length;
       }
-      if (!newHasMore || newItems.length === 0) setHasMore(false);
+      setHasMore(newHasMore && newItems.length > 0);
     } catch {
-      setHasMore(false);
+      setHasMore(true);
     } finally {
       setLoadingMore(false);
       isFetchingRef.current = false;
@@ -286,12 +285,6 @@ function DiscoverPage() {
       {loadingMore && (
         <div className="flex justify-center py-8">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
-      )}
-
-      {!hasMore && articles.length > 0 && (
-        <div className="text-center py-12">
-          <p className="kicker">You've reached the end of the archive</p>
         </div>
       )}
 

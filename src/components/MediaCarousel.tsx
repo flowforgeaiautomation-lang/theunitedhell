@@ -1,11 +1,10 @@
-import { useState, useRef, useEffect, useCallback, forwardRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { SmartImage } from "./SmartImage";
-import { ChevronLeft, ChevronRight, Play } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 type MediaItem = {
-  type: "video" | "image";
+  type: "image";
   src: string;
-  poster?: string;
   alt: string;
 };
 
@@ -14,61 +13,6 @@ type MediaCarouselProps = {
   alt: string;
   priority?: boolean;
 };
-
-const VideoPlayer = forwardRef<HTMLVideoElement, { src: string; poster?: string; active: boolean }>(
-  function VideoPlayer({ src, poster, active }, ref) {
-    const [playing, setPlaying] = useState(false);
-    const localRef = useRef<HTMLVideoElement>(null);
-
-    useEffect(() => {
-      const el = localRef.current;
-      if (!el) return;
-      if (active && playing) {
-        el.play().catch(() => {});
-      } else {
-        el.pause();
-      }
-    }, [active, playing]);
-
-    return (
-      <div className="relative h-full w-full bg-black">
-        <video
-          ref={(node) => {
-            localRef.current = node;
-            if (typeof ref === "function") ref(node);
-            else if (ref) (ref as React.MutableRefObject<HTMLVideoElement | null>).current = node;
-          }}
-          src={src}
-          poster={poster}
-          loop
-          muted
-          playsInline
-          preload="metadata"
-          className="h-full w-full object-cover"
-          onPlay={() => setPlaying(true)}
-          onPause={() => setPlaying(false)}
-        />
-        {!playing && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              const el = localRef.current;
-              if (el) {
-                el.play().then(() => setPlaying(true)).catch(() => {});
-              }
-            }}
-            className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/20 transition-colors"
-            aria-label="Play video"
-          >
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-background/90 backdrop-blur-sm shadow-lg">
-              <Play className="h-7 w-7 text-foreground ml-1" fill="currentColor" />
-            </div>
-          </button>
-        )}
-      </div>
-    );
-  },
-);
 
 export function MediaCarousel({ media, alt, priority = false }: MediaCarouselProps) {
   const [index, setIndex] = useState(0);
@@ -131,20 +75,12 @@ export function MediaCarousel({ media, alt, priority = false }: MediaCarouselPro
         >
           {media.map((item, i) => (
             <div key={i} className="relative h-full w-full shrink-0">
-              {item.type === "video" ? (
-                <VideoPlayer
-                  src={item.src}
-                  poster={item.poster}
-                  active={i === index}
-                />
-              ) : (
-                <SmartImage
-                  src={item.src}
-                  alt={i === index ? alt : ""}
-                  loading={i === 0 && priority ? "eager" : "lazy"}
-                  className="h-full w-full"
-                />
-              )}
+              <SmartImage
+                src={item.src}
+                alt={i === index ? alt : ""}
+                loading={i === 0 && priority ? "eager" : "lazy"}
+                className="h-full w-full"
+              />
             </div>
           ))}
         </div>

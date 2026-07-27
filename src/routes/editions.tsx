@@ -1,13 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Search, X, ArrowRight, ExternalLink } from "lucide-react";
 import { BOOKS, AUTHOR, type EditionBook } from "@/lib/editions-data";
 import { canonicalUrl, SITE_NAME } from "@/lib/seo";
 
 export const Route = createFileRoute("/editions")({
-  validateSearch: (s: Record<string, unknown>) => ({
-    book: typeof s.book === "string" ? s.book : undefined,
-  }),
   head: () => ({
     meta: [
       { title: "Editions | Altair Veda" },
@@ -26,21 +23,8 @@ export const Route = createFileRoute("/editions")({
 });
 
 function EditionsPage() {
-  const { book: deepLinkSlug } = Route.useSearch();
   const [selectedSlug, setSelectedSlug] = useState<string>(BOOKS[0].slug);
   const [searchTerm, setSearchTerm] = useState("");
-
-  useEffect(() => {
-    if (deepLinkSlug) {
-      const found = BOOKS.find((b) => b.slug === deepLinkSlug);
-      if (found) {
-        setSelectedSlug(found.slug);
-        requestAnimationFrame(() => {
-          document.getElementById(`book-row-${found.slug}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
-        });
-      }
-    }
-  }, [deepLinkSlug]);
 
   const selectedBook = useMemo(
     () => BOOKS.find((b) => b.slug === selectedSlug) ?? BOOKS[0],
@@ -216,11 +200,10 @@ function BookListRow({
 }) {
   return (
     <div
-      id={`book-row-${book.slug}`}
       className={`group flex items-center gap-4 sm:gap-6 py-5 px-2 sm:px-4 transition-colors animate-fade-in cursor-pointer ${
         isSelected ? "bg-muted" : "hover:bg-muted/50"
       }`}
-      style={{ animationDelay: `${index * 50}ms`, scrollMarginTop: "120px" }}
+      style={{ animationDelay: `${index * 50}ms` }}
       onClick={onSelect}
     >
       {/* Cover */}

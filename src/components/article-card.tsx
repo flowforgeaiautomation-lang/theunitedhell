@@ -1,10 +1,8 @@
 import { Link } from "@tanstack/react-router";
-import { useRef, useState, useEffect } from "react";
 import type { ArticleSummary } from "@lib/types";
 import { categoryLabel } from "@/lib/categories";
 import { fallbackCoverUrl } from "@/lib/article-images";
 import { SmartImage } from "@/components/SmartImage";
-import { PlayCircle } from "lucide-react";
 
 export function ArticleCard({
   article,
@@ -23,48 +21,6 @@ function Meta({ article }: { article: ArticleSummary }) {
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
       <span className="kicker">{categoryLabel(article.category)}</span>
-    </div>
-  );
-}
-
-function VideoBadge() {
-  return (
-    <div className="absolute bottom-3 right-3 z-10 flex items-center gap-1 rounded-full bg-background/80 backdrop-blur-sm px-2.5 py-1 text-xs font-medium text-foreground/80">
-      <PlayCircle className="h-4 w-4" /> Video
-    </div>
-  );
-}
-
-function HoverVideo({ src, poster }: { src: string; poster: string }) {
-  const ref = useRef<HTMLVideoElement>(null);
-  const [playing, setPlaying] = useState(false);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    if (playing) {
-      el.play().catch(() => {});
-    } else {
-      el.pause();
-    }
-  }, [playing]);
-
-  return (
-    <div
-      className="absolute inset-0 z-10"
-      onMouseEnter={() => setPlaying(true)}
-      onMouseLeave={() => setPlaying(false)}
-    >
-      <video
-        ref={ref}
-        src={src}
-        poster={poster}
-        loop
-        muted
-        playsInline
-        preload="none"
-        className="h-full w-full object-cover"
-      />
     </div>
   );
 }
@@ -89,12 +45,6 @@ function HeroCard({ article }: { article: ArticleSummary }) {
             aspectClass="aspect-[16/10] w-full"
             className="rounded-sm"
           />
-          {article.cover_video_url && (
-            <>
-              <VideoBadge />
-              <HoverVideo src={article.cover_video_url} poster={cover} />
-            </>
-          )}
         </div>
         <div className="md:col-span-5 flex flex-col justify-center">
           <Meta article={article} />
@@ -128,12 +78,6 @@ function DefaultCard({ article }: { article: ArticleSummary }) {
           aspectClass="w-full"
           className="rounded-sm"
         />
-        {article.cover_video_url && (
-          <>
-            <VideoBadge />
-            <HoverVideo src={article.cover_video_url} poster={cover} />
-          </>
-        )}
       </div>
       <div className="mt-4 flex flex-col gap-3">
         <Meta article={article} />
@@ -165,12 +109,6 @@ function WideCard({ article }: { article: ArticleSummary }) {
           aspectClass="w-full"
           className="rounded-sm"
         />
-        {article.cover_video_url && (
-          <>
-            <VideoBadge />
-            <HoverVideo src={article.cover_video_url} poster={cover} />
-          </>
-        )}
       </div>
       <div className="md:col-span-7 flex flex-col justify-center">
         <Meta article={article} />
@@ -199,11 +137,6 @@ function CompactCard({ article }: { article: ArticleSummary }) {
           loading="lazy"
           className="h-20 w-20 rounded-sm"
         />
-        {article.cover_video_url && (
-          <div className="absolute bottom-1 right-1 z-10 flex items-center justify-center rounded-full bg-background/80 backdrop-blur-sm w-5 h-5">
-            <PlayCircle className="h-3 w-3 text-foreground/80" />
-          </div>
-        )}
       </div>
       <div className="min-w-0">
         <span className="kicker text-[0.65rem]">{categoryLabel(article.category)}</span>

@@ -1,7 +1,7 @@
 import { o as __toESM } from "../_runtime.mjs";
 import { c as require_react, s as require_jsx_runtime } from "../_libs/react+tanstack__react-query.mjs";
 import { g as Link } from "../_libs/@tanstack/react-router+[...].mjs";
-import { $ as Globe, Ct as Calendar, D as ShoppingBag, Et as Bookmark, O as Share2, Ot as BookOpen, X as Heart, at as Eye, it as FileText, pt as Clock, u as User, vt as ChevronRight, xt as Check, yt as ChevronLeft } from "../_libs/lucide-react.mjs";
+import { $ as Globe, D as ShoppingBag, Dt as BookOpen, O as Share2, St as Calendar, Tt as Bookmark, X as Heart, _t as ChevronRight, at as Eye, bt as Check, it as FileText, pt as Clock, u as User, vt as ChevronLeft } from "../_libs/lucide-react.mjs";
 import { i as getRelatedBooks, n as BOOKS, r as getBookBySlug, t as AUTHOR } from "./editions-data-CBkYZZRA.mjs";
 import { t as Route } from "./editions._slug-BeAX0Adc.mjs";
 //#region node_modules/.nitro/vite/services/ssr/assets/editions._slug-e_N7XRTn.js

@@ -52,46 +52,11 @@ function decodeListMaybe<T>(items: T): T {
   return items.map((s) => (typeof s === "string" ? decodeEntities(s) : s)) as unknown as T;
 }
 
-const CATEGORY_VIDEOS: Record<string, string> = {
-  "artificial-intelligence": "https://videos.pexels.com/video-files/3129957/3129957-uhd_2560_1440_30fps.mp4",
-  "books": "https://videos.pexels.com/video-files/2765448/2765448-uhd_2560_1440_30fps.mp4",
-  "business": "https://videos.pexels.com/video-files/3195874/3195874-uhd_2560_1440_30fps.mp4",
-  "climate": "https://videos.pexels.com/video-files/1405922/1405922-uhd_2560_1440_30fps.mp4",
-  "cricket": "https://videos.pexels.com/video-files/4765242/4765242-uhd_2560_1440_30fps.mp4",
-  "economics": "https://videos.pexels.com/video-files/3195874/3195874-uhd_2560_1440_30fps.mp4",
-  "electric-vehicles": "https://videos.pexels.com/video-files/1709115/1709115-uhd_2560_1440_30fps.mp4",
-  "environment": "https://videos.pexels.com/video-files/1405922/1405922-uhd_2560_1440_30fps.mp4",
-  "football": "https://videos.pexels.com/video-files/4765242/4765242-uhd_2560_1440_30fps.mp4",
-  "gaming": "https://videos.pexels.com/video-files/2765448/2765448-uhd_2560_1440_30fps.mp4",
-  "health": "https://videos.pexels.com/video-files/4211718/4211718-uhd_2560_1440_30fps.mp4",
-  "india": "https://videos.pexels.com/video-files/3571264/3571264-uhd_2560_1440_30fps.mp4",
-  "markets": "https://videos.pexels.com/video-files/3195874/3195874-uhd_2560_1440_30fps.mp4",
-  "movies": "https://videos.pexels.com/video-files/2765448/2765448-uhd_2560_1440_30fps.mp4",
-  "music": "https://videos.pexels.com/video-files/2765448/2765448-uhd_2560_1440_30fps.mp4",
-  "physics": "https://videos.pexels.com/video-files/3129957/3129957-uhd_2560_1440_30fps.mp4",
-  "politics": "https://videos.pexels.com/video-files/3571264/3571264-uhd_2560_1440_30fps.mp4",
-  "robotics": "https://videos.pexels.com/video-files/3129957/3129957-uhd_2560_1440_30fps.mp4",
-  "science": "https://videos.pexels.com/video-files/3129957/3129957-uhd_2560_1440_30fps.mp4",
-  "space": "https://videos.pexels.com/video-files/1869990/1869990-uhd_2560_1440_30fps.mp4",
-  "sport": "https://videos.pexels.com/video-files/3571264/3571264-uhd_2560_1440_30fps.mp4",
-  "sustainability": "https://videos.pexels.com/video-files/1405922/1405922-uhd_2560_1440_30fps.mp4",
-  "technology": "https://videos.pexels.com/video-files/3129957/3129957-uhd_2560_1440_30fps.mp4",
-  "world": "https://videos.pexels.com/video-files/3571264/3571264-uhd_2560_1440_30fps.mp4",
-};
-
-const DEFAULT_VIDEO = "https://videos.pexels.com/video-files/3571264/3571264-uhd_2560_1440_30fps.mp4";
-
-function videoForCategory(category?: string | null): string {
-  if (category && CATEGORY_VIDEOS[category]) return CATEGORY_VIDEOS[category];
-  return DEFAULT_VIDEO;
-}
-
-function decodeSummary<T extends { title?: string | null; dek?: string | null; category?: string | null; cover_video_url?: string | null }>(row: T): T {
+function decodeSummary<T extends { title?: string | null; dek?: string | null; category?: string | null }>(row: T): T {
   return {
     ...row,
     title: row.title ? decodeEntities(row.title) : row.title,
     dek: row.dek ? decodeEntities(row.dek) : row.dek,
-    cover_video_url: row.cover_video_url || videoForCategory(row.category),
   };
 }
 
@@ -633,9 +598,6 @@ export const listArticles = createServerFn({ method: "GET" })
       }
     }
 
-    // Use direct query with ONLY columns PostgREST knows about
-    // (no cover_video_url, no trending_score — PostgREST schema cache is broken)
-    // Videos are assigned in decodeSummary() based on category
     let query = supabase
       .from("articles")
       .select("id,slug,title,dek,category,subcategory,cover_image_url,read_time_minutes,country_code,featured_slot,published_at,created_at,view_count,like_count,bookmark_count,comment_count")
@@ -663,7 +625,17 @@ export const listArticles = createServerFn({ method: "GET" })
     const { data: rows, error } = await query.limit(data.limit).range(data.offset, data.offset + data.limit - 1);
     if (error) throw new Error(error.message);
     const items = ((rows ?? []) as ArticleSummary[]).map((r) => decodeSummary(r));
-    return { items, nextCursor: undefined, hasMore: false };
+    const hasMore = items.length === data.limit;
+    let nextCursor: string | undefined = undefined;
+    if (hasMore && items.length > 0) {
+      const last = items[items.length - 1];
+      if (data.sort === "recent") {
+        nextCursor = `${last.published_at}|${last.id}`;
+      } else {
+        nextCursor = `${(last as any).view_count ?? 0}|${last.id}`;
+      }
+    }
+    return { items, nextCursor, hasMore };
   });
 
 export const getFeatured = createServerFn({ method: "GET" }).handler(async () => {

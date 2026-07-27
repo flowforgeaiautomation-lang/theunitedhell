@@ -179,7 +179,6 @@ function ArticlePage() {
   const story = article.story ?? {};
   const cover = article.cover_image_url || fallbackCoverUrl(article);
   const articleMedia: MediaItem[] = [
-    ...(article.cover_video_url ? [{ type: "video" as const, src: article.cover_video_url, poster: cover, alt: article.title }] : []),
     { type: "image" as const, src: cover, alt: article.title },
   ];
   const related = relatedQuery.data ?? [];

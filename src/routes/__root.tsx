@@ -208,13 +208,13 @@ function RootComponent() {
       <EzoicScriptLoader />
       <div className="min-h-screen flex flex-col bg-background text-foreground">
         <SiteHeader />
+        <BookAnchorCard />
         <main className="flex-1 page-enter">
           <Outlet />
         </main>
         <SiteFooter />
         <ReadingSettings />
         <ScrollToTop />
-        <BookAnchorCard />
       </div>
       <Toaster
         position="top-center"

@@ -1,7 +1,6 @@
 import { Link, useRouter } from "@tanstack/react-router";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Search, Moon, Sun, Menu, X, User, BookOpen } from "lucide-react";
-import { BookAnchorCard } from "./BookAnchorCard";
 import { supabase } from "@/integrations/supabase/client";
 import { PanchangDisplay } from "./PanchangDisplay";
 import { SubNav } from "./SubNav";
