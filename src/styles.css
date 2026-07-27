@@ -223,25 +223,7 @@
   }
 }
 
-  /* High contrast mode */
-  .tuh-high-contrast {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0 0 0);
-    --paper: oklch(1 0 0);
-    --ink: oklch(0 0 0);
-    --rule: oklch(0 0 0 / 0.5);
-    --muted-foreground: oklch(0.2 0 0);
-    --border: oklch(0 0 0 / 0.4);
-  }
-  .dark.tuh-high-contrast {
-    --background: oklch(0 0 0);
-    --foreground: oklch(1 0 0);
-    --paper: oklch(0 0 0);
-    --ink: oklch(1 0 0);
-    --rule: oklch(1 0 0 / 0.5);
-    --muted-foreground: oklch(0.8 0 0);
-    --border: oklch(1 0 0 / 0.4);
-  }
+  /* High contrast mode — defined with !important in the theme section below */
 
   /* Dyslexia-friendly font */
   .tuh-dyslexia-font .font-serif,
@@ -364,6 +346,31 @@
   }
 
   /* Themes — !important on every variable so they ALWAYS override :root and .dark */
+  .tuh-theme-light {
+    color-scheme: light !important;
+    --background: oklch(0.985 0.003 80) !important;
+    --foreground: oklch(0.16 0.005 270) !important;
+    --paper: oklch(0.985 0.003 80) !important;
+    --ink: oklch(0.16 0.005 270) !important;
+    --muted-foreground: oklch(0.42 0.005 270) !important;
+    --border: oklch(0.16 0.005 270 / 0.14) !important;
+    --rule: oklch(0.16 0.005 270 / 0.18) !important;
+    --card: oklch(1 0 0) !important;
+    --card-foreground: oklch(0.16 0.005 270) !important;
+    --popover: oklch(1 0 0) !important;
+    --popover-foreground: oklch(0.16 0.005 270) !important;
+    --primary: oklch(0.16 0.005 270) !important;
+    --primary-foreground: oklch(0.985 0.003 80) !important;
+    --secondary: oklch(0.94 0.003 80) !important;
+    --secondary-foreground: oklch(0.16 0.005 270) !important;
+    --muted: oklch(0.95 0.003 80) !important;
+    --accent: oklch(0.92 0.003 80) !important;
+    --accent-foreground: oklch(0.16 0.005 270) !important;
+    --destructive: oklch(0.45 0.18 25) !important;
+    --destructive-foreground: oklch(0.985 0.003 80) !important;
+    --input: oklch(0.16 0.005 270 / 0.18) !important;
+    --ring: oklch(0.16 0.005 270 / 0.4) !important;
+  }
   .tuh-theme-dark {
     color-scheme: dark !important;
     --background: oklch(0.18 0.01 250) !important;

@@ -1,1 +1,0 @@
-import{qt as e}from"./index-Da50s2_s.js";var t=e({type:`function`});export{t};

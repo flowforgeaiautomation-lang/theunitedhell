@@ -1,1 +1,0 @@
-import{r as e,t}from"./useBaseQuery-DVslmSI6.js";function n(n,r){return t(n,e,r)}export{n as t};
