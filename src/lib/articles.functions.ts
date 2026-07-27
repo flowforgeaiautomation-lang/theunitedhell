@@ -52,11 +52,46 @@ function decodeListMaybe<T>(items: T): T {
   return items.map((s) => (typeof s === "string" ? decodeEntities(s) : s)) as unknown as T;
 }
 
-function decodeSummary<T extends { title?: string | null; dek?: string | null }>(row: T): T {
+const CATEGORY_VIDEOS: Record<string, string> = {
+  "artificial-intelligence": "https://videos.pexels.com/video-files/3129957/3129957-uhd_2560_1440_30fps.mp4",
+  "books": "https://videos.pexels.com/video-files/2765448/2765448-uhd_2560_1440_30fps.mp4",
+  "business": "https://videos.pexels.com/video-files/3195874/3195874-uhd_2560_1440_30fps.mp4",
+  "climate": "https://videos.pexels.com/video-files/1405922/1405922-uhd_2560_1440_30fps.mp4",
+  "cricket": "https://videos.pexels.com/video-files/4765242/4765242-uhd_2560_1440_30fps.mp4",
+  "economics": "https://videos.pexels.com/video-files/3195874/3195874-uhd_2560_1440_30fps.mp4",
+  "electric-vehicles": "https://videos.pexels.com/video-files/1709115/1709115-uhd_2560_1440_30fps.mp4",
+  "environment": "https://videos.pexels.com/video-files/1405922/1405922-uhd_2560_1440_30fps.mp4",
+  "football": "https://videos.pexels.com/video-files/4765242/4765242-uhd_2560_1440_30fps.mp4",
+  "gaming": "https://videos.pexels.com/video-files/2765448/2765448-uhd_2560_1440_30fps.mp4",
+  "health": "https://videos.pexels.com/video-files/4211718/4211718-uhd_2560_1440_30fps.mp4",
+  "india": "https://videos.pexels.com/video-files/3571264/3571264-uhd_2560_1440_30fps.mp4",
+  "markets": "https://videos.pexels.com/video-files/3195874/3195874-uhd_2560_1440_30fps.mp4",
+  "movies": "https://videos.pexels.com/video-files/2765448/2765448-uhd_2560_1440_30fps.mp4",
+  "music": "https://videos.pexels.com/video-files/2765448/2765448-uhd_2560_1440_30fps.mp4",
+  "physics": "https://videos.pexels.com/video-files/3129957/3129957-uhd_2560_1440_30fps.mp4",
+  "politics": "https://videos.pexels.com/video-files/3571264/3571264-uhd_2560_1440_30fps.mp4",
+  "robotics": "https://videos.pexels.com/video-files/3129957/3129957-uhd_2560_1440_30fps.mp4",
+  "science": "https://videos.pexels.com/video-files/3129957/3129957-uhd_2560_1440_30fps.mp4",
+  "space": "https://videos.pexels.com/video-files/1869990/1869990-uhd_2560_1440_30fps.mp4",
+  "sport": "https://videos.pexels.com/video-files/3571264/3571264-uhd_2560_1440_30fps.mp4",
+  "sustainability": "https://videos.pexels.com/video-files/1405922/1405922-uhd_2560_1440_30fps.mp4",
+  "technology": "https://videos.pexels.com/video-files/3129957/3129957-uhd_2560_1440_30fps.mp4",
+  "world": "https://videos.pexels.com/video-files/3571264/3571264-uhd_2560_1440_30fps.mp4",
+};
+
+const DEFAULT_VIDEO = "https://videos.pexels.com/video-files/3571264/3571264-uhd_2560_1440_30fps.mp4";
+
+function videoForCategory(category?: string | null): string {
+  if (category && CATEGORY_VIDEOS[category]) return CATEGORY_VIDEOS[category];
+  return DEFAULT_VIDEO;
+}
+
+function decodeSummary<T extends { title?: string | null; dek?: string | null; category?: string | null; cover_video_url?: string | null }>(row: T): T {
   return {
     ...row,
     title: row.title ? decodeEntities(row.title) : row.title,
     dek: row.dek ? decodeEntities(row.dek) : row.dek,
+    cover_video_url: row.cover_video_url || videoForCategory(row.category),
   };
 }
 
@@ -598,37 +633,48 @@ export const listArticles = createServerFn({ method: "GET" })
       }
     }
 
-    // Use RPC function to bypass PostgREST schema cache issues with trending_score
-    const cursorVal = cursorDate || (cursorSortVal !== null ? String(cursorSortVal) : null);
+    // Use direct query with ONLY columns PostgREST knows about
+    // (no cover_video_url, no trending_score — PostgREST schema cache is broken)
+    // Videos are assigned in decodeSummary() based on category
+    let query = supabase
+      .from("articles")
+      .select("id,slug,title,dek,category,subcategory,cover_image_url,read_time_minutes,country_code,featured_slot,published_at,created_at,view_count,like_count,bookmark_count,comment_count")
+      .eq("is_published", true);
 
-    const { data: rpcResult, error: rpcError } = await supabase.rpc("list_articles_sorted", {
-      p_sort: data.sort,
-      p_limit: data.limit,
-      p_cursor_id: cursorId || null,
-      p_cursor_val: cursorVal,
-      p_today_only: data.todayOnly || false,
-    });
-
-    if (rpcError) {
-      const { data: fbData, error: fbError } = await supabase.rpc("get_articles_by_category", {
-        p_category: data.category ?? null,
-        p_country: data.country ?? null,
-        p_limit: data.limit,
-        p_today_only: data.todayOnly ?? false,
-      });
-      if (fbError) throw new Error(fbError.message);
-      const fbRows = ((fbData ?? []) as ArticleSummary[]).map((r) => decodeSummary(r));
-      return { items: fbRows, nextCursor: undefined, hasMore: false };
+    if (data.todayOnly) {
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      query = query.gte("published_at", startOfDay.toISOString());
     }
 
-    const result = rpcResult as { items: ArticleSummary[]; hasMore: boolean; nextCursor: string | null };
-    const items = (result.items || []).map((r) => decodeSummary(r));
-    return { items, nextCursor: result.nextCursor || undefined, hasMore: result.hasMore };
+    if (data.category) query = query.eq("category", data.category);
+    if (data.country) query = query.eq("country_code", data.country);
+
+    if (data.sort === "trending") {
+      query = query.order("view_count", { ascending: false }).order("id", { ascending: false });
+    } else if (data.sort === "most_read") {
+      query = query.order("view_count", { ascending: false }).order("id", { ascending: false });
+    } else if (data.sort === "most_saved") {
+      query = query.order("bookmark_count", { ascending: false }).order("id", { ascending: false });
+    } else {
+      query = query.order("published_at", { ascending: false }).order("id", { ascending: false });
+    }
+
+    const { data: rows, error } = await query.limit(data.limit).range(data.offset, data.offset + data.limit - 1);
+    if (error) throw new Error(error.message);
+    const items = ((rows ?? []) as ArticleSummary[]).map((r) => decodeSummary(r));
+    return { items, nextCursor: undefined, hasMore: false };
   });
 
 export const getFeatured = createServerFn({ method: "GET" }).handler(async () => {
   const supabase = publicClient();
-  const { data, error } = await supabase.rpc("get_featured_articles");
+  const { data, error } = await supabase
+    .from("articles")
+    .select("id,slug,title,dek,category,subcategory,cover_image_url,read_time_minutes,country_code,featured_slot,published_at,created_at,view_count,like_count,bookmark_count,comment_count")
+    .eq("is_published", true)
+    .not("featured_slot", "is", null)
+    .order("published_at", { ascending: false })
+    .limit(20);
   if (error) throw new Error(error.message);
   const bySlot = new Map<string, ArticleSummary>();
   for (const a of (data ?? []) as ArticleSummary[]) {
@@ -642,10 +688,15 @@ export const getArticleBySlug = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ slug: z.string().min(1) }).parse(d))
   .handler(async ({ data }) => {
     const supabase = publicClient();
-    const { data: row, error } = await supabase.rpc("get_article_full_by_slug", { p_slug: data.slug });
+    const { data: row, error } = await supabase
+      .from("articles")
+      .select("id,slug,title,dek,category,subcategory,cover_image_url,cover_image_prompt,read_time_minutes,trust_score,source_count,sources,story,body,country_code,featured_slot,is_published,published_at,view_count,like_count,bookmark_count,comment_count,created_by,created_at,updated_at")
+      .eq("slug", data.slug)
+      .eq("is_published", true)
+      .maybeSingle();
     if (error) throw new Error(error.message);
     if (!row) return null;
-    const article = row as Article;
+    const article = decodeSummary(row as unknown as ArticleSummary) as unknown as Article;
     try {
       supabase.from("articles").update({ view_count: (article.view_count ?? 0) + 1 }).eq("id", article.id).then(() => {});
     } catch {}
@@ -658,17 +709,25 @@ export const getRelated = createServerFn({ method: "GET" })
   )
   .handler(async ({ data }) => {
     const supabase = publicClient();
-    const { data: sameCat, error } = await supabase.rpc("get_related_articles", {
-      p_category: data.category,
-      p_exclude_slug: data.excludeSlug,
-      p_limit: data.limit,
-    });
+    const { data: sameCat, error } = await supabase
+      .from("articles")
+      .select("id,slug,title,dek,category,subcategory,cover_image_url,read_time_minutes,country_code,featured_slot,published_at,created_at,view_count,like_count,bookmark_count,comment_count")
+      .eq("is_published", true)
+      .eq("category", data.category)
+      .neq("slug", data.excludeSlug)
+      .order("published_at", { ascending: false })
+      .limit(data.limit);
     if (error) throw new Error(error.message);
-    let result = dedupeSummaries((sameCat ?? []) as ArticleSummary[], data.limit);
+    let result = dedupeSummaries(((sameCat ?? []) as ArticleSummary[]).map((r) => decodeSummary(r)), data.limit);
     if (result.length < data.limit) {
-      const { data: recent } = await supabase.rpc("get_briefing_articles", { p_limit: data.limit * 3 });
-      const recentRows = ((recent ?? []) as ArticleSummary[]).filter((r) => r.slug !== data.excludeSlug);
-      result = dedupeSummaries([...result, ...recentRows], data.limit);
+      const { data: recent } = await supabase
+        .from("articles")
+        .select("id,slug,title,dek,category,subcategory,cover_image_url,read_time_minutes,country_code,featured_slot,published_at,created_at,view_count,like_count,bookmark_count,comment_count")
+        .eq("is_published", true)
+        .neq("slug", data.excludeSlug)
+        .order("published_at", { ascending: false })
+        .limit(data.limit * 3);
+      result = dedupeSummaries([...result, ...((recent ?? []) as ArticleSummary[]).map((r) => decodeSummary(r))], data.limit);
     }
     return result;
   });
@@ -677,11 +736,13 @@ export const searchArticles = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ q: z.string().min(1).max(120) }).parse(d))
   .handler(async ({ data }) => {
     const supabase = publicClient();
-    const term = `%${data.q.replace(/[%_]/g, " ")}%`;
-    const { data: rows, error } = await supabase.rpc("search_articles", {
-      p_search_term: term,
-      p_limit: 40,
-    });
+    const { data: rows, error } = await supabase
+      .from("articles")
+      .select("id,slug,title,dek,category,subcategory,cover_image_url,read_time_minutes,country_code,featured_slot,published_at,created_at,view_count,like_count,bookmark_count,comment_count")
+      .eq("is_published", true)
+      .or(`title.ilike.%${data.q}%,dek.ilike.%${data.q}%,category.ilike.%${data.q}%`)
+      .order("published_at", { ascending: false })
+      .limit(40);
     if (error) throw new Error(error.message);
     return ((rows ?? []) as ArticleSummary[]).map((r) => decodeSummary(r));
   });
@@ -720,17 +781,26 @@ export const getBriefingToday = createServerFn({ method: "GET" }).handler(async 
 
   const buildFromArticles = async (): Promise<Briefing> => {
     const today = new Date().toISOString().slice(0, 10);
+    const safeCols = "id,slug,title,dek,category,subcategory,cover_image_url,read_time_minutes,country_code,featured_slot,published_at,created_at,view_count,like_count,bookmark_count,comment_count";
     const fetchCat = async (cats: string[], limit: number) => {
-      const { data: rows } = await supabase.rpc("get_briefing_by_category", {
-        p_categories: cats,
-        p_limit: limit,
-      });
-      return dedupeSummaries((rows ?? []) as ArticleSummary[], limit);
+      const { data: rows } = await supabase
+        .from("articles")
+        .select(safeCols)
+        .eq("is_published", true)
+        .in("category", cats)
+        .order("published_at", { ascending: false })
+        .limit(limit);
+      return dedupeSummaries(((rows ?? []) as ArticleSummary[]).map((r) => decodeSummary(r)), limit);
     };
-    const { data: latestRpc } = await supabase.rpc("get_briefing_articles", { p_limit: 80 });
-    const latestRows = dedupeSummaries((latestRpc ?? []) as ArticleSummary[], 60);
+    const { data: latestRows } = await supabase
+      .from("articles")
+      .select(safeCols)
+      .eq("is_published", true)
+      .order("published_at", { ascending: false })
+      .limit(80);
+    const latest = dedupeSummaries(((latestRows ?? []) as ArticleSummary[]).map((r) => decodeSummary(r)), 60);
 
-    const top = latestRows.slice(0, 8);
+    const top = (latestRows ?? []).slice(0, 8);
     const [discoveries, science, success, tech] = await Promise.all([
       fetchCat(["discovery", "world-discovery", "exploration", "amazing-places"], 6),
       fetchCat(["science", "scientific-discoveries", "physics", "biology", "medicine", "breakthroughs"], 6),
@@ -746,10 +816,10 @@ export const getBriefingToday = createServerFn({ method: "GET" }).handler(async 
         "Today's most important stories, drawn from the latest published articles.",
       sections: {
         top_stories: pickItems(top),
-        discoveries: pickItems(discoveries.length ? discoveries : latestRows.slice(8, 14)),
-        science: pickItems(science.length ? science : latestRows.slice(14, 20)),
-        success: pickItems(success.length ? success : latestRows.slice(20, 26)),
-        tech: pickItems(tech.length ? tech : latestRows.slice(26, 32)),
+        discoveries: pickItems(discoveries.length ? discoveries : (latestRows ?? []).slice(8, 14)),
+        science: pickItems(science.length ? science : (latestRows ?? []).slice(14, 20)),
+        success: pickItems(success.length ? success : (latestRows ?? []).slice(20, 26)),
+        tech: pickItems(tech.length ? tech : (latestRows ?? []).slice(26, 32)),
         facts: briefing?.sections?.facts,
       },
     } as Briefing;
