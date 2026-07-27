@@ -21,7 +21,7 @@ import { t as Route$22 } from "./editions._slug-BDZWxPJ2.mjs";
 import { t as statsQ } from "./map-IDz5fq0f.mjs";
 import { t as Route$23 } from "./search-C-qVPo2D.mjs";
 import { t as homeQuery } from "./routes-CXV355NV.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/router-BJUK5a1k.js
+//#region node_modules/.nitro/vite/services/ssr/assets/router-DDkO0NK9.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var styles_default = "/assets/styles-Yl-0LhfE.css";
@@ -1054,8 +1054,8 @@ function ReadingSettings() {
 	const { prefs, update, reset, exportPrefs, importPrefs, loaded, signedIn } = useReadingPrefs();
 	const fileRef = (0, import_react.useRef)(null);
 	(0, import_react.useEffect)(() => {
-		if (loaded) applyReadingPrefs(prefs);
-	}, [prefs, loaded]);
+		applyReadingPrefs(prefs);
+	}, [prefs]);
 	(0, import_react.useEffect)(() => {
 		function onKey(e) {
 			if ((e.metaKey || e.ctrlKey) && e.altKey && e.key === "r") {
@@ -1267,7 +1267,13 @@ function ReadingSettings() {
 							].map((t) => {
 								const Icon = t.icon;
 								return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
-									onClick: () => set({ theme: t.id }),
+									onClick: () => {
+										applyReadingPrefs({
+											...prefs,
+											theme: t.id
+										});
+										set({ theme: t.id });
+									},
 									className: `flex items-center gap-2 border rule px-4 py-3 text-sm transition rounded-sm ${p.theme === t.id ? "bg-foreground text-background border-foreground" : "hover:bg-foreground/[0.05]"}`,
 									children: [
 										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Icon, { className: "h-4 w-4" }),

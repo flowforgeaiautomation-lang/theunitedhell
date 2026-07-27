@@ -129,10 +129,11 @@ export function ReadingSettings() {
   const { prefs, update, reset, exportPrefs, importPrefs, loaded, signedIn } = useReadingPrefs();
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // Apply prefs to <html> whenever they change
+  // Apply prefs to <html> whenever they change — no gating on `loaded`
+  // because the inline bootstrap script in __root.tsx handles the initial paint
   useEffect(() => {
-    if (loaded) applyReadingPrefs(prefs);
-  }, [prefs, loaded]);
+    applyReadingPrefs(prefs);
+  }, [prefs]);
 
   // Open with keyboard shortcut
   useEffect(() => {
@@ -307,7 +308,11 @@ export function ReadingSettings() {
                       return (
                         <button
                           key={t.id}
-                          onClick={() => set({ theme: t.id })}
+                          onClick={() => {
+                            const next = { ...prefs, theme: t.id };
+                            applyReadingPrefs(next);
+                            set({ theme: t.id });
+                          }}
                           className={`flex items-center gap-2 border rule px-4 py-3 text-sm transition rounded-sm ${
                             p.theme === t.id ? "bg-foreground text-background border-foreground" : "hover:bg-foreground/[0.05]"
                           }`}

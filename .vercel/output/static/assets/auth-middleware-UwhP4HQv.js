@@ -1,1 +1,0 @@
-import{qt as e}from"./index-DevfNF5-.js";var t=e({type:`function`});export{t};
