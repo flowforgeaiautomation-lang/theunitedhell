@@ -33,7 +33,7 @@ export interface EditionBook {
 
 export const AUTHOR = {
   name: "Altair Veda",
-  logo: "/covers/author.webp",
+  logo: "/THEUH.LOGO.png",
   shortBio:
     "Altair Veda is an author, thinker, and creator of the Powerful Mind Series, a collection of books that explores the hidden dimensions of human potential through practical thinking, self-mastery, and purposeful action.",
   longBio: [
@@ -201,7 +201,7 @@ export const BOOKS: EditionBook[] = [
     seriesOrder: 1,
     amazonLink: "https://www.amazon.com/Multiverse-Intelligence-Mental-Powers-Powerful-ebook/dp/B0GT64Y8JR?ref_=saga_dp_bnx_mbl_dp",
     books2ReadLink: "https://books2read.com",
-    coverImage: "/covers/book-1.webp",
+    coverImage: "/images/covers/file_00000000e4f881fa88b50e9044984741.png",
     readingTime: "6 hours",
     tags: ["Intelligence", "Psychology", "Self-Help", "Leadership", "Cognitive Science"],
     collections: ["Mental Power", "Psychology", "Mindset", "Learning", "Thinking"],
@@ -307,7 +307,7 @@ export const BOOKS: EditionBook[] = [
     seriesOrder: 2,
     amazonLink: "https://www.amazon.com/Discipline-Code-Mastering-Control-Powerful-ebook/dp/B0GT1JDZMN?ref_=saga_dp_bnx_mbl_dp",
     books2ReadLink: "https://books2read.com",
-    coverImage: "/covers/book-2.webp",
+    coverImage: "/images/covers/file_00000000f39482079920190790028d30.png",
     readingTime: "5 hours",
     tags: ["Discipline", "Productivity", "Habits", "Success", "Self-Control"],
     collections: ["Mental Power", "Productivity", "Success", "Focus", "Mindset"],
@@ -410,7 +410,7 @@ export const BOOKS: EditionBook[] = [
     seriesOrder: 3,
     amazonLink: "https://www.amazon.com/Focus-productivity-mastering-attention-Powerful-ebook/dp/B0GTMLW51Q?ref_=saga_dp_bnx_mbl_dp",
     books2ReadLink: "https://books2read.com",
-    coverImage: "/covers/book-3.webp",
+    coverImage: "/images/covers/file_00000000bf8c81fab4900f65cb142b47.png",
     readingTime: "5 hours",
     tags: ["Focus", "Productivity", "Attention", "Mental Clarity", "Psychology"],
     collections: ["Mental Power", "Productivity", "Focus", "Success", "Mindset"],
@@ -512,7 +512,7 @@ export const BOOKS: EditionBook[] = [
     seriesOrder: 4,
     amazonLink: "https://www.amazon.com/Strategic-Thinking-Planning-Decision-Making-Powerful-ebook/dp/B0GTMQ7B6Z?ref_=saga_dp_bnx_mbl_dp",
     books2ReadLink: "https://books2read.com",
-    coverImage: "/covers/book-4.webp",
+    coverImage: "/images/covers/file_0000000016fc81fabea25db6e7af5a65.png",
     readingTime: "5 hours",
     tags: ["Strategy", "Leadership", "Decision Making", "Planning", "Business"],
     collections: ["Mental Power", "Leadership", "Strategy", "Success", "Thinking"],
@@ -614,7 +614,7 @@ export const BOOKS: EditionBook[] = [
     seriesOrder: 5,
     amazonLink: "https://www.amazon.com/Future-Leader-Mindset-Influence-Powerful-ebook/dp/B0GTMNLQ5H?ref_=saga_dp_bnx_mbl_dp",
     books2ReadLink: "https://books2read.com",
-    coverImage: "/covers/book-5.webp",
+    coverImage: "/images/covers/file_000000008b4081faa4906c5fef6e1154.png",
     readingTime: "5 hours",
     tags: ["Leadership", "Vision", "Influence", "Impact", "Future"],
     collections: ["Leadership", "Mental Power", "Success", "Mindset", "Strategy"],
