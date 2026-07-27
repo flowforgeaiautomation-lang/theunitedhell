@@ -1,0 +1,1 @@
+import{Wt as e}from"./index-Dfs2zwqs.js";var t=e({type:`function`});export{t};

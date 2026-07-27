@@ -329,7 +329,7 @@ function ArticlePage() {
             <div className="kicker mb-6">Vocabulary Builder</div>
               {story.vocabulary && story.vocabulary.length > 0 ? (
                 <div className="grid gap-6">
-                  {story.vocabulary.map((v, i) => (
+                  {enhanceVocabEntries(story.vocabulary).map((v, i) => (
                     <EnhancedVocabCard key={`${v.word}-${i}`} entry={v} articleId={article.id} index={i} />
                   ))}
                 </div>
@@ -693,17 +693,38 @@ function generateLocalVocabFallback(text: string): VocabEntry[] {
   const sorted = [...freq.entries()].sort((a, b) => b[1] - a[1]).slice(0, 30);
   const picks: VocabEntry[] = [];
   const used = new Set<string>();
+  // First pass: match article words to the curated dictionary
   for (const [w] of sorted) {
     const curated = CURATED_VOCAB[w];
     if (curated && !used.has(w)) { picks.push(curated); used.add(w); }
     if (picks.length >= 6) break;
   }
+  // Second pass: fill remaining slots with other curated words
   const allCurated = Object.values(CURATED_VOCAB);
   for (const v of allCurated) {
     if (picks.length >= 6) break;
     if (!used.has(v.word!)) { picks.push(v); used.add(v.word!); }
   }
   return picks.slice(0, 6);
+}
+
+/** Enhance incomplete vocab entries from the database with curated data when available. */
+function enhanceVocabEntries(entries: VocabEntry[]): VocabEntry[] {
+  return entries.map((e) => {
+    if (!e.word) return e;
+    const curated = CURATED_VOCAB[e.word.toLowerCase()];
+    if (!curated) return e;
+    return {
+      ...e,
+      meaning: e.meaning || curated.meaning,
+      simpleExplanation: e.simpleExplanation || curated.simpleExplanation,
+      example: e.example || curated.example,
+      synonyms: e.synonyms?.length ? e.synonyms : curated.synonyms,
+      antonyms: e.antonyms?.length ? e.antonyms : curated.antonyms,
+      pronunciation: e.pronunciation || curated.pronunciation,
+      partOfSpeech: e.partOfSpeech || curated.partOfSpeech,
+    };
+  });
 }
 
 const PROMPTS = [

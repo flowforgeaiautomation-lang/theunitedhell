@@ -27,6 +27,14 @@ export function useInfiniteScroll({ fetcher, pageSize }: UseInfiniteScrollOption
         setArticles((prev) => {
           const existingIds = new Set(prev.map((a) => a.id));
           const unique = newArticles.filter((a) => !existingIds.has(a.id));
+          // Preload all cover images immediately so they appear instantly
+          for (const a of unique) {
+            if (a.cover_image_url) {
+              const img = new Image();
+              img.decoding = "sync";
+              img.src = a.cover_image_url;
+            }
+          }
           return [...prev, ...unique];
         });
         offsetRef.current = offset + newArticles.length;
@@ -55,7 +63,7 @@ export function useInfiniteScroll({ fetcher, pageSize }: UseInfiniteScrollOption
     const sentinel = sentinelRef.current; if (!sentinel) return;
     const observer = new IntersectionObserver((entries) => {
       if (entries[0].isIntersecting && !loading && !loadingMore && hasMore) loadMore();
-    }, { rootMargin: "1200px" });
+    }, { rootMargin: "2000px" });
     observer.observe(sentinel);
     return () => observer.disconnect();
   }, [loadMore, loading, loadingMore, hasMore]);

@@ -1,1 +1,0 @@
-import{Wt as e}from"./index--ABapFgE.js";var t=e({type:`function`});export{t};
