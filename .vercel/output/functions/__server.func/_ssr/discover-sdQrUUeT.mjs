@@ -7,7 +7,7 @@ import "../_libs/sonner.mjs";
 import { a as categoryLabel, i as HOMEPAGE_CATEGORIES } from "./categories-BEROsZZ5.mjs";
 import { t as supabase } from "./client-d8MeWTAO.mjs";
 import { l as listArticles } from "./articles.functions-CcS7Xvic.mjs";
-import { At as ArrowRight, U as LoaderCircle, t as lucide_react_exports } from "../_libs/lucide-react.mjs";
+import { At as ArrowRight, H as LoaderCircle, t as lucide_react_exports } from "../_libs/lucide-react.mjs";
 import { t as motion } from "../_libs/framer-motion.mjs";
 import { t as ArticleCard } from "./article-card-C0m5Cqjb.mjs";
 import { n as ScrollToTop, t as CategoryModal } from "./ScrollToTop-DRtZjwEu.mjs";
