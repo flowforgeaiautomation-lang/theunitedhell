@@ -55,7 +55,7 @@ export function useInfiniteScroll({ fetcher, pageSize }: UseInfiniteScrollOption
     const sentinel = sentinelRef.current; if (!sentinel) return;
     const observer = new IntersectionObserver((entries) => {
       if (entries[0].isIntersecting && !loading && !loadingMore && hasMore) loadMore();
-    }, { rootMargin: "600px" });
+    }, { rootMargin: "1200px" });
     observer.observe(sentinel);
     return () => observer.disconnect();
   }, [loadMore, loading, loadingMore, hasMore]);

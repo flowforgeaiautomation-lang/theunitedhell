@@ -1,0 +1,1 @@
+import{Wt as e}from"./index-B-nNMQY4.js";var t=e({type:`function`});export{t};

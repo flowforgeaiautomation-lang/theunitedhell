@@ -74,7 +74,7 @@ function DefaultCard({ article }: { article: ArticleSummary }) {
           alt={article.title}
           width={600}
           height={450}
-          loading="lazy"
+          loading="eager"
           aspectClass="w-full"
           className="rounded-sm"
         />
@@ -105,7 +105,7 @@ function WideCard({ article }: { article: ArticleSummary }) {
           alt={article.title}
           width={600}
           height={450}
-          loading="lazy"
+          loading="eager"
           aspectClass="w-full"
           className="rounded-sm"
         />
@@ -134,7 +134,7 @@ function CompactCard({ article }: { article: ArticleSummary }) {
           alt={article.title}
           width={80}
           height={80}
-          loading="lazy"
+          loading="eager"
           className="h-20 w-20 rounded-sm"
         />
       </div>

@@ -14,15 +14,15 @@ type SmartImageProps = {
 };
 
 /**
- * Image with blur-up progressive loading, lazy loading, and no layout shift.
- * Shows a muted shimmer placeholder until the image loads, then fades in.
+ * Image with eager loading, no layout shift, and instant display.
+ * Images load immediately with high priority to avoid blank/vague states during scroll.
  */
 export function SmartImage({
   src,
   alt,
   width,
   height,
-  loading = "lazy",
+  loading = "eager",
   className = "",
   placeholder,
   aspectClass = "",
@@ -40,9 +40,6 @@ export function SmartImage({
       className={`relative overflow-hidden bg-foreground/[0.06] ${aspectClass} ${className}`}
       style={width && height ? { aspectRatio: `${width} / ${height}` } : undefined}
     >
-      {!loaded && !error && (
-        <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-foreground/[0.04] via-foreground/[0.08] to-foreground/[0.04]" />
-      )}
       {placeholder && !loaded && (
         <img
           src={placeholder}
@@ -57,11 +54,13 @@ export function SmartImage({
           alt={alt}
           width={width}
           height={height}
-          loading={loading}
+          loading="eager"
           decoding="async"
+          // @ts-expect-error fetchPriority is valid HTML but not in React types
+          fetchPriority="high"
           onLoad={() => setLoaded(true)}
           onError={() => setError(true)}
-          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ${
+          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${
             loaded ? "opacity-100" : "opacity-0"
           }`}
         />

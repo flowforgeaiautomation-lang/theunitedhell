@@ -1,19 +1,16 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { X, ExternalLink, BookOpen } from "lucide-react";
+import { ExternalLink, BookOpen } from "lucide-react";
 import { BOOKS } from "@/lib/editions-data";
 
 const ROTATION_MS = 17000;
 const STORAGE_INDEX_KEY = "tuh-book-anchor-index";
 
 export function BookAnchorCard() {
-  const [visible, setVisible] = useState(true);
   const [index, setIndex] = useState(0);
   const [fade, setFade] = useState(true);
   const pausedRef = useRef(false);
   const navigate = useNavigate();
-
-
 
   useEffect(() => {
     try {
@@ -36,79 +33,66 @@ export function BookAnchorCard() {
   }, []);
 
   useEffect(() => {
-    if (!visible) return;
     const id = setInterval(rotate, ROTATION_MS);
     return () => clearInterval(id);
-  }, [visible, rotate]);
+  }, [rotate]);
 
-  function dismiss() {
-    setVisible(false);
+  function handleClick() {
+    navigate({ to: "/editions" });
   }
 
-  function viewBook(slug: string) {
-    navigate({ to: "/editions", search: { book: slug } });
-  }
-
-  if (!visible) return null;
   const book = BOOKS[index];
 
   return (
     <div className="w-full bg-black border-b border-white/20">
       <div className="container-edit">
         <div
-          className="flex items-center gap-3 sm:gap-4 py-2.5 sm:py-3"
-          role="region"
-          aria-label="Featured publication"
+          className="flex items-center gap-4 sm:gap-5 py-4 sm:py-5 cursor-pointer select-none"
+          role="button"
+          tabIndex={0}
+          aria-label={`View ${book.title} in Editions`}
+          onClick={handleClick}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleClick(); } }}
           onMouseEnter={() => { pausedRef.current = true; }}
           onMouseLeave={() => { pausedRef.current = false; }}
           onFocus={() => { pausedRef.current = true; }}
           onBlur={() => { pausedRef.current = false; }}
         >
           {/* Book cover */}
-          <div className="shrink-0 w-10 h-14 sm:w-12 sm:h-16 border border-white/20 overflow-hidden bg-neutral-900 rounded">
+          <div className="shrink-0 w-14 h-20 sm:w-16 sm:h-24 border border-white/20 overflow-hidden bg-neutral-900 rounded">
             <img
               src={book.coverImage}
               alt=""
-              loading="lazy"
+              loading="eager"
               className="w-full h-full object-cover"
             />
           </div>
 
           {/* Title + subtitle */}
           <div className={`flex-1 min-w-0 transition-opacity duration-300 ${fade ? "opacity-100" : "opacity-0"}`}>
-            <div className="flex items-center gap-1.5">
-              <BookOpen className="h-3 w-3 text-white/50 shrink-0" />
-              <span className="text-[0.5rem] sm:text-[0.55rem] uppercase tracking-[0.18em] text-white/40">From the Editions</span>
+            <div className="flex items-center gap-2">
+              <BookOpen className="h-4 w-4 text-white/50 shrink-0" />
+              <span className="text-[0.6rem] sm:text-xs uppercase tracking-[0.18em] text-white/40">From the Editions</span>
             </div>
-            <div className="font-serif text-sm sm:text-base font-bold text-white leading-tight truncate">{book.title}</div>
-            <div className="text-[0.65rem] sm:text-xs text-white/60 leading-tight truncate hidden sm:block">{book.subtitle}</div>
+            <div className="font-serif text-lg sm:text-xl font-bold text-white leading-tight truncate">{book.title}</div>
+            <div className="text-xs sm:text-sm text-white/60 leading-tight truncate hidden sm:block">{book.subtitle}</div>
           </div>
 
-          {/* Buttons */}
-          <div className="shrink-0 flex items-center gap-1.5 sm:gap-2">
-            <button
-              onClick={() => viewBook(book.slug)}
-              className="px-2.5 sm:px-3 py-1.5 text-[0.6rem] sm:text-[0.65rem] font-semibold uppercase tracking-wider border border-white/40 text-white rounded hover:bg-white hover:text-black transition min-h-[36px]"
-              aria-label={`View ${book.title} in Editions`}
-            >
-              View
-            </button>
+          {/* CTA */}
+          <div className="shrink-0 flex items-center gap-2 sm:gap-3">
+            <span className="hidden sm:inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold uppercase tracking-wider border border-white/40 text-white rounded hover:bg-white hover:text-black transition min-h-[40px]">
+              View Editions
+            </span>
             <a
               href={book.amazonLink}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-1.5 text-[0.6rem] sm:text-[0.65rem] font-semibold uppercase tracking-wider bg-white text-black rounded hover:bg-white/90 transition min-h-[36px]"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold uppercase tracking-wider bg-white text-black rounded hover:bg-white/90 transition min-h-[40px]"
               aria-label={`Buy ${book.title} on Amazon`}
             >
-              Buy <ExternalLink className="h-3 w-3" />
+              Buy <ExternalLink className="h-3.5 w-3.5" />
             </a>
-            <button
-              onClick={dismiss}
-              className="p-1.5 text-white/40 hover:text-white transition rounded min-h-[36px] min-w-[36px] flex items-center justify-center"
-              aria-label="Dismiss"
-            >
-              <X className="h-4 w-4" />
-            </button>
           </div>
         </div>
       </div>

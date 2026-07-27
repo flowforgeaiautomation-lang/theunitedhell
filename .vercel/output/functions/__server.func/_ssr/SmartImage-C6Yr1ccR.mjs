@@ -1,0 +1,86 @@
+import { o as __toESM } from "../_runtime.mjs";
+import { c as require_react, s as require_jsx_runtime } from "../_libs/react+tanstack__react-query.mjs";
+import { a as categoryLabel } from "./categories-CY0cJTXM.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/SmartImage-C6Yr1ccR.js
+var import_react = /* @__PURE__ */ __toESM(require_react());
+var import_jsx_runtime = require_jsx_runtime();
+function fallbackCoverUrl(article) {
+	const label = categoryLabel(article.category);
+	const title = article.title.slice(0, 90);
+	const accent = [
+		"#8A2D2D",
+		"#25635A",
+		"#6E5B18",
+		"#2F5E88",
+		"#5B4E7A"
+	][Array.from(`${article.slug}-${article.category}`).reduce((sum, char) => sum + char.charCodeAt(0), 0) % 5];
+	const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" role="img" aria-label="${escapeSvg(title)}"><rect width="1600" height="1000" fill="#f6f1e7"/><rect x="72" y="72" width="1456" height="856" fill="#fbf8f0" stroke="#1f1b16" stroke-width="6"/><rect x="118" y="126" width="1364" height="72" fill="${accent}"/><text x="128" y="172" font-family="Georgia, 'Times New Roman', serif" font-size="34" fill="#fbf8f0" letter-spacing="4">${escapeSvg(label.toUpperCase())}</text><line x1="128" y1="292" x2="1472" y2="292" stroke="#1f1b16" stroke-width="4"/><line x1="128" y1="706" x2="1472" y2="706" stroke="#1f1b16" stroke-width="4"/><text x="128" y="402" font-family="Georgia, 'Times New Roman', serif" font-size="76" fill="#1f1b16">${escapeSvg(title.slice(0, 32))}</text><text x="128" y="500" font-family="Georgia, 'Times New Roman', serif" font-size="76" fill="#1f1b16">${escapeSvg(title.slice(32, 64))}</text><text x="128" y="598" font-family="Georgia, 'Times New Roman', serif" font-size="76" fill="#1f1b16">${escapeSvg(title.slice(64, 90))}</text><text x="128" y="812" font-family="Arial, sans-serif" font-size="28" fill="#4f4a42" letter-spacing="5">THE UNITED HELL</text></svg>`;
+	return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
+function escapeSvg(value) {
+	return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+/**
+* Image with eager loading, no layout shift, and instant display.
+* Images load immediately with high priority to avoid blank/vague states during scroll.
+*/
+function SmartImage({ src, alt, width, height, loading = "eager", className = "", placeholder, aspectClass = "" }) {
+	const [loaded, setLoaded] = (0, import_react.useState)(false);
+	const [error, setError] = (0, import_react.useState)(false);
+	(0, import_react.useEffect)(() => {
+		setLoaded(false);
+		setError(false);
+	}, [src]);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: `relative overflow-hidden bg-foreground/[0.06] ${aspectClass} ${className}`,
+		style: width && height ? { aspectRatio: `${width} / ${height}` } : void 0,
+		children: [
+			placeholder && !loaded && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
+				src: placeholder,
+				alt: "",
+				"aria-hidden": true,
+				className: "absolute inset-0 h-full w-full object-cover scale-110 blur-xl opacity-60"
+			}),
+			!error && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
+				src,
+				alt,
+				width,
+				height,
+				loading: "eager",
+				decoding: "async",
+				fetchPriority: "high",
+				onLoad: () => setLoaded(true),
+				onError: () => setError(true),
+				className: `absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"}`
+			}),
+			error && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "absolute inset-0 flex items-center justify-center bg-foreground/[0.04]",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", {
+					className: "h-8 w-8 text-foreground/20",
+					viewBox: "0 0 24 24",
+					fill: "none",
+					stroke: "currentColor",
+					strokeWidth: "1.5",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("rect", {
+							x: "3",
+							y: "3",
+							width: "18",
+							height: "18",
+							rx: "2"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "m21 15-5-5L5 21" }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("circle", {
+							cx: "9",
+							cy: "9",
+							r: "1.5",
+							fill: "currentColor"
+						})
+					]
+				})
+			})
+		]
+	});
+}
+//#endregion
+export { fallbackCoverUrl as n, SmartImage as t };
