@@ -21,7 +21,7 @@ import { t as Route$22 } from "./editions._slug-BDZWxPJ2.mjs";
 import { t as statsQ } from "./map-IDz5fq0f.mjs";
 import { t as Route$23 } from "./search-C-qVPo2D.mjs";
 import { t as homeQuery } from "./routes-CXV355NV.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/router-CqLiivt9.js
+//#region node_modules/.nitro/vite/services/ssr/assets/router-BJUK5a1k.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var styles_default = "/assets/styles-Yl-0LhfE.css";
@@ -891,6 +891,8 @@ function applyReadingPrefs(prefs) {
 	root.style.setProperty("--article-indent", prefs.indentFirstParagraph ? "1.5em" : "0");
 	ALL_THEME_CLASSES.forEach((c) => root.classList.remove(c));
 	root.classList.add(THEME_CLASSES[prefs.theme]);
+	const isDark = prefs.theme === "dark" || prefs.theme === "midnight" || prefs.theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches;
+	root.classList.toggle("dark", isDark);
 	ALL_A11Y_CLASSES.forEach((c) => root.classList.remove(c));
 	if (prefs.highContrast) root.classList.add("tuh-high-contrast");
 	if (prefs.dyslexiaFont) root.classList.add("tuh-dyslexia-font");
@@ -1851,7 +1853,7 @@ var Route$20 = createRootRouteWithContext()({
 function RootShell({ children }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("html", {
 		lang: "en",
-		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("head", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(HeadContent, {}) }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("body", { children: [children, /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Scripts, {})] })]
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("head", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(HeadContent, {}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("script", { dangerouslySetInnerHTML: { __html: `(function(){try{var k="tuh-reading-prefs";var raw=localStorage.getItem(k);var t="system";if(raw){var p=JSON.parse(raw);if(p&&p.theme)t=p.theme;}var d=t==="dark"||t==="midnight"||(t==="system"&&window.matchMedia("(prefers-color-scheme: dark)").matches);var cls=["tuh-theme-light","tuh-theme-dark","tuh-theme-system","tuh-theme-sepia","tuh-theme-paper","tuh-theme-midnight","tuh-theme-high-contrast"];var m={"light":"tuh-theme-light","dark":"tuh-theme-dark","system":"tuh-theme-system","sepia":"tuh-theme-sepia","paper":"tuh-theme-paper","midnight":"tuh-theme-midnight","high-contrast":"tuh-theme-high-contrast"};var el=document.documentElement;cls.forEach(function(c){el.classList.remove(c);});if(m[t])el.classList.add(m[t]);el.classList.toggle("dark",d);}catch(e){}})();` } })] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("body", { children: [children, /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Scripts, {})] })]
 	});
 }
 function EzoicScriptLoader() {

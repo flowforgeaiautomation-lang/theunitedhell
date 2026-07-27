@@ -136,10 +136,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 });
 
 function RootShell({ children }: { children: ReactNode }) {
+  const themeBootstrap = `(function(){try{var k="tuh-reading-prefs";var raw=localStorage.getItem(k);var t="system";if(raw){var p=JSON.parse(raw);if(p&&p.theme)t=p.theme;}var d=t==="dark"||t==="midnight"||(t==="system"&&window.matchMedia("(prefers-color-scheme: dark)").matches);var cls=["tuh-theme-light","tuh-theme-dark","tuh-theme-system","tuh-theme-sepia","tuh-theme-paper","tuh-theme-midnight","tuh-theme-high-contrast"];var m={"light":"tuh-theme-light","dark":"tuh-theme-dark","system":"tuh-theme-system","sepia":"tuh-theme-sepia","paper":"tuh-theme-paper","midnight":"tuh-theme-midnight","high-contrast":"tuh-theme-high-contrast"};var el=document.documentElement;cls.forEach(function(c){el.classList.remove(c);});if(m[t])el.classList.add(m[t]);el.classList.toggle("dark",d);}catch(e){}})();`;
   return (
     <html lang="en">
       <head>
         <HeadContent />
+        <script dangerouslySetInnerHTML={{ __html: themeBootstrap }} />
       </head>
       <body>
         {children}

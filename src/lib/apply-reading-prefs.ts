@@ -57,6 +57,11 @@ export function applyReadingPrefs(prefs: ReadingPreferences) {
   ALL_THEME_CLASSES.forEach((c) => root.classList.remove(c));
   root.classList.add(THEME_CLASSES[prefs.theme]);
 
+  // Sync .dark class so Tailwind's dark: variant and the full .dark variable set apply
+  const isDark = prefs.theme === "dark" || prefs.theme === "midnight" ||
+    (prefs.theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  root.classList.toggle("dark", isDark);
+
   // Accessibility classes
   ALL_A11Y_CLASSES.forEach((c) => root.classList.remove(c));
   if (prefs.highContrast) root.classList.add("tuh-high-contrast");

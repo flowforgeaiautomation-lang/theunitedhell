@@ -1,28 +1,22 @@
-import { n as getResponse, r as requestHandler } from "./request-response-BEPp1C2k.js";
-import { t as getServerFnById } from "./__23tanstack-start-server-fn-resolver-BzcG-_IX.js";
-import { a as flattenMiddlewares, c as createNullProtoObject, d as TSS_CONTENT_TYPE_FRAMED_VERSIONED, f as TSS_FORMDATA_CONTEXT, h as X_TSS_SERIALIZED, l as safeObjectMerge, m as X_TSS_RAW_RESPONSE, n as getDefaultSerovalPlugins, o as getStartContext, p as TSS_SERVER_FUNCTION, r as createCsrfMiddleware, s as runWithStartContext, t as mergeHeaders, u as FrameType } from "./esm-Dova13aH.js";
-import "react";
-import { RouterProvider } from "@tanstack/react-router";
-import { jsx } from "react/jsx-runtime";
-import { defineHandlerCallback, renderRouterToStream } from "@tanstack/react-router/ssr/server";
-import { createRawStreamRPCPlugin, createSerializationAdapter, executeRewriteInput, getScriptPreloadAttrs, getStylesheetHref, invariant, isNotFound, isRedirect as isRedirect$1, isResolvedRedirect, resolveManifestAssetLink, resolveManifestCssLink, rootRouteId } from "@tanstack/router-core";
-import { fromJSON, toCrossJSONAsync, toCrossJSONStream } from "seroval";
-import { createMemoryHistory } from "@tanstack/history";
-import { attachRouterServerSsrUtils, getNormalizedURL, getOrigin, isSsrResponse, normalizeSsrResponse, replaceSsrResponse, stripSsrResponseBody } from "@tanstack/router-core/ssr/server";
-//#region node_modules/@tanstack/react-start-server/dist/esm/StartServer.js
+import "../_runtime.mjs";
+import { c as require_react, s as require_jsx_runtime } from "../_libs/react+tanstack__react-query.mjs";
+import { A as isResolvedRedirect, D as resolveManifestCssLink, E as resolveManifestAssetLink, L as invariant, N as rootRouteId, O as executeRewriteInput, P as isNotFound, T as getStylesheetHref, a as replaceSsrResponse, i as normalizeSsrResponse, k as isRedirect, n as defineHandlerCallback, o as stripSsrResponseBody, r as isSsrResponse, t as renderRouterToStream, u as RouterProvider, w as getScriptPreloadAttrs } from "../_libs/@tanstack/react-router+[...].mjs";
+import { n as createMemoryHistory } from "../_libs/tanstack__history.mjs";
+import { d as su, i as mergeHeaders, l as Pu, n as getNormalizedURL, o as createRawStreamRPCPlugin, r as getOrigin, s as createSerializationAdapter, t as attachRouterServerSsrUtils, u as iu } from "../_libs/@tanstack/router-core+[...].mjs";
+import { a as X_TSS_RAW_RESPONSE, c as createNullProtoObject, d as getDefaultSerovalPlugins, f as getStartContext, i as TSS_SERVER_FUNCTION, m as safeObjectMerge, n as TSS_CONTENT_TYPE_FRAMED_VERSIONED, o as X_TSS_SERIALIZED, p as runWithStartContext, r as TSS_FORMDATA_CONTEXT, s as createCsrfMiddleware, t as FrameType, u as flattenMiddlewares } from "./esm-Dova13aH.mjs";
+import { n as getResponse, r as requestHandler } from "./request-response-BEPp1C2k.mjs";
+import { t as getServerFnById } from "../__23tanstack-start-server-fn-resolver-BzcG-_IX.mjs";
+require_react();
+var import_jsx_runtime = require_jsx_runtime();
 function StartServer(props) {
-	return /* @__PURE__ */ jsx(RouterProvider, { router: props.router });
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(RouterProvider, { router: props.router });
 }
-//#endregion
-//#region node_modules/@tanstack/react-start-server/dist/esm/defaultStreamHandler.js
 var defaultStreamHandler = defineHandlerCallback(({ request, router, responseHeaders }) => renderRouterToStream({
 	request,
 	router,
 	responseHeaders,
-	children: /* @__PURE__ */ jsx(StartServer, { router })
+	children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(StartServer, { router })
 }));
-//#endregion
-//#region node_modules/@tanstack/start-server-core/dist/esm/router-manifest.js
 /**
 * @description Returns the router manifest data that should be sent to the client.
 * This includes only the assets and preloads for the current route and any
@@ -33,7 +27,7 @@ var defaultStreamHandler = defineHandlerCallback(({ request, router, responseHea
 * the dev styles URL for route-scoped CSS collection.
 */
 async function getStartManifest(matchedRoutes) {
-	const { tsrStartManifest } = await import("./_tanstack-start-manifest_v-D7ipnack.js");
+	const { tsrStartManifest } = await import("../_tanstack-start-manifest_v-CH_SfTaT.mjs");
 	const startManifest = tsrStartManifest();
 	let routes = startManifest.routes;
 	routes[rootRouteId];
@@ -52,8 +46,6 @@ async function getStartManifest(matchedRoutes) {
 		routes: manifestRoutes
 	};
 }
-//#endregion
-//#region node_modules/@tanstack/start-server-core/dist/esm/frame-protocol.js
 /**
 * Binary frame protocol for multiplexing JSON and raw streams over HTTP.
 *
@@ -214,8 +206,6 @@ function createMultiplexedStream(jsonStream, rawStreams, lateStreamSource) {
 		}
 	});
 }
-//#endregion
-//#region node_modules/@tanstack/start-server-core/dist/esm/server-functions-handler.js
 var serovalPlugins = void 0;
 var FORM_DATA_CONTENT_TYPES = ["multipart/form-data", "application/x-www-form-urlencoded"];
 var MAX_PAYLOAD_SIZE = 1e6;
@@ -231,7 +221,7 @@ var handleServerAction = async ({ request, context, serverFnId }) => {
 	if (!serovalPlugins) serovalPlugins = getDefaultSerovalPlugins();
 	const contentType = request.headers.get("Content-Type");
 	function parsePayload(payload) {
-		return fromJSON(payload, { plugins: serovalPlugins });
+		return Pu(payload, { plugins: serovalPlugins });
 	}
 	return await (async () => {
 		try {
@@ -247,7 +237,7 @@ var handleServerAction = async ({ request, context, serverFnId }) => {
 						method: methodUpper
 					};
 					if (typeof serializedContext === "string") try {
-						const deserializedContext = fromJSON(JSON.parse(serializedContext), { plugins: serovalPlugins });
+						const deserializedContext = Pu(JSON.parse(serializedContext), { plugins: serovalPlugins });
 						if (typeof deserializedContext === "object" && deserializedContext) params.context = safeObjectMerge(deserializedContext, context);
 					} catch (e) {}
 					return await action(params);
@@ -271,7 +261,7 @@ var handleServerAction = async ({ request, context, serverFnId }) => {
 			if (isNotFound(res)) res = isNotFoundResponse(res);
 			if (!isServerFn) return unwrapped;
 			if (unwrapped instanceof Response) {
-				if (isRedirect$1(unwrapped)) return unwrapped;
+				if (isRedirect(unwrapped)) return unwrapped;
 				unwrapped.headers.set(X_TSS_RAW_RESPONSE, "true");
 				return unwrapped;
 			}
@@ -314,7 +304,7 @@ var handleServerAction = async ({ request, context, serverFnId }) => {
 							throw error;
 						}
 					};
-					toCrossJSONStream(res, {
+					iu(res, {
 						refs: /* @__PURE__ */ new Map(),
 						plugins,
 						onParse(value) {
@@ -390,7 +380,7 @@ var handleServerAction = async ({ request, context, serverFnId }) => {
 			console.info();
 			console.error(error);
 			console.info();
-			const serializedError = JSON.stringify(await Promise.resolve(toCrossJSONAsync(error, {
+			const serializedError = JSON.stringify(await Promise.resolve(su(error, {
 				refs: /* @__PURE__ */ new Map(),
 				plugins: serovalPlugins
 			})));
@@ -416,8 +406,6 @@ function isNotFoundResponse(error) {
 		}
 	});
 }
-//#endregion
-//#region node_modules/@tanstack/start-server-core/dist/esm/early-hints.js
 var LINK_PARAM_TOKEN_RE = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
 var PRELOAD_AS_VALUES = /* @__PURE__ */ new Set([
 	"fetch",
@@ -666,8 +654,6 @@ function createEarlyHintsCollector(opts) {
 		}
 	};
 }
-//#endregion
-//#region node_modules/@tanstack/start-server-core/dist/esm/transformAssetUrls.js
 function normalizeTransformAssetResult(result) {
 	if (typeof result === "string") return { href: result };
 	return result;
@@ -825,8 +811,6 @@ function buildManifest(source, opts) {
 		routes: { ...source.routes }
 	};
 }
-//#endregion
-//#region node_modules/@tanstack/start-server-core/dist/esm/inlineCss.js
 function getStaticHandlerInlineCssDefault(handlerInlineCss) {
 	if (typeof handlerInlineCss === "function") return;
 	return handlerInlineCss ?? true;
@@ -836,8 +820,6 @@ async function resolveInlineCssForRequest(opts) {
 	if (typeof opts.handlerInlineCss === "function") return await opts.handlerInlineCss({ request: opts.request });
 	return opts.handlerInlineCss ?? true;
 }
-//#endregion
-//#region node_modules/@tanstack/start-server-core/dist/esm/finalManifest.js
 function createCachedBaseManifestLoader(loadBaseManifest) {
 	let baseManifestPromise;
 	return () => {
@@ -957,11 +939,7 @@ function warmupFinalManifest(opts) {
 	if (opts.onError) warmupPromise.catch(opts.onError);
 	return warmupPromise;
 }
-//#endregion
-//#region node_modules/@tanstack/start-server-core/dist/esm/constants.js
 var HEADERS = { TSS_SHELL: "X-TSS_SHELL" };
-//#endregion
-//#region node_modules/@tanstack/start-server-core/dist/esm/serializer/ServerFunctionSerializationAdapter.js
 var ServerFunctionSerializationAdapter = createSerializationAdapter({
 	key: "$TSS/serverfn",
 	test: (v) => {
@@ -977,8 +955,6 @@ var ServerFunctionSerializationAdapter = createSerializationAdapter({
 		return fn;
 	}
 });
-//#endregion
-//#region node_modules/@tanstack/start-server-core/dist/esm/createStartHandler.js
 function getStartResponseHeaders(opts) {
 	return mergeHeaders({ "Content-Type": "text/html; charset=utf-8" }, ...opts.router.stores.matches.get().map((match) => {
 		return match.headers;
@@ -992,9 +968,9 @@ var getBaseManifest = getProdBaseManifest;
 var createEarlyHintsForRequest = createEarlyHintsCollector;
 async function loadEntries() {
 	const [routerEntry, startEntry, pluginAdapters] = await Promise.all([
-		import("./router-CqLiivt9.js"),
-		import("./start-pFjLjOtE.js"),
-		import("./empty-plugin-adapters-D9UWiqvJ.js")
+		import("./router-BJUK5a1k.mjs"),
+		import("./start-pFjLjOtE.mjs"),
+		import("./empty-plugin-adapters-D9UWiqvJ.mjs")
 	]);
 	return {
 		routerEntry,
@@ -1023,7 +999,7 @@ function throwIfMayNotDefer() {
 * Check if a value is a special response (Response or Redirect)
 */
 function isSpecialResponse(value) {
-	return value instanceof Response || isRedirect$1(value);
+	return value instanceof Response || isRedirect(value);
 }
 /**
 * Normalize middleware result to context shape
@@ -1301,7 +1277,7 @@ function createStartHandler(cbOrOptions) {
 }
 async function handleRedirectResponse(response, request, getRouter) {
 	const ssrResponse = normalizeSsrResponse(response);
-	if (!isRedirect$1(ssrResponse.response)) return ssrResponse;
+	if (!isRedirect(ssrResponse.response)) return ssrResponse;
 	if (isResolvedRedirect(ssrResponse.response)) {
 		if (request.headers.get("x-tsr-serverFn") === "true") return replaceSsrResponse(ssrResponse, Response.json({
 			...ssrResponse.response.options,
@@ -1369,8 +1345,6 @@ async function handleServerRoutes({ getRouter, request, url, executeRouter, cont
 	}
 	return normalizeSsrResponse(response);
 }
-//#endregion
-//#region node_modules/@tanstack/react-start/dist/default-entry/esm/server.js
 var fetch = createStartHandler(defaultStreamHandler);
 function createServerEntry(entry) {
 	return { async fetch(...args) {
