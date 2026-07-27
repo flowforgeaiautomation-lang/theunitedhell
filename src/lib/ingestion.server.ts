@@ -2320,15 +2320,9 @@ export async function backfillVideos(opts?: { limit?: number }): Promise<{
 }> {
   const supabase = adminClient();
   const limit = Math.min(Math.max(opts?.limit ?? 20, 1), 50);
-  const { data: rows } = await supabase
-    .from("articles")
-    .select("id, title, category, cover_image_url, cover_video_url")
-    .is("cover_video_url", null)
-    .eq("is_published", true)
-    .order("published_at", { ascending: false })
-    .limit(limit);
+  const { data: rpcData } = await supabase.rpc("get_articles_missing_video", { p_limit: limit });
 
-  const items = (rows ?? []) as Array<{
+  const items = (rpcData ?? []) as Array<{
     id: string;
     title: string;
     category: string | null;
@@ -2351,10 +2345,10 @@ export async function backfillVideos(opts?: { limit?: number }): Promise<{
       const query = subject || row.category || "news";
       const vid = await pexelsVideo(query);
       if (vid?.videoUrl) {
-        const { error } = await supabase
-          .from("articles")
-          .update({ cover_video_url: vid.videoUrl })
-          .eq("id", row.id);
+        const { error } = await supabase.rpc("update_cover_video_url", {
+          p_article_id: row.id,
+          p_video_url: vid.videoUrl,
+        });
         if (error) {
           failed++;
         } else {
@@ -2365,10 +2359,10 @@ export async function backfillVideos(opts?: { limit?: number }): Promise<{
         const catQuery = row.category || "news";
         const fallbackVid = await pexelsVideo(catQuery);
         if (fallbackVid?.videoUrl) {
-          const { error } = await supabase
-            .from("articles")
-            .update({ cover_video_url: fallbackVid.videoUrl })
-            .eq("id", row.id);
+          const { error } = await supabase.rpc("update_cover_video_url", {
+            p_article_id: row.id,
+            p_video_url: fallbackVid.videoUrl,
+          });
           if (error) {
             failed++;
           } else {
@@ -2384,12 +2378,9 @@ export async function backfillVideos(opts?: { limit?: number }): Promise<{
     }
   });
 
-  const { count } = await supabase
-    .from("articles")
-    .select("id", { count: "exact", head: true })
-    .is("cover_video_url", null)
-    .eq("is_published", true);
+  const { data: countData } = await supabase.rpc("count_articles_missing_video");
+  const count = (countData as number) ?? 0;
 
-  return { attempted: items.length, updated, failed, remaining: count ?? 0 };
+  return { attempted: items.length, updated, failed, remaining: count };
 }
 
