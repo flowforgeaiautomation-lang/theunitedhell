@@ -1,1 +1,0 @@
-import{qt as e}from"./index-BTMalyMa.js";var t=e({type:`function`});export{t};
