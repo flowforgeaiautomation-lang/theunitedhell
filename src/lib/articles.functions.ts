@@ -598,119 +598,102 @@ export const listArticles = createServerFn({ method: "GET" })
       }
     }
 
-    // Build direct PostgREST query — no RPC dependency, no schema cache issues
-    let query = supabase
-      .from("articles")
-      .select(summaryCols)
-      .eq("is_published", true);
+    // Use RPC function to bypass PostgREST schema cache issues with trending_score
+    const cursorVal = cursorDate || (cursorSortVal !== null ? String(cursorSortVal) : null);
 
-    // Category filter with related slugs
-    if (data.category) {
-      const related = relatedCategorySlugs(data.category);
-      if (related.length > 0) {
-        query = query.in("category", related);
-      } else {
-        query = query.eq("category", data.category);
-      }
-    }
-
-    // Country filter
-    if (data.country) {
-      query = query.eq("country_code", data.country);
-    }
-
-    // Today-only filter (with graceful fallback handled by frontend)
-    if (data.todayOnly) {
-      const todayStart = new Date();
-      todayStart.setUTCHours(0, 0, 0, 0);
-      query = query.gte("published_at", todayStart.toISOString());
-    }
-
-    // Cursor pagination — use lt() on the sort column, with id as tiebreaker
-    // For "recent": published_at DESC, id DESC
-    // For others: sort_col DESC, id DESC
-    const fetchLimit = data.limit + 1; // fetch one extra to detect hasMore
-
-    if (data.sort === "recent") {
-      if (cursorId && cursorDate) {
-        // Cursor: (published_at, id) — get rows strictly before this point
-        query = query
-          .or(`published_at.lt.${cursorDate},and(published_at.eq.${cursorDate},id.lt.${cursorId})`)
-          .order("published_at", { ascending: false })
-          .order("id", { ascending: false });
-      } else {
-        query = query
-          .order("published_at", { ascending: false })
-          .order("id", { ascending: false });
-      }
-    } else if (data.sort === "trending") {
-      if (cursorId && cursorSortVal !== null) {
-        query = query
-          .or(`trending_score.lt.${cursorSortVal},and(trending_score.eq.${cursorSortVal},id.lt.${cursorId})`)
-          .order("trending_score", { ascending: false })
-          .order("id", { ascending: false });
-      } else {
-        query = query
-          .order("trending_score", { ascending: false })
-          .order("id", { ascending: false });
-      }
-    } else if (data.sort === "most_read") {
-      if (cursorId && cursorSortVal !== null) {
-        query = query
-          .or(`view_count.lt.${cursorSortVal},and(view_count.eq.${cursorSortVal},id.lt.${cursorId})`)
-          .order("view_count", { ascending: false })
-          .order("id", { ascending: false });
-      } else {
-        query = query
-          .order("view_count", { ascending: false })
-          .order("id", { ascending: false });
-      }
-    } else if (data.sort === "most_saved") {
-      if (cursorId && cursorSortVal !== null) {
-        query = query
-          .or(`bookmark_count.lt.${cursorSortVal},and(bookmark_count.eq.${cursorSortVal},id.lt.${cursorId})`)
-          .order("bookmark_count", { ascending: false })
-          .order("id", { ascending: false });
-      } else {
-        query = query
-          .order("bookmark_count", { ascending: false })
-          .order("id", { ascending: false });
-      }
-    }
-
-    query = query.limit(fetchLimit);
-
-    const { data: rows, error } = await query;
-
-    if (error) throw new Error(error.message);
-
-    const allRows = ((rows ?? []) as ArticleSummary[]).map((r) => decodeSummary(r));
-    const hasMore = allRows.length > data.limit;
-    const pageRows = hasMore ? allRows.slice(0, data.limit) : allRows;
-
-    // Deduplicate by ID only — never drop articles with similar titles
-    const seenIds = new Set<string>();
-    const deduped = pageRows.filter((r) => {
-      if (seenIds.has(r.id)) return false;
-      seenIds.add(r.id);
-      return true;
+    const { data: rpcResult, error: rpcError } = await supabase.rpc("list_articles_sorted", {
+      p_sort: data.sort,
+      p_limit: data.limit,
+      p_cursor_id: cursorId || null,
+      p_cursor_val: cursorVal,
+      p_today_only: data.todayOnly || false,
     });
 
-    let nextCursor: string | undefined = undefined;
-    if (hasMore && deduped.length > 0) {
-      const last = deduped[deduped.length - 1];
-      if (data.sort === "recent") {
-        nextCursor = `${last.published_at}|${last.id}`;
-      } else if (data.sort === "trending") {
-        nextCursor = `${(last as any).trending_score ?? 0}|${last.id}`;
-      } else if (data.sort === "most_read") {
-        nextCursor = `${last.view_count}|${last.id}`;
-      } else if (data.sort === "most_saved") {
-        nextCursor = `${last.bookmark_count}|${last.id}`;
+    if (rpcError) {
+      // Fallback to direct PostgREST query if RPC fails
+      let query = supabase
+        .from("articles")
+        .select(summaryCols)
+        .eq("is_published", true);
+
+      if (data.category) {
+        const related = relatedCategorySlugs(data.category);
+        if (related.length > 0) {
+          query = query.in("category", related);
+        } else {
+          query = query.eq("category", data.category);
+        }
       }
+
+      if (data.country) {
+        query = query.eq("country_code", data.country);
+      }
+
+      if (data.todayOnly) {
+        const todayStart = new Date();
+        todayStart.setUTCHours(0, 0, 0, 0);
+        query = query.gte("published_at", todayStart.toISOString());
+      }
+
+      const fetchLimit = data.limit + 1;
+
+      if (data.sort === "recent") {
+        if (cursorId && cursorDate) {
+          query = query
+            .or(`published_at.lt.${cursorDate},and(published_at.eq.${cursorDate},id.lt.${cursorId})`)
+            .order("published_at", { ascending: false })
+            .order("id", { ascending: false });
+        } else {
+          query = query
+            .order("published_at", { ascending: false })
+            .order("id", { ascending: false });
+        }
+      } else if (data.sort === "trending") {
+        query = query
+          .order("published_at", { ascending: false })
+          .order("id", { ascending: false });
+      } else if (data.sort === "most_read") {
+        query = query
+          .order("view_count", { ascending: false })
+          .order("id", { ascending: false });
+      } else if (data.sort === "most_saved") {
+        query = query
+          .order("bookmark_count", { ascending: false })
+          .order("id", { ascending: false });
+      }
+
+      query = query.limit(fetchLimit);
+      const { data: rows, error } = await query;
+      if (error) throw new Error(error.message);
+
+      const allRows = ((rows ?? []) as ArticleSummary[]).map((r) => decodeSummary(r));
+      const hasMore = allRows.length > data.limit;
+      const pageRows = hasMore ? allRows.slice(0, data.limit) : allRows;
+      const seenIds = new Set<string>();
+      const deduped = pageRows.filter((r) => {
+        if (seenIds.has(r.id)) return false;
+        seenIds.add(r.id);
+        return true;
+      });
+
+      let nextCursor: string | undefined = undefined;
+      if (hasMore && deduped.length > 0) {
+        const last = deduped[deduped.length - 1];
+        if (data.sort === "recent") {
+          nextCursor = `${last.published_at}|${last.id}`;
+        } else if (data.sort === "most_read") {
+          nextCursor = `${last.view_count}|${last.id}`;
+        } else if (data.sort === "most_saved") {
+          nextCursor = `${last.bookmark_count}|${last.id}`;
+        }
+      }
+
+      return { items: deduped, nextCursor, hasMore };
     }
 
-    return { items: deduped, nextCursor, hasMore };
+    const result = rpcResult as { items: ArticleSummary[]; hasMore: boolean; nextCursor: string | null };
+    const items = (result.items || []).map((r) => decodeSummary(r));
+    return { items, nextCursor: result.nextCursor || undefined, hasMore: result.hasMore };
   });
 
 export const getFeatured = createServerFn({ method: "GET" }).handler(async () => {
