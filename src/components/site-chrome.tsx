@@ -5,6 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { PanchangDisplay } from "./PanchangDisplay";
 import { SubNav } from "./SubNav";
 import { LanguageSwitcher } from "./LanguageSwitcher";
+import { useReadingPrefs } from "@/hooks/use-reading-prefs";
+import { applyReadingPrefs } from "@/lib/apply-reading-prefs";
 
 // Translation handled by browser's built-in "Translate page" (three-dot menu).
 
@@ -36,7 +38,7 @@ const NAV = [
 ];
 
 export function SiteHeader() {
-  const [dark, setDark] = useState(false);
+  const { prefs, update } = useReadingPrefs();
   const [open, setOpen] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
   const [location, setLocation] = useState("WORLD");
@@ -44,12 +46,14 @@ export function SiteHeader() {
   const [isHidden, setIsHidden] = useState(false);
   const ticking = useRef(false);
 
+  const isDark = prefs.theme === "dark" || prefs.theme === "midnight" ||
+    (prefs.theme === "system" && typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+
   useEffect(() => {
-    const t = window.localStorage.getItem("tuh-theme");
-    if (t === "dark") {
-      document.documentElement.classList.add("dark");
-      setDark(true);
-    }
+    applyReadingPrefs(prefs);
+  }, [prefs]);
+
+  useEffect(() => {
     const loc = window.localStorage.getItem("tuh-country") || "WORLD";
     setLocation(loc);
   }, []);
@@ -95,10 +99,8 @@ export function SiteHeader() {
   }, [handleScroll]);
 
   function toggleTheme() {
-    const next = !dark;
-    setDark(next);
-    document.documentElement.classList.toggle("dark", next);
-    window.localStorage.setItem("tuh-theme", next ? "dark" : "light");
+    const nextTheme = isDark ? "light" : "dark";
+    update({ theme: nextTheme });
   }
 
   function updateLocation(next: string) {
@@ -171,7 +173,7 @@ export function SiteHeader() {
               aria-label="theme"
               className="hidden lg:inline-block p-2 hover:opacity-70"
             >
-              {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>
             <div className="hidden lg:block">
               <LanguageSwitcher compact />
@@ -250,7 +252,7 @@ export function SiteHeader() {
                   }}
                   className="flex items-center gap-3 py-1 hover:opacity-60 w-full text-left uppercase tracking-[0.18em]"
                 >
-                  {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />} Dark
+                  {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />} Dark
                 </button>
               </li>
               <li>

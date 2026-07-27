@@ -1,11 +1,33 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useSyncExternalStore } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   type ReadingPreferences,
   DEFAULT_READING_PREFS,
 } from "@/lib/reading-prefs";
+import { applyReadingPrefs } from "@/lib/apply-reading-prefs";
 
 const LS_KEY = "tuh-reading-prefs";
+
+// ── Module-level singleton store ─────────────────────────────────────────────
+// All components share one source of truth so theme toggles from the header
+// are immediately visible everywhere and never overwritten by a stale copy.
+
+let currentPrefs: ReadingPreferences = { ...DEFAULT_READING_PREFS };
+let currentSignedIn = false;
+let initialized = false;
+const listeners = new Set<() => void>();
+
+function emit() {
+  listeners.forEach((l) => l());
+}
+
+function setPrefsInternal(next: ReadingPreferences, applyNow = true) {
+  currentPrefs = next;
+  if (applyNow && typeof document !== "undefined") {
+    applyReadingPrefs(next);
+  }
+  emit();
+}
 
 function loadFromLS(): Partial<ReadingPreferences> {
   if (typeof window === "undefined") return {};
@@ -23,128 +45,143 @@ function saveToLS(prefs: ReadingPreferences) {
   } catch {}
 }
 
-/**
- * useReadingPrefs — single source of truth for reading preferences.
- * - Logged-out: localStorage only.
- * - Logged-in: Supabase reading_preferences table (synced across devices).
- * - On login: migrates any localStorage prefs into Supabase, then clears LS.
- */
-export function useReadingPrefs() {
-  const [prefs, setPrefs] = useState<ReadingPreferences>(DEFAULT_READING_PREFS);
-  const [loaded, setLoaded] = useState(false);
-  const [signedIn, setSignedIn] = useState(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+async function initStore() {
+  if (initialized) return;
+  initialized = true;
 
-  // Initial load
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (cancelled) return;
-      const isSignedIn = !!sessionData.session;
-      setSignedIn(isSignedIn);
+  const { data: sessionData } = await supabase.auth.getSession();
+  const isSignedIn = !!sessionData.session;
+  currentSignedIn = isSignedIn;
 
-      if (isSignedIn) {
-        // Try to load from Supabase
-        const { data, error } = await supabase
+  if (isSignedIn) {
+    const { data, error } = await supabase
+      .from("reading_preferences")
+      .select("prefs")
+      .maybeSingle();
+
+    if (data?.prefs && !error) {
+      setPrefsInternal({ ...DEFAULT_READING_PREFS, ...(data.prefs as Partial<ReadingPreferences>) });
+    } else {
+      const ls = loadFromLS();
+      if (Object.keys(ls).length > 0) {
+        const merged = { ...DEFAULT_READING_PREFS, ...ls };
+        setPrefsInternal(merged);
+        await supabase.from("reading_preferences").upsert({
+          user_id: sessionData.session!.user.id,
+          prefs: merged,
+        });
+        window.localStorage.removeItem(LS_KEY);
+      } else {
+        setPrefsInternal({ ...DEFAULT_READING_PREFS });
+      }
+    }
+  } else {
+    const ls = loadFromLS();
+    setPrefsInternal({ ...DEFAULT_READING_PREFS, ...ls });
+  }
+
+  // Listen for auth changes
+  supabase.auth.onAuthStateChange((event, session) => {
+    if (event === "SIGNED_IN" && session) {
+      currentSignedIn = true;
+      (async () => {
+        const ls = loadFromLS();
+        const { data } = await supabase
           .from("reading_preferences")
           .select("prefs")
           .maybeSingle();
-
-        if (!cancelled && data?.prefs && !error) {
-          const merged = { ...DEFAULT_READING_PREFS, ...(data.prefs as Partial<ReadingPreferences>) };
-          setPrefs(merged);
-        } else if (!cancelled) {
-          // Migrate from localStorage if present
-          const ls = loadFromLS();
-          if (Object.keys(ls).length > 0) {
-            const merged = { ...DEFAULT_READING_PREFS, ...ls };
-            setPrefs(merged);
-            await supabase.from("reading_preferences").upsert({
-              user_id: sessionData.session!.user.id,
-              prefs: merged,
-            });
-            window.localStorage.removeItem(LS_KEY);
-          }
-        }
-      } else {
-        // Not signed in — load from localStorage
-        const ls = loadFromLS();
-        if (!cancelled) {
-          setPrefs({ ...DEFAULT_READING_PREFS, ...ls });
-        }
-      }
-      if (!cancelled) setLoaded(true);
-    })();
-
-    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      (async () => {
-        if (event === "SIGNED_IN" && session) {
-          setSignedIn(true);
-          const ls = loadFromLS();
-          const { data } = await supabase
-            .from("reading_preferences")
-            .select("prefs")
-            .maybeSingle();
-          if (data?.prefs) {
-            const merged = { ...DEFAULT_READING_PREFS, ...(data.prefs as Partial<ReadingPreferences>), ...ls };
-            setPrefs(merged);
-            await supabase.from("reading_preferences").upsert({
-              user_id: session.user.id,
-              prefs: merged,
-            });
-            window.localStorage.removeItem(LS_KEY);
-          } else if (Object.keys(ls).length > 0) {
-            const merged = { ...DEFAULT_READING_PREFS, ...ls };
-            setPrefs(merged);
-            await supabase.from("reading_preferences").upsert({
-              user_id: session.user.id,
-              prefs: merged,
-            });
-            window.localStorage.removeItem(LS_KEY);
-          }
-        } else if (event === "SIGNED_OUT") {
-          setSignedIn(false);
-          setPrefs({ ...DEFAULT_READING_PREFS, ...loadFromLS() });
+        if (data?.prefs) {
+          const merged = { ...DEFAULT_READING_PREFS, ...(data.prefs as Partial<ReadingPreferences>), ...ls };
+          setPrefsInternal(merged);
+          await supabase.from("reading_preferences").upsert({
+            user_id: session.user.id,
+            prefs: merged,
+          });
+          window.localStorage.removeItem(LS_KEY);
+        } else if (Object.keys(ls).length > 0) {
+          const merged = { ...DEFAULT_READING_PREFS, ...ls };
+          setPrefsInternal(merged);
+          await supabase.from("reading_preferences").upsert({
+            user_id: session.user.id,
+            prefs: merged,
+          });
+          window.localStorage.removeItem(LS_KEY);
         }
       })();
-    });
+    } else if (event === "SIGNED_OUT") {
+      currentSignedIn = false;
+      setPrefsInternal({ ...DEFAULT_READING_PREFS, ...loadFromLS() });
+    }
+  });
+}
 
-    return () => {
-      cancelled = true;
-      sub.subscription.unsubscribe();
-    };
+// Start init immediately (idempotent)
+if (typeof window !== "undefined") {
+  initStore();
+
+  // Cross-tab sync: when another tab changes the prefs in localStorage, update our store
+  window.addEventListener("storage", (e) => {
+    if (e.key === LS_KEY && e.newValue) {
+      try {
+        const parsed = JSON.parse(e.newValue);
+        setPrefsInternal({ ...DEFAULT_READING_PREFS, ...parsed });
+      } catch {}
+    }
+  });
+
+  // System theme change listener — when OS switches between light/dark,
+  // re-apply prefs so "system" theme picks up the new mode
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+    if (currentPrefs.theme === "system") {
+      setPrefsInternal(currentPrefs);
+    }
+  });
+}
+
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+function getSnapshot() {
+  return currentPrefs;
+}
+
+function getServerSnapshot() {
+  return DEFAULT_READING_PREFS;
+}
+
+/**
+ * useReadingPrefs — single source of truth for reading preferences.
+ * Uses a module-level singleton so all components share the same state.
+ */
+export function useReadingPrefs() {
+  const prefs = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const update = useCallback((patch: Partial<ReadingPreferences>) => {
+    const next = { ...currentPrefs, ...patch };
+    setPrefsInternal(next);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      if (currentSignedIn) {
+        const { data: s } = await supabase.auth.getSession();
+        if (s.session) {
+          await supabase.from("reading_preferences").upsert({
+            user_id: s.session.user.id,
+            prefs: next,
+            updated_at: new Date().toISOString(),
+          });
+        }
+      } else {
+        saveToLS(next);
+      }
+    }, 300);
   }, []);
 
-  // Persist on change (debounced)
-  const update = useCallback(
-    (patch: Partial<ReadingPreferences>) => {
-      setPrefs((prev) => {
-        const next = { ...prev, ...patch };
-        if (debounceRef.current) clearTimeout(debounceRef.current);
-        debounceRef.current = setTimeout(async () => {
-          if (signedIn) {
-            const { data: s } = await supabase.auth.getSession();
-            if (s.session) {
-              await supabase.from("reading_preferences").upsert({
-                user_id: s.session.user.id,
-                prefs: next,
-                updated_at: new Date().toISOString(),
-              });
-            }
-          } else {
-            saveToLS(next);
-          }
-        }, 300);
-        return next;
-      });
-    },
-    [signedIn]
-  );
-
   const reset = useCallback(() => {
-    setPrefs(DEFAULT_READING_PREFS);
-    if (signedIn) {
+    setPrefsInternal({ ...DEFAULT_READING_PREFS });
+    if (currentSignedIn) {
       (async () => {
         const { data: s } = await supabase.auth.getSession();
         if (s.session) {
@@ -158,27 +195,26 @@ export function useReadingPrefs() {
     } else {
       window.localStorage.removeItem(LS_KEY);
     }
-  }, [signedIn]);
+  }, []);
 
   const exportPrefs = useCallback(() => {
-    const blob = new Blob([JSON.stringify(prefs, null, 2)], { type: "application/json" });
+    const blob = new Blob([JSON.stringify(currentPrefs, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
     a.download = "tuh-reading-prefs.json";
     a.click();
     URL.revokeObjectURL(url);
-  }, [prefs]);
+  }, []);
 
   const importPrefs = useCallback((json: string) => {
     try {
       const parsed = JSON.parse(json);
-      const merged = { ...DEFAULT_READING_PREFS, ...parsed };
-      update(merged);
+      update({ ...DEFAULT_READING_PREFS, ...parsed });
     } catch {
       throw new Error("Invalid preferences file");
     }
   }, [update]);
 
-  return { prefs, update, reset, exportPrefs, importPrefs, loaded, signedIn };
+  return { prefs, update, reset, exportPrefs, importPrefs, loaded: initialized, signedIn: currentSignedIn };
 }
