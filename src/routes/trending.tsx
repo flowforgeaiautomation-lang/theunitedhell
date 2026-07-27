@@ -37,7 +37,7 @@ export const Route = createFileRoute("/trending")({
     context.queryClient.ensureQueryData(
       queryOptions({
         queryKey: ["trending", "trending"],
-        queryFn: async () => (await listArticles({ data: { sort: "trending", limit: 36 } })).items,
+        queryFn: async () => (await listArticles({ data: { sort: "trending", limit: 60 } })).items,
       }),
     ),
   component: TrendingPage,
