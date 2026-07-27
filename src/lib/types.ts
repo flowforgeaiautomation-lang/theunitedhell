@@ -89,6 +89,7 @@ export type ArticleSummary = {
   category: string;
   subcategory: string | null;
   cover_image_url: string | null;
+  cover_video_url: string | null;
   read_time_minutes: number;
   source_count: number;
   country_code: string | null;

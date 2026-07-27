@@ -1,8 +1,9 @@
 import { Link } from "@tanstack/react-router";
-import type { ArticleSummary } from "@/lib/types";
+import type { ArticleSummary } from "@lib/types";
 import { categoryLabel } from "@/lib/categories";
 import { fallbackCoverUrl } from "@/lib/article-images";
 import { SmartImage } from "@/components/SmartImage";
+import { PlayCircle } from "lucide-react";
 
 export function ArticleCard({
   article,
@@ -45,6 +46,11 @@ function HeroCard({ article }: { article: ArticleSummary }) {
             aspectClass="aspect-[16/10] w-full"
             className="rounded-sm"
           />
+          {article.cover_video_url && (
+            <div className="absolute bottom-3 right-3 z-10 flex items-center gap-1 rounded-full bg-background/80 backdrop-blur-sm px-2.5 py-1 text-xs font-medium text-foreground/80">
+              <PlayCircle className="h-4 w-4" /> Video
+            </div>
+          )}
         </div>
         <div className="md:col-span-5 flex flex-col justify-center">
           <Meta article={article} />
@@ -77,6 +83,11 @@ function DefaultCard({ article }: { article: ArticleSummary }) {
         aspectClass="w-full"
         className="rounded-sm"
       />
+      {article.cover_video_url && (
+        <div className="absolute bottom-3 right-3 z-10 flex items-center gap-1 rounded-full bg-background/80 backdrop-blur-sm px-2.5 py-1 text-xs font-medium text-foreground/80">
+          <PlayCircle className="h-4 w-4" /> Video
+        </div>
+      )}
       <div className="mt-4 flex flex-col gap-3">
         <Meta article={article} />
         <h3 className="display-3 group-hover:underline decoration-1 underline-offset-4">
@@ -107,6 +118,11 @@ function WideCard({ article }: { article: ArticleSummary }) {
           aspectClass="w-full"
           className="rounded-sm"
         />
+        {article.cover_video_url && (
+          <div className="absolute bottom-3 right-3 z-10 flex items-center gap-1 rounded-full bg-background/80 backdrop-blur-sm px-2.5 py-1 text-xs font-medium text-foreground/80">
+            <PlayCircle className="h-4 w-4" /> Video
+          </div>
+        )}
       </div>
       <div className="md:col-span-7 flex flex-col justify-center">
         <Meta article={article} />

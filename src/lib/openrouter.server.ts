@@ -349,3 +349,31 @@ export async function pexelsImage(query: string, options?: { excludeUrls?: Set<s
 export function getCategoryFallbackImage(category: string): string {
   return CATEGORY_FALLBACK_IMAGES[category?.toLowerCase()] || CATEGORY_FALLBACK_IMAGES.world;
 }
+
+export async function pexelsVideo(query: string): Promise<{ videoUrl: string; posterUrl: string } | null> {
+  const pk = process.env.PEXELS_API_KEY;
+  if (!pk) return null;
+  try {
+    const page = 1 + Math.floor(Math.random() * 3);
+    const r = await fetch(
+      `https://api.pexels.com/videos/search?per_page=15&page=${page}&query=${encodeURIComponent(query)}`,
+      { headers: { Authorization: pk } },
+    );
+    if (!r.ok) return null;
+    const d = await r.json();
+    const videos = (d?.videos ?? []).filter((v: any) => {
+      const files = v?.video_files ?? [];
+      return files.some((f: any) => f?.file_type === "video/mp4" && f?.width >= 640);
+    });
+    if (!videos.length) return null;
+    const pick = videos[Math.floor(Math.random() * Math.min(videos.length, 5))];
+    const mp4 = (pick?.video_files ?? [])
+      .filter((f: any) => f?.file_type === "video/mp4")
+      .sort((a: any, b: any) => (b?.width ?? 0) - (a?.width ?? 0))[0];
+    if (!mp4?.link) return null;
+    const poster = pick?.image ?? "";
+    return { videoUrl: mp4.link, posterUrl: poster };
+  } catch {
+    return null;
+  }
+}

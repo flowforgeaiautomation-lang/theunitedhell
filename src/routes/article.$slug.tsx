@@ -19,6 +19,7 @@ import { ArticleAudioPlayer } from "@/components/ArticleAudioPlayer";
 import { useReadingPrefs } from "@/hooks/use-reading-prefs";
 import { useLiveTranslation } from "@/hooks/use-live-translation";
 import { ImageCarousel } from "@/components/ImageCarousel";
+import { MediaCarousel, type MediaItem } from "@/components/MediaCarousel";
 import { fallbackCoverUrl } from "@/lib/article-images";
 import { WordSearch } from "@/components/word-search";
 import { KnowledgeCheck } from "@/components/KnowledgeCheck";
@@ -177,7 +178,10 @@ function ArticlePage() {
   if (!article) return null;
   const story = article.story ?? {};
   const cover = article.cover_image_url || fallbackCoverUrl(article);
-  const articleImages = [cover].filter(Boolean);
+  const articleMedia: MediaItem[] = [
+    ...(article.cover_video_url ? [{ type: "video" as const, src: article.cover_video_url, poster: cover, alt: article.title }] : []),
+    { type: "image" as const, src: cover, alt: article.title },
+  ];
   const related = relatedQuery.data ?? [];
 
   const tags = (article as any).tags || (story as any).tags || [];
@@ -219,7 +223,7 @@ function ArticlePage() {
         transition={{ duration: 0.6, ease: [0.2, 0.7, 0.2, 1] }}
         className="container-edit mt-10"
       >
-        <ImageCarousel images={articleImages} alt={article.title} priority />
+        <MediaCarousel media={articleMedia} alt={article.title} priority />
       </motion.div>
 
       {/* Story Mode */}

@@ -4,7 +4,7 @@
 // Concurrency parallelised so manual "Curate More" returns fast.
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
-import { orJson, pexelsImage, getCategoryFallbackImage } from "./openrouter.server";
+import { orJson, pexelsImage, getCategoryFallbackImage, pexelsVideo } from "./openrouter.server";
 import { CATEGORIES } from "./categories";
 import { lookupWords } from "./dictionary.server";
 import type { VocabEntry } from "./types";
@@ -2059,6 +2059,20 @@ export async function runIngestion(opts?: { maxItems?: number; priorityCategory?
     batchUrls.add(urlKey);
     batchHashes.add(contentHash);
     if (cover) batchImages.add(cover);
+    // Fetch a relevant video for this article
+    let coverVideoUrl: string | null = null;
+    try {
+      const videoSubject = (p.title || raw.title)
+        .replace(/[^A-Za-z0-9\s]/g, " ")
+        .split(/\s+/)
+        .filter((w) => w.length >= 4 && !/^(the|and|for|from|with|after|about|into|amid|says|will|been|have|this|that|their|them)$/i.test(w))
+        .slice(0, 5)
+        .join(" ");
+      if (videoSubject) {
+        const vid = await pexelsVideo(videoSubject);
+        if (vid) coverVideoUrl = vid.videoUrl;
+      }
+    } catch {}
     rows.push({
       slug: `${slugify(p.title)}-${Math.random().toString(36).slice(2, 6)}`,
       title: p.title,
@@ -2066,6 +2080,7 @@ export async function runIngestion(opts?: { maxItems?: number; priorityCategory?
       category: p.category,
       subcategory: p.subcategory || null,
       cover_image_url: cover,
+      cover_video_url: coverVideoUrl,
       read_time_minutes: 4,
       source_count: 1,
       sources: null as unknown as Database["public"]["Tables"]["articles"]["Insert"]["sources"],
@@ -2256,6 +2271,12 @@ export async function reprocessBatch(opts?: { limit?: number }): Promise<{
           || (await pexelsImage(`${p.category || row.category || "news"} ${subject}`.trim()))
           || getCategoryFallbackImage(p.category || row.category || "world");
       }
+      // Fetch a relevant video for this article
+      let coverVideoUrl: string | null = null;
+      try {
+        const vid = await pexelsVideo(subject);
+        if (vid) coverVideoUrl = vid.videoUrl;
+      } catch {}
       const { error } = await supabase
         .from("articles")
         .update({
@@ -2264,6 +2285,7 @@ export async function reprocessBatch(opts?: { limit?: number }): Promise<{
           category: p.category || row.category,
           subcategory: p.subcategory || null,
           cover_image_url: cover,
+          cover_video_url: coverVideoUrl,
           read_time_minutes: 4,
           story: ({ ...(p.story || {}), sources: undefined } as unknown) as Database["public"]["Tables"]["articles"]["Update"]["story"],
           country_code: p.country_code || null,
