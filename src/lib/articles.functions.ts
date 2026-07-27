@@ -610,11 +610,13 @@ export const listArticles = createServerFn({ method: "GET" })
     });
 
     if (rpcError) {
-      const { data: fbData, error: fbError } = await supabase.rpc("get_articles_by_category", {
+      // Fallback: use list_articles_cursor (old function PostgREST knows)
+      const { data: fbData, error: fbError } = await supabase.rpc("list_articles_cursor", {
+        p_limit: data.limit,
         p_category: data.category ?? null,
         p_country: data.country ?? null,
-        p_limit: data.limit,
         p_today_only: data.todayOnly ?? false,
+        p_sort: data.sort,
       });
       if (fbError) throw new Error(fbError.message);
       const fbRows = ((fbData ?? []) as ArticleSummary[]).map((r) => decodeSummary(r));
@@ -628,11 +630,17 @@ export const listArticles = createServerFn({ method: "GET" })
 
 export const getFeatured = createServerFn({ method: "GET" }).handler(async () => {
   const supabase = publicClient();
-  const { data, error } = await supabase.rpc("get_featured_articles");
+  // Use list_articles_sorted (PostgREST knows this function) and filter for featured in JS
+  const { data, error } = await supabase.rpc("list_articles_sorted", {
+    p_sort: "recent",
+    p_limit: 100,
+  });
   if (error) throw new Error(error.message);
+  const result = data as { items: ArticleSummary[] } | null;
   const bySlot = new Map<string, ArticleSummary>();
-  for (const a of (data ?? []) as ArticleSummary[]) {
-    if (a.featured_slot && !bySlot.has(a.featured_slot)) bySlot.set(a.featured_slot, a);
+  for (const a of (result?.items ?? []) as ArticleSummary[]) {
+    const decoded = decodeSummary(a);
+    if (decoded.featured_slot && !bySlot.has(decoded.featured_slot)) bySlot.set(decoded.featured_slot, decoded);
   }
   return Object.fromEntries(bySlot) as Record<string, ArticleSummary>;
 });
@@ -641,10 +649,28 @@ export const getArticleBySlug = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ slug: z.string().min(1) }).parse(d))
   .handler(async ({ data }) => {
     const supabase = publicClient();
-    const { data: row, error } = await supabase.rpc("get_article_by_slug", { p_slug: data.slug });
+    // Use list_articles_sorted (PostgREST knows this) with high limit, find by slug in JS
+    // This bypasses PostgREST schema cache issues with cover_video_url column
+    const { data: rpcData, error: rpcError } = await supabase.rpc("list_articles_sorted", {
+      p_sort: "recent",
+      p_limit: 500,
+    });
+    if (rpcError) throw new Error(rpcError.message);
+    const result = rpcData as { items: ArticleSummary[] } | null;
+    const summary = (result?.items ?? []).find((a) => a.slug === data.slug);
+    if (!summary) return null;
+    // Now fetch the full article using only safe columns (no cover_video_url, no trending_score)
+    const safeCols = "id,slug,title,dek,category,subcategory,cover_image_url,cover_image_prompt,read_time_minutes,trust_score,source_count,sources,story,body,country_code,featured_slot,is_published,published_at,view_count,like_count,bookmark_count,comment_count,created_by,created_at,updated_at";
+    const { data: row, error } = await supabase
+      .from("articles")
+      .select(safeCols)
+      .eq("slug", data.slug)
+      .eq("is_published", true)
+      .maybeSingle();
     if (error) throw new Error(error.message);
     if (!row) return null;
-    const article = row as Article;
+    // Merge cover_video_url from the RPC result (PostgREST can't see it)
+    const article = { ...(row as unknown as Article), cover_video_url: summary.cover_video_url };
     try {
       supabase.from("articles").update({ view_count: (article.view_count ?? 0) + 1 }).eq("id", article.id).then(() => {});
     } catch {}
@@ -657,16 +683,22 @@ export const getRelated = createServerFn({ method: "GET" })
   )
   .handler(async ({ data }) => {
     const supabase = publicClient();
-    const { data: sameCat, error } = await supabase.rpc("get_related_articles", {
+    // Use list_articles_cursor (PostgREST knows this) with category filter
+    const { data: sameCat, error } = await supabase.rpc("list_articles_cursor", {
+      p_limit: data.limit * 2,
       p_category: data.category,
-      p_exclude_slug: data.excludeSlug,
-      p_limit: data.limit,
+      p_sort: "recent",
     });
     if (error) throw new Error(error.message);
-    let result = dedupeSummaries((sameCat ?? []) as ArticleSummary[], data.limit);
+    const filtered = ((sameCat ?? []) as ArticleSummary[]).filter((r) => r.slug !== data.excludeSlug);
+    let result = dedupeSummaries(filtered, data.limit);
     if (result.length < data.limit) {
-      const { data: recent } = await supabase.rpc("get_briefing_articles", { p_limit: data.limit * 3 });
-      const recentRows = ((recent ?? []) as ArticleSummary[]).filter((r) => r.slug !== data.excludeSlug);
+      const { data: recent } = await supabase.rpc("list_articles_sorted", {
+        p_sort: "recent",
+        p_limit: data.limit * 3,
+      });
+      const recentResult = recent as { items: ArticleSummary[] } | null;
+      const recentRows = (recentResult?.items ?? []).filter((r) => r.slug !== data.excludeSlug);
       result = dedupeSummaries([...result, ...recentRows], data.limit);
     }
     return result;
@@ -676,13 +708,21 @@ export const searchArticles = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ q: z.string().min(1).max(120) }).parse(d))
   .handler(async ({ data }) => {
     const supabase = publicClient();
-    const term = `%${data.q.replace(/[%_]/g, " ")}%`;
-    const { data: rows, error } = await supabase.rpc("search_articles", {
-      p_search_term: term,
-      p_limit: 40,
+    // Use list_articles_sorted (PostgREST knows this) and filter in JS
+    const { data: rpcData, error } = await supabase.rpc("list_articles_sorted", {
+      p_sort: "recent",
+      p_limit: 500,
     });
     if (error) throw new Error(error.message);
-    return (rows ?? []) as ArticleSummary[];
+    const result = rpcData as { items: ArticleSummary[] } | null;
+    const term = data.q.toLowerCase();
+       const rows = (result?.items ?? []).filter(
+      (a) =>
+        (a.title?.toLowerCase().includes(term) ?? false) ||
+        (a.dek?.toLowerCase().includes(term) ?? false) ||
+        (a.category?.toLowerCase().includes(term) ?? false),
+    ).slice(0, 40);
+    return rows.map((r) => decodeSummary(r));
   });
 
 export const getCountryStats = createServerFn({ method: "GET" }).handler(async () => {
@@ -720,14 +760,22 @@ export const getBriefingToday = createServerFn({ method: "GET" }).handler(async 
   const buildFromArticles = async (): Promise<Briefing> => {
     const today = new Date().toISOString().slice(0, 10);
     const fetchCat = async (cats: string[], limit: number) => {
-      const { data: rows } = await supabase.rpc("get_briefing_by_category", {
-        p_categories: cats,
-        p_limit: limit,
-      });
-      return dedupeSummaries((rows ?? []) as ArticleSummary[], limit);
+      // Use list_articles_cursor (PostgREST knows this) for each category
+      const results: ArticleSummary[] = [];
+      for (const cat of cats) {
+        if (results.length >= limit) break;
+        const { data: rows } = await supabase.rpc("list_articles_cursor", {
+          p_limit: limit,
+          p_category: cat,
+          p_sort: "recent",
+        });
+        results.push(...((rows ?? []) as ArticleSummary[]));
+      }
+      return dedupeSummaries(results, limit);
     };
-    const { data: latest } = await supabase.rpc("get_briefing_articles", { p_limit: 80 });
-    const latestRows = dedupeSummaries((latest ?? []) as ArticleSummary[], 60);
+    const { data: latestRpc } = await supabase.rpc("list_articles_sorted", { p_sort: "recent", p_limit: 80 });
+    const latestResult = latestRpc as { items: ArticleSummary[] } | null;
+    const latestRows = dedupeSummaries(latestResult?.items ?? [], 60);
 
     const top = latestRows.slice(0, 8);
     const [discoveries, science, success, tech] = await Promise.all([

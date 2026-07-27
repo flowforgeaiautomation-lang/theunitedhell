@@ -1,0 +1,1 @@
+import{Jt as e}from"./index-BaHPMawP.js";var t=e({type:`function`});export{t};
