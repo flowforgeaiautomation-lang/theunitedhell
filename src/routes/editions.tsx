@@ -165,9 +165,9 @@ function EditionsPage() {
         <div className="max-w-3xl mx-auto text-center">
           <div className="inline-block mb-5">
             <img
-              src="/THEUH.LOGO.png"
+              src="/images/authors/file_0000000048408230ae003d41cbf27281.jpg"
               alt="Altair Veda"
-              className="w-24 h-24 object-contain mx-auto"
+              className="w-28 h-28 object-cover rounded-full mx-auto border border-border"
               loading="lazy"
             />
           </div>
