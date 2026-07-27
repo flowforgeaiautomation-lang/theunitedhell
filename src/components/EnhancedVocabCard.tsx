@@ -26,7 +26,7 @@ export function EnhancedVocabCard({ entry, articleId, index }: { entry: VocabEnt
 
   const saveMutation = useMutation({
     mutationFn: async (save: boolean) =>
-      save ? saveFn({ data: { word: entry.word!, meaning: entry.meaning, pronunciation: entry.pronunciation, partOfSpeech: entry.partOfSpeech, example: entry.example, synonyms: entry.synonyms, antonyms: entry.antonyms, articleId } }) : unsaveFn({ data: { word: entry.word! } }),
+      save ? saveFn({ data: { word: entry.word!, meaning: entry.meaning, pronunciation: entry.pronunciation, partOfSpeech: entry.partOfSpeech, example: entry.example, synonyms: entry.synonyms, antonyms: entry.antonyms, simpleExplanation: entry.simpleExplanation, contextInArticle: entry.contextInArticle, wordOrigin: entry.wordOrigin, articleId } }) : unsaveFn({ data: { word: entry.word! } }),
     onSuccess: (_, save) => {
       toast.success(save ? "Saved to your vocabulary library" : "Removed from library");
       qc.invalidateQueries({ queryKey: ["saved-word", entry.word] });

@@ -1,0 +1,1 @@
+import{r as e,t}from"./useBaseQuery-DYi_oAW2.js";function n(n,r){return t(n,e,r)}export{n as t};

@@ -128,6 +128,9 @@ export const saveWord = createServerFn({ method: "POST" })
       example: z.string().optional(),
       synonyms: z.array(z.string()).optional(),
       antonyms: z.array(z.string()).optional(),
+      simpleExplanation: z.string().optional(),
+      contextInArticle: z.string().optional(),
+      wordOrigin: z.string().optional(),
       articleId: z.string().uuid().optional(),
       difficulty: z.enum(["beginner", "intermediate", "advanced"]).default("intermediate"),
     }).parse(d),
@@ -143,6 +146,9 @@ export const saveWord = createServerFn({ method: "POST" })
       example: data.example,
       synonyms: data.synonyms,
       antonyms: data.antonyms,
+      simple_explanation: data.simpleExplanation,
+      context_in_article: data.contextInArticle,
+      word_origin: data.wordOrigin,
       article_id: data.articleId,
       difficulty: data.difficulty,
     }, { onConflict: "user_id,word" });
@@ -165,7 +171,7 @@ export const listSavedWords = createServerFn({ method: "GET" })
     const { supabase, userId } = context;
     const { data, error } = await supabase
       .from("saved_words")
-      .select("word,meaning,pronunciation,part_of_speech,example,synonyms,antonyms,difficulty,created_at")
+      .select("word,meaning,pronunciation,part_of_speech,example,synonyms,antonyms,difficulty,simple_explanation,context_in_article,word_origin,created_at")
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);

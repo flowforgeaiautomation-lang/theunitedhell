@@ -1,0 +1,1 @@
+import{Gt as e}from"./index-BFBftJSC.js";var t=e({type:`function`});export{t};
