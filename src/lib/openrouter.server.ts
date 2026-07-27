@@ -352,28 +352,66 @@ export function getCategoryFallbackImage(category: string): string {
 
 export async function pexelsVideo(query: string): Promise<{ videoUrl: string; posterUrl: string } | null> {
   const pk = process.env.PEXELS_API_KEY;
-  if (!pk) return null;
+  if (!pk) {
+    return getCategoryFallbackVideo(query);
+  }
   try {
     const page = 1 + Math.floor(Math.random() * 3);
     const r = await fetch(
       `https://api.pexels.com/videos/search?per_page=15&page=${page}&query=${encodeURIComponent(query)}`,
       { headers: { Authorization: pk } },
     );
-    if (!r.ok) return null;
+    if (!r.ok) return getCategoryFallbackVideo(query);
     const d = await r.json();
     const videos = (d?.videos ?? []).filter((v: any) => {
       const files = v?.video_files ?? [];
       return files.some((f: any) => f?.file_type === "video/mp4" && f?.width >= 640);
     });
-    if (!videos.length) return null;
+    if (!videos.length) return getCategoryFallbackVideo(query);
     const pick = videos[Math.floor(Math.random() * Math.min(videos.length, 5))];
     const mp4 = (pick?.video_files ?? [])
       .filter((f: any) => f?.file_type === "video/mp4")
       .sort((a: any, b: any) => (b?.width ?? 0) - (a?.width ?? 0))[0];
-    if (!mp4?.link) return null;
+    if (!mp4?.link) return getCategoryFallbackVideo(query);
     const poster = pick?.image ?? "";
     return { videoUrl: mp4.link, posterUrl: poster };
   } catch {
-    return null;
+    return getCategoryFallbackVideo(query);
   }
+}
+
+const CATEGORY_FALLBACK_VIDEOS: Record<string, { videoUrl: string; posterUrl: string }> = {
+  world: { videoUrl: "https://videos.pexels.com/video-files/3571264/3571264-uhd_2560_1440_30fps.mp4", posterUrl: "https://images.pexels.com/photos/1004665/pexels-photo-1004665.jpeg?auto=compress&cs=tinysrgb&w=1200" },
+  politics: { videoUrl: "https://videos.pexels.com/video-files/4765242/4765242-uhd_2560_1440_30fps.mp4", posterUrl: "https://images.pexels.com/photos/6130304/pexels-photo-6130304.jpeg?auto=compress&cs=tinysrgb&w=1200" },
+  technology: { videoUrl: "https://videos.pexels.com/video-files/3129957/3129957-uhd_2560_1440_30fps.mp4", posterUrl: "https://images.pexels.com/photos/18108/pexels-photo.jpg?auto=compress&cs=tinysrgb&w=1200" },
+  science: { videoUrl: "https://videos.pexels.com/video-files/3129957/3129957-uhd_2560_1440_30fps.mp4", posterUrl: "https://images.pexels.com/photos/2280571/pexels-photo-2280571.jpeg?auto=compress&cs=tinysrgb&w=1200" },
+  health: { videoUrl: "https://videos.pexels.com/video-files/4211718/4211718-uhd_2560_1440_30fps.mp4", posterUrl: "https://images.pexels.com/photos/263402/pexels-photo-263402.jpeg?auto=compress&cs=tinysrgb&w=1200" },
+  business: { videoUrl: "https://videos.pexels.com/video-files/3195874/3195874-uhd_2560_1440_30fps.mp4", posterUrl: "https://images.pexels.com/photos/3183150/pexels-photo-3183150.jpeg?auto=compress&cs=tinysrgb&w=1200" },
+  markets: { videoUrl: "https://videos.pexels.com/video-files/3195874/3195874-uhd_2560_1440_30fps.mp4", posterUrl: "https://images.pexels.com/photos/534220/pexels-photo-534220.jpeg?auto=compress&cs=tinysrgb&w=1200" },
+  "artificial-intelligence": { videoUrl: "https://videos.pexels.com/video-files/3129957/3129957-uhd_2560_1440_30fps.mp4", posterUrl: "https://images.pexels.com/photos/1034840/pexels-photo-1034840.jpeg?auto=compress&cs=tinysrgb&w=1200" },
+  space: { videoUrl: "https://videos.pexels.com/video-files/1869990/1869990-uhd_2560_1440_30fps.mp4", posterUrl: "https://images.pexels.com/photos/110854/pexels-photo-110854.jpeg?auto=compress&cs=tinysrgb&w=1200" },
+  climate: { videoUrl: "https://videos.pexels.com/video-files/1405922/1405922-uhd_2560_1440_30fps.mp4", posterUrl: "https://images.pexels.com/photos/2280571/pexels-photo-2280571.jpeg?auto=compress&cs=tinysrgb&w=1200" },
+  environment: { videoUrl: "https://videos.pexels.com/video-files/1405922/1405922-uhd_2560_1440_30fps.mp4", posterUrl: "https://images.pexels.com/photos/2280571/pexels-photo-2280571.jpeg?auto=compress&cs=tinysrgb&w=1200" },
+  music: { videoUrl: "https://videos.pexels.com/video-files/2765448/2765448-uhd_2560_1440_30fps.mp4", posterUrl: "https://images.pexels.com/photos/1763075/pexels-photo-1763075.jpeg?auto=compress&cs=tinysrgb&w=1200" },
+  movies: { videoUrl: "https://videos.pexels.com/video-files/2765448/2765448-uhd_2560_1440_30fps.mp4", posterUrl: "https://images.pexels.com/photos/65168/pexels-photo-65168.jpeg?auto=compress&cs=tinysrgb&w=1200" },
+  gaming: { videoUrl: "https://videos.pexels.com/video-files/2699157/2699157-uhd_2560_1440_30fps.mp4", posterUrl: "https://images.pexels.com/photos/442576/pexels-photo-442576.jpeg?auto=compress&cs=tinysrgb&w=1200" },
+  football: { videoUrl: "https://videos.pexels.com/video-files/4765242/4765242-uhd_2560_1440_30fps.mp4", posterUrl: "https://images.pexels.com/photos/46798/the-ball-stadion-football-the-ball-46798.jpeg?auto=compress&cs=tinysrgb&w=1200" },
+  cricket: { videoUrl: "https://videos.pexels.com/video-files/4765242/4765242-uhd_2560_1440_30fps.mp4", posterUrl: "https://images.pexels.com/photos/17172382/pexels-photo-17172382.jpeg?auto=compress&cs=tinysrgb&w=1200" },
+  sport: { videoUrl: "https://videos.pexels.com/video-files/4765242/4765242-uhd_2560_1440_30fps.mp4", posterUrl: "https://images.pexels.com/photos/46798/the-ball-stadion-football-the-ball-46798.jpeg?auto=compress&cs=tinysrgb&w=1200" },
+  india: { videoUrl: "https://videos.pexels.com/video-files/3571264/3571264-uhd_2560_1440_30fps.mp4", posterUrl: "https://images.pexels.com/photos/1004665/pexels-photo-1004665.jpeg?auto=compress&cs=tinysrgb&w=1200" },
+  economics: { videoUrl: "https://videos.pexels.com/video-files/3195874/3195874-uhd_2560_1440_30fps.mp4", posterUrl: "https://images.pexels.com/photos/534220/pexels-photo-534220.jpeg?auto=compress&cs=tinysrgb&w=1200" },
+  "electric-vehicles": { videoUrl: "https://videos.pexels.com/video-files/1709115/1709115-uhd_2560_1440_30fps.mp4", posterUrl: "https://images.pexels.com/photos/376361/pexels-photo-376361.jpeg?auto=compress&cs=tinysrgb&w=1200" },
+  physics: { videoUrl: "https://videos.pexels.com/video-files/3129957/3129957-uhd_2560_1440_30fps.mp4", posterUrl: "https://images.pexels.com/photos/2280571/pexels-photo-2280571.jpeg?auto=compress&cs=tinysrgb&w=1200" },
+  sustainability: { videoUrl: "https://videos.pexels.com/video-files/1405922/1405922-uhd_2560_1440_30fps.mp4", posterUrl: "https://images.pexels.com/photos/2280571/pexels-photo-2280571.jpeg?auto=compress&cs=tinysrgb&w=1200" },
+  books: { videoUrl: "https://videos.pexels.com/video-files/2765448/2765448-uhd_2560_1440_30fps.mp4", posterUrl: "https://images.pexels.com/photos/256541/pexels-photo-256541.jpeg?auto=compress&cs=tinysrgb&w=1200" },
+  robotics: { videoUrl: "https://videos.pexels.com/video-files/3129957/3129957-uhd_2560_1440_30fps.mp4", posterUrl: "https://images.pexels.com/photos/1034840/pexels-photo-1034840.jpeg?auto=compress&cs=tinysrgb&w=1200" },
+  news: { videoUrl: "https://videos.pexels.com/video-files/3571264/3571264-uhd_2560_1440_30fps.mp4", posterUrl: "https://images.pexels.com/photos/1004665/pexels-photo-1004665.jpeg?auto=compress&cs=tinysrgb&w=1200" },
+};
+
+export function getCategoryFallbackVideo(query: string): { videoUrl: string; posterUrl: string } | null {
+  const q = query.toLowerCase();
+  for (const [cat, vid] of Object.entries(CATEGORY_FALLBACK_VIDEOS)) {
+    if (q.includes(cat)) return vid;
+  }
+  return CATEGORY_FALLBACK_VIDEOS.news;
 }
