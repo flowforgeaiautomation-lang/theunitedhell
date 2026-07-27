@@ -1,0 +1,1 @@
+import{Jt as e}from"./index-CVOcbH7M.js";var t=e({type:`function`});export{t};

@@ -700,7 +700,9 @@ function KnowledgeCheckReflection({ articleId, story, title }: { articleId: stri
           author: null,
         };
 
-        qc.setQueryData<CommentRow[]>(["comments", articleId], (old = []) => [optimisticComment, ...old]);
+        qc.setQueryData<CommentRow[]>(["comments", articleId, "newest"], (old = []) => [optimisticComment, ...old]);
+        qc.setQueryData<CommentRow[]>(["comments", articleId, "top"], (old = []) => [optimisticComment, ...old]);
+        qc.setQueryData<CommentRow[]>(["comments", articleId, "oldest"], (old = []) => [optimisticComment, ...old]);
         setPosted(true);
         requestAnimationFrame(() => {
           document.getElementById("discussion")?.scrollIntoView({ behavior: "smooth", block: "start" });
