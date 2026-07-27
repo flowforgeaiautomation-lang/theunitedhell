@@ -123,6 +123,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "stylesheet", href: appCss },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+      { rel: "preconnect", href: "https://images.pexels.com", crossOrigin: "anonymous" },
+      { rel: "dns-prefetch", href: "https://images.pexels.com" },
       { rel: "dns-prefetch", href: "https://pagead2.googlesyndication.com" },
       {
         rel: "stylesheet",

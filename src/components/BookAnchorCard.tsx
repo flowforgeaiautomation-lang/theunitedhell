@@ -3,7 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { ExternalLink, BookOpen } from "lucide-react";
 import { BOOKS } from "@/lib/editions-data";
 
-const ROTATION_MS = 17000;
+const ROTATION_MS = 7000;
 const STORAGE_INDEX_KEY = "tuh-book-anchor-index";
 
 export function BookAnchorCard() {
@@ -29,7 +29,7 @@ export function BookAnchorCard() {
         return next;
       });
       setFade(true);
-    }, 350);
+    }, 300);
   }, []);
 
   useEffect(() => {
@@ -44,10 +44,10 @@ export function BookAnchorCard() {
   const book = BOOKS[index];
 
   return (
-    <div className="w-full bg-black border-b border-white/20">
+    <div className="w-full bg-black border-b-2 border-white/30">
       <div className="container-edit">
         <div
-          className="flex items-center gap-4 sm:gap-5 py-4 sm:py-5 cursor-pointer select-none"
+          className="flex items-center gap-5 sm:gap-6 py-6 sm:py-7 cursor-pointer select-none group"
           role="button"
           tabIndex={0}
           aria-label={`View ${book.title} in Editions`}
@@ -59,7 +59,7 @@ export function BookAnchorCard() {
           onBlur={() => { pausedRef.current = false; }}
         >
           {/* Book cover */}
-          <div className="shrink-0 w-14 h-20 sm:w-16 sm:h-24 border border-white/20 overflow-hidden bg-neutral-900 rounded">
+          <div className="shrink-0 w-20 h-28 sm:w-24 sm:h-34 border-2 border-white/30 overflow-hidden bg-neutral-900 rounded shadow-lg shadow-white/10 group-hover:scale-105 transition-transform duration-300">
             <img
               src={book.coverImage}
               alt=""
@@ -70,17 +70,17 @@ export function BookAnchorCard() {
 
           {/* Title + subtitle */}
           <div className={`flex-1 min-w-0 transition-opacity duration-300 ${fade ? "opacity-100" : "opacity-0"}`}>
-            <div className="flex items-center gap-2">
-              <BookOpen className="h-4 w-4 text-white/50 shrink-0" />
-              <span className="text-[0.6rem] sm:text-xs uppercase tracking-[0.18em] text-white/40">From the Editions</span>
+            <div className="flex items-center gap-2 mb-1">
+              <BookOpen className="h-5 w-5 text-white/50 shrink-0" />
+              <span className="text-xs sm:text-sm uppercase tracking-[0.2em] text-white/40 font-semibold">From the Editions</span>
             </div>
-            <div className="font-serif text-lg sm:text-xl font-bold text-white leading-tight truncate">{book.title}</div>
-            <div className="text-xs sm:text-sm text-white/60 leading-tight truncate hidden sm:block">{book.subtitle}</div>
+            <div className="font-serif text-2xl sm:text-3xl font-bold text-white leading-tight truncate">{book.title}</div>
+            <div className="text-sm sm:text-base text-white/60 leading-tight truncate hidden sm:block mt-1">{book.subtitle}</div>
           </div>
 
           {/* CTA */}
-          <div className="shrink-0 flex items-center gap-2 sm:gap-3">
-            <span className="hidden sm:inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold uppercase tracking-wider border border-white/40 text-white rounded hover:bg-white hover:text-black transition min-h-[40px]">
+          <div className="shrink-0 flex items-center gap-3">
+            <span className="hidden sm:inline-flex items-center gap-2 px-5 py-3 text-sm font-semibold uppercase tracking-wider border-2 border-white/40 text-white rounded group-hover:bg-white group-hover:text-black transition min-h-[48px]">
               View Editions
             </span>
             <a
@@ -88,10 +88,10 @@ export function BookAnchorCard() {
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold uppercase tracking-wider bg-white text-black rounded hover:bg-white/90 transition min-h-[40px]"
+              className="inline-flex items-center gap-2 px-5 py-3 text-sm font-semibold uppercase tracking-wider bg-white text-black rounded hover:bg-white/90 transition min-h-[48px]"
               aria-label={`Buy ${book.title} on Amazon`}
             >
-              Buy <ExternalLink className="h-3.5 w-3.5" />
+              Buy <ExternalLink className="h-4 w-4" />
             </a>
           </div>
         </div>

@@ -7,15 +7,13 @@ type SmartImageProps = {
   height?: number;
   loading?: "lazy" | "eager";
   className?: string;
-  /** Optional tiny blurhash/low-res placeholder URL */
   placeholder?: string;
-  /** Aspect ratio class, e.g. "aspect-[4/3]" — applied to wrapper */
   aspectClass?: string;
 };
 
 /**
- * Image with eager loading, no layout shift, and instant display.
- * Images load immediately with high priority to avoid blank/vague states during scroll.
+ * Image that displays instantly. No fade-in delay — the image is visible
+ * immediately at opacity-100 if cached, and snaps in the moment it loads.
  */
 export function SmartImage({
   src,
@@ -27,11 +25,9 @@ export function SmartImage({
   placeholder,
   aspectClass = "",
 }: SmartImageProps) {
-  const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    setLoaded(false);
     setError(false);
   }, [src]);
 
@@ -40,14 +36,6 @@ export function SmartImage({
       className={`relative overflow-hidden bg-foreground/[0.06] ${aspectClass} ${className}`}
       style={width && height ? { aspectRatio: `${width} / ${height}` } : undefined}
     >
-      {placeholder && !loaded && (
-        <img
-          src={placeholder}
-          alt=""
-          aria-hidden
-          className="absolute inset-0 h-full w-full object-cover scale-110 blur-xl opacity-60"
-        />
-      )}
       {!error && (
         <img
           src={src}
@@ -55,14 +43,11 @@ export function SmartImage({
           width={width}
           height={height}
           loading="eager"
-          decoding="async"
+          decoding="sync"
           // @ts-expect-error fetchPriority is valid HTML but not in React types
           fetchPriority="high"
-          onLoad={() => setLoaded(true)}
           onError={() => setError(true)}
-          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${
-            loaded ? "opacity-100" : "opacity-0"
-          }`}
+          className="absolute inset-0 h-full w-full object-cover"
         />
       )}
       {error && (
