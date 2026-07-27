@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, forwardRef } from "react";
 import { SmartImage } from "./SmartImage";
 import { ChevronLeft, ChevronRight, Play } from "lucide-react";
 
@@ -15,13 +15,67 @@ type MediaCarouselProps = {
   priority?: boolean;
 };
 
+const VideoPlayer = forwardRef<HTMLVideoElement, { src: string; poster?: string; active: boolean }>(
+  function VideoPlayer({ src, poster, active }, ref) {
+    const [playing, setPlaying] = useState(false);
+    const localRef = useRef<HTMLVideoElement>(null);
+
+    useEffect(() => {
+      const el = localRef.current;
+      if (!el) return;
+      if (active && playing) {
+        el.play().catch(() => {});
+      } else {
+        el.pause();
+      }
+    }, [active, playing]);
+
+    return (
+      <div className="relative h-full w-full bg-black">
+        <video
+          ref={(node) => {
+            localRef.current = node;
+            if (typeof ref === "function") ref(node);
+            else if (ref) (ref as React.MutableRefObject<HTMLVideoElement | null>).current = node;
+          }}
+          src={src}
+          poster={poster}
+          loop
+          muted
+          playsInline
+          preload="metadata"
+          className="h-full w-full object-cover"
+          onPlay={() => setPlaying(true)}
+          onPause={() => setPlaying(false)}
+        />
+        {!playing && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              const el = localRef.current;
+              if (el) {
+                el.play().then(() => setPlaying(true)).catch(() => {});
+              }
+            }}
+            className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/20 transition-colors"
+            aria-label="Play video"
+          >
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-background/90 backdrop-blur-sm shadow-lg">
+              <Play className="h-7 w-7 text-foreground ml-1" fill="currentColor" />
+            </div>
+          </button>
+        )}
+      </div>
+    );
+  },
+);
+
 export function MediaCarousel({ media, alt, priority = false }: MediaCarouselProps) {
   const [index, setIndex] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [dragX, setDragX] = useState(0);
   const startX = useRef(0);
   const containerRef = useRef<HTMLDivElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
 
   const count = media.length;
   const canSwipe = count > 1;
@@ -55,7 +109,7 @@ export function MediaCarousel({ media, alt, priority = false }: MediaCarouselPro
     setDragX(0);
   }
 
-  const current = media[index];
+  if (count === 0) return null;
 
   return (
     <figure className="group relative overflow-hidden rounded-sm bg-foreground/[0.04]">
@@ -79,7 +133,6 @@ export function MediaCarousel({ media, alt, priority = false }: MediaCarouselPro
             <div key={i} className="relative h-full w-full shrink-0">
               {item.type === "video" ? (
                 <VideoPlayer
-                  ref={videoRef}
                   src={item.src}
                   poster={item.poster}
                   active={i === index}
@@ -137,60 +190,3 @@ export function MediaCarousel({ media, alt, priority = false }: MediaCarouselPro
     </figure>
   );
 }
-
-import { forwardRef } from "react";
-
-const VideoPlayer = forwardRef<HTMLVideoElement, { src: string; poster?: string; active: boolean }>(
-  function VideoPlayer({ src, poster, active }, ref) {
-    const [playing, setPlaying] = useState(false);
-    const localRef = useRef<HTMLVideoElement>(null);
-
-    useEffect(() => {
-      const el = localRef.current;
-      if (!el) return;
-      if (active && playing) {
-        el.play().catch(() => {});
-      } else {
-        el.pause();
-      }
-    }, [active, playing]);
-
-    return (
-      <div className="relative h-full w-full bg-black">
-        <video
-          ref={(node) => {
-            localRef.current = node;
-            if (typeof ref === "function") ref(node);
-            else if (ref) (ref as React.MutableRefObject<HTMLVideoElement | null>).current = node;
-          }}
-          src={src}
-          poster={poster}
-          loop
-          muted
-          playsInline
-          preload="metadata"
-          className="h-full w-full object-cover"
-          onPlay={() => setPlaying(true)}
-          onPause={() => setPlaying(false)}
-        />
-        {!playing && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              const el = localRef.current;
-              if (el) {
-                el.play().then(() => setPlaying(true)).catch(() => {});
-              }
-            }}
-            className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/20 transition-colors"
-            aria-label="Play video"
-          >
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-background/90 backdrop-blur-sm shadow-lg">
-              <Play className="h-7 w-7 text-foreground ml-1" fill="currentColor" />
-            </div>
-          </button>
-        )}
-      </div>
-    );
-  },
-);

@@ -1,1 +1,0 @@
-import{Jt as e}from"./index-D7p79XmR.js";var t=e({type:`function`});export{t};

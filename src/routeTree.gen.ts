@@ -31,6 +31,7 @@ import { Route as ApiPublicHooksReprocessRouteImport } from './routes/api/public
 import { Route as ApiPublicHooksIngestRouteImport } from './routes/api/public/hooks/ingest'
 import { Route as ApiPublicHooksDebugEnvRouteImport } from './routes/api/public/hooks/debug-env'
 import { Route as ApiPublicHooksBackfillVocabRouteImport } from './routes/api/public/hooks/backfill-vocab'
+import { Route as ApiPublicHooksBackfillVideosRouteImport } from './routes/api/public/hooks/backfill-videos'
 import { Route as ApiPublicHooksBackfillQuizzesRouteImport } from './routes/api/public/hooks/backfill-quizzes'
 
 const WorldRoute = WorldRouteImport.update({
@@ -143,6 +144,12 @@ const ApiPublicHooksBackfillVocabRoute =
     path: '/api/public/hooks/backfill-vocab',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksBackfillVideosRoute =
+  ApiPublicHooksBackfillVideosRouteImport.update({
+    id: '/api/public/hooks/backfill-videos',
+    path: '/api/public/hooks/backfill-videos',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksBackfillQuizzesRoute =
   ApiPublicHooksBackfillQuizzesRouteImport.update({
     id: '/api/public/hooks/backfill-quizzes',
@@ -169,6 +176,7 @@ export interface FileRoutesByFullPath {
   '/article/$slug': typeof ArticleSlugRoute
   '/editions/$slug': typeof EditionsSlugRoute
   '/api/public/hooks/backfill-quizzes': typeof ApiPublicHooksBackfillQuizzesRoute
+  '/api/public/hooks/backfill-videos': typeof ApiPublicHooksBackfillVideosRoute
   '/api/public/hooks/backfill-vocab': typeof ApiPublicHooksBackfillVocabRoute
   '/api/public/hooks/debug-env': typeof ApiPublicHooksDebugEnvRoute
   '/api/public/hooks/ingest': typeof ApiPublicHooksIngestRoute
@@ -193,6 +201,7 @@ export interface FileRoutesByTo {
   '/article/$slug': typeof ArticleSlugRoute
   '/editions/$slug': typeof EditionsSlugRoute
   '/api/public/hooks/backfill-quizzes': typeof ApiPublicHooksBackfillQuizzesRoute
+  '/api/public/hooks/backfill-videos': typeof ApiPublicHooksBackfillVideosRoute
   '/api/public/hooks/backfill-vocab': typeof ApiPublicHooksBackfillVocabRoute
   '/api/public/hooks/debug-env': typeof ApiPublicHooksDebugEnvRoute
   '/api/public/hooks/ingest': typeof ApiPublicHooksIngestRoute
@@ -219,6 +228,7 @@ export interface FileRoutesById {
   '/article/$slug': typeof ArticleSlugRoute
   '/editions/$slug': typeof EditionsSlugRoute
   '/api/public/hooks/backfill-quizzes': typeof ApiPublicHooksBackfillQuizzesRoute
+  '/api/public/hooks/backfill-videos': typeof ApiPublicHooksBackfillVideosRoute
   '/api/public/hooks/backfill-vocab': typeof ApiPublicHooksBackfillVocabRoute
   '/api/public/hooks/debug-env': typeof ApiPublicHooksDebugEnvRoute
   '/api/public/hooks/ingest': typeof ApiPublicHooksIngestRoute
@@ -245,6 +255,7 @@ export interface FileRouteTypes {
     | '/article/$slug'
     | '/editions/$slug'
     | '/api/public/hooks/backfill-quizzes'
+    | '/api/public/hooks/backfill-videos'
     | '/api/public/hooks/backfill-vocab'
     | '/api/public/hooks/debug-env'
     | '/api/public/hooks/ingest'
@@ -269,6 +280,7 @@ export interface FileRouteTypes {
     | '/article/$slug'
     | '/editions/$slug'
     | '/api/public/hooks/backfill-quizzes'
+    | '/api/public/hooks/backfill-videos'
     | '/api/public/hooks/backfill-vocab'
     | '/api/public/hooks/debug-env'
     | '/api/public/hooks/ingest'
@@ -294,6 +306,7 @@ export interface FileRouteTypes {
     | '/article/$slug'
     | '/editions/$slug'
     | '/api/public/hooks/backfill-quizzes'
+    | '/api/public/hooks/backfill-videos'
     | '/api/public/hooks/backfill-vocab'
     | '/api/public/hooks/debug-env'
     | '/api/public/hooks/ingest'
@@ -316,6 +329,7 @@ export interface RootRouteChildren {
   WorldRoute: typeof WorldRoute
   ArticleSlugRoute: typeof ArticleSlugRoute
   ApiPublicHooksBackfillQuizzesRoute: typeof ApiPublicHooksBackfillQuizzesRoute
+  ApiPublicHooksBackfillVideosRoute: typeof ApiPublicHooksBackfillVideosRoute
   ApiPublicHooksBackfillVocabRoute: typeof ApiPublicHooksBackfillVocabRoute
   ApiPublicHooksDebugEnvRoute: typeof ApiPublicHooksDebugEnvRoute
   ApiPublicHooksIngestRoute: typeof ApiPublicHooksIngestRoute
@@ -478,6 +492,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksBackfillVocabRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/backfill-videos': {
+      id: '/api/public/hooks/backfill-videos'
+      path: '/api/public/hooks/backfill-videos'
+      fullPath: '/api/public/hooks/backfill-videos'
+      preLoaderRoute: typeof ApiPublicHooksBackfillVideosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/backfill-quizzes': {
       id: '/api/public/hooks/backfill-quizzes'
       path: '/api/public/hooks/backfill-quizzes'
@@ -531,6 +552,7 @@ const rootRouteChildren: RootRouteChildren = {
   WorldRoute: WorldRoute,
   ArticleSlugRoute: ArticleSlugRoute,
   ApiPublicHooksBackfillQuizzesRoute: ApiPublicHooksBackfillQuizzesRoute,
+  ApiPublicHooksBackfillVideosRoute: ApiPublicHooksBackfillVideosRoute,
   ApiPublicHooksBackfillVocabRoute: ApiPublicHooksBackfillVocabRoute,
   ApiPublicHooksDebugEnvRoute: ApiPublicHooksDebugEnvRoute,
   ApiPublicHooksIngestRoute: ApiPublicHooksIngestRoute,

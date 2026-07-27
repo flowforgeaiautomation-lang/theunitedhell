@@ -2312,3 +2312,84 @@ export async function reprocessBatch(opts?: { limit?: number }): Promise<{
   return { attempted: items.length, updated, failed, remaining: count ?? 0 };
 }
 
+export async function backfillVideos(opts?: { limit?: number }): Promise<{
+  attempted: number;
+  updated: number;
+  failed: number;
+  remaining: number;
+}> {
+  const supabase = adminClient();
+  const limit = Math.min(Math.max(opts?.limit ?? 20, 1), 50);
+  const { data: rows } = await supabase
+    .from("articles")
+    .select("id, title, category, cover_image_url, cover_video_url")
+    .is("cover_video_url", null)
+    .eq("is_published", true)
+    .order("published_at", { ascending: false })
+    .limit(limit);
+
+  const items = (rows ?? []) as Array<{
+    id: string;
+    title: string;
+    category: string | null;
+    cover_image_url: string | null;
+    cover_video_url: string | null;
+  }>;
+
+  let updated = 0;
+  let failed = 0;
+
+  await pMap(items, 3, async (row) => {
+    try {
+      const subject = row.title
+        .replace(/[^A-Za-z0-9\s]/g, " ")
+        .split(/\s+/)
+        .filter((w) => w.length >= 4 && !/^(the|and|for|from|with|after|about|into|amid|says|will|been|have|this|that|their|them|over|more|than|what|when|where|which|while|also|could|would|should|might|must|does|doing|done|made|make|gets|getting|goes|going|come|coming|takes|taking|finds|found|find|reveals|revealed|shows|shown|show|study|report|according|image|photo|getty|reuters|caption|via|advertisement|story|article|read|more|click|subscribe|sign)\b/i.test(w))
+        .slice(0, 4)
+        .join(" ");
+
+      const query = subject || row.category || "news";
+      const vid = await pexelsVideo(query);
+      if (vid?.videoUrl) {
+        const { error } = await supabase
+          .from("articles")
+          .update({ cover_video_url: vid.videoUrl })
+          .eq("id", row.id);
+        if (error) {
+          failed++;
+        } else {
+          updated++;
+        }
+      } else {
+        // No video found — try category-based fallback
+        const catQuery = row.category || "news";
+        const fallbackVid = await pexelsVideo(catQuery);
+        if (fallbackVid?.videoUrl) {
+          const { error } = await supabase
+            .from("articles")
+            .update({ cover_video_url: fallbackVid.videoUrl })
+            .eq("id", row.id);
+          if (error) {
+            failed++;
+          } else {
+            updated++;
+          }
+        } else {
+          failed++;
+        }
+      }
+    } catch (e) {
+      failed++;
+      console.error("[backfill-videos] error:", (e as Error).message);
+    }
+  });
+
+  const { count } = await supabase
+    .from("articles")
+    .select("id", { count: "exact", head: true })
+    .is("cover_video_url", null)
+    .eq("is_published", true);
+
+  return { attempted: items.length, updated, failed, remaining: count ?? 0 };
+}
+
