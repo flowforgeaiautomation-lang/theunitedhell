@@ -99,6 +99,7 @@ export type ArticleSummary = {
   like_count: number;
   bookmark_count: number;
   comment_count: number;
+  trending_score?: number;
 };
 
 export type Article = ArticleSummary & {
