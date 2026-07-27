@@ -16,7 +16,7 @@ function publicClient() {
 }
 
 const summaryCols =
-  "id,slug,title,dek,category,subcategory,cover_image_url,cover_video_url,read_time_minutes,country_code,featured_slot,published_at,created_at,view_count,like_count,bookmark_count,comment_count";
+  "id,slug,title,dek,category,subcategory,cover_image_url,read_time_minutes,country_code,featured_slot,published_at,created_at,view_count,like_count,bookmark_count,comment_count";
 
 const NAMED_ENTITIES: Record<string, string> = {
   amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ",
@@ -610,85 +610,15 @@ export const listArticles = createServerFn({ method: "GET" })
     });
 
     if (rpcError) {
-      // Fallback to direct PostgREST query if RPC fails
-      let query = supabase
-        .from("articles")
-        .select(summaryCols)
-        .eq("is_published", true);
-
-      if (data.category) {
-        const related = relatedCategorySlugs(data.category);
-        if (related.length > 0) {
-          query = query.in("category", related);
-        } else {
-          query = query.eq("category", data.category);
-        }
-      }
-
-      if (data.country) {
-        query = query.eq("country_code", data.country);
-      }
-
-      if (data.todayOnly) {
-        const todayStart = new Date();
-        todayStart.setUTCHours(0, 0, 0, 0);
-        query = query.gte("published_at", todayStart.toISOString());
-      }
-
-      const fetchLimit = data.limit + 1;
-
-      if (data.sort === "recent") {
-        if (cursorId && cursorDate) {
-          query = query
-            .or(`published_at.lt.${cursorDate},and(published_at.eq.${cursorDate},id.lt.${cursorId})`)
-            .order("published_at", { ascending: false })
-            .order("id", { ascending: false });
-        } else {
-          query = query
-            .order("published_at", { ascending: false })
-            .order("id", { ascending: false });
-        }
-      } else if (data.sort === "trending") {
-        query = query
-          .order("published_at", { ascending: false })
-          .order("id", { ascending: false });
-      } else if (data.sort === "most_read") {
-        query = query
-          .order("view_count", { ascending: false })
-          .order("id", { ascending: false });
-      } else if (data.sort === "most_saved") {
-        query = query
-          .order("bookmark_count", { ascending: false })
-          .order("id", { ascending: false });
-      }
-
-      query = query.limit(fetchLimit);
-      const { data: rows, error } = await query;
-      if (error) throw new Error(error.message);
-
-      const allRows = ((rows ?? []) as ArticleSummary[]).map((r) => decodeSummary(r));
-      const hasMore = allRows.length > data.limit;
-      const pageRows = hasMore ? allRows.slice(0, data.limit) : allRows;
-      const seenIds = new Set<string>();
-      const deduped = pageRows.filter((r) => {
-        if (seenIds.has(r.id)) return false;
-        seenIds.add(r.id);
-        return true;
+      const { data: fbData, error: fbError } = await supabase.rpc("get_articles_by_category", {
+        p_category: data.category ?? null,
+        p_country: data.country ?? null,
+        p_limit: data.limit,
+        p_today_only: data.todayOnly ?? false,
       });
-
-      let nextCursor: string | undefined = undefined;
-      if (hasMore && deduped.length > 0) {
-        const last = deduped[deduped.length - 1];
-        if (data.sort === "recent") {
-          nextCursor = `${last.published_at}|${last.id}`;
-        } else if (data.sort === "most_read") {
-          nextCursor = `${last.view_count}|${last.id}`;
-        } else if (data.sort === "most_saved") {
-          nextCursor = `${last.bookmark_count}|${last.id}`;
-        }
-      }
-
-      return { items: deduped, nextCursor, hasMore };
+      if (fbError) throw new Error(fbError.message);
+      const fbRows = ((fbData ?? []) as ArticleSummary[]).map((r) => decodeSummary(r));
+      return { items: fbRows, nextCursor: undefined, hasMore: false };
     }
 
     const result = rpcResult as { items: ArticleSummary[]; hasMore: boolean; nextCursor: string | null };
@@ -698,15 +628,8 @@ export const listArticles = createServerFn({ method: "GET" })
 
 export const getFeatured = createServerFn({ method: "GET" }).handler(async () => {
   const supabase = publicClient();
-  const { data, error } = await supabase
-    .from("articles")
-    .select(summaryCols)
-    .eq("is_published", true)
-    .not("featured_slot", "is", null)
-    .order("published_at", { ascending: false })
-    .order("id", { ascending: false });
+  const { data, error } = await supabase.rpc("get_featured_articles");
   if (error) throw new Error(error.message);
-  // Keep latest per slot.
   const bySlot = new Map<string, ArticleSummary>();
   for (const a of (data ?? []) as ArticleSummary[]) {
     if (a.featured_slot && !bySlot.has(a.featured_slot)) bySlot.set(a.featured_slot, a);
@@ -718,19 +641,14 @@ export const getArticleBySlug = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ slug: z.string().min(1) }).parse(d))
   .handler(async ({ data }) => {
     const supabase = publicClient();
-    const { data: row, error } = await supabase
-      .from("articles")
-      .select("*")
-      .eq("slug", data.slug)
-      .eq("is_published", true)
-      .maybeSingle();
+    const { data: row, error } = await supabase.rpc("get_article_by_slug", { p_slug: data.slug });
     if (error) throw new Error(error.message);
     if (!row) return null;
-    // fire-and-forget view bump — never block the page load on this
+    const article = row as Article;
     try {
-      supabase.from("articles").update({ view_count: (row.view_count ?? 0) + 1 }).eq("id", row.id).then(() => {});
+      supabase.from("articles").update({ view_count: (article.view_count ?? 0) + 1 }).eq("id", article.id).then(() => {});
     } catch {}
-    return await normalizeArticle(row as unknown as Article);
+    return await normalizeArticle(article);
   });
 
 export const getRelated = createServerFn({ method: "GET" })
@@ -739,57 +657,18 @@ export const getRelated = createServerFn({ method: "GET" })
   )
   .handler(async ({ data }) => {
     const supabase = publicClient();
-    const excludeSlug = data.excludeSlug;
-    const limit = data.limit;
-
-    // 1. Same category
-    const { data: sameCat } = await supabase
-      .from("articles")
-      .select(summaryCols)
-      .eq("is_published", true)
-      .eq("category", data.category)
-      .neq("slug", excludeSlug)
-      .order("published_at", { ascending: false })
-      .order("id", { ascending: false })
-      .limit(limit);
-
-    let result = dedupeSummaries((sameCat ?? []) as ArticleSummary[], limit);
-
-    // 2. Same country (if not enough)
-    if (result.length < limit) {
-      const { data: currentRow } = await supabase
-        .from("articles")
-        .select("country_code")
-        .eq("slug", excludeSlug)
-        .maybeSingle();
-      const cc = (currentRow as { country_code: string | null } | null)?.country_code;
-      if (cc) {
-        const { data: byCountry } = await supabase
-          .from("articles")
-          .select(summaryCols)
-          .eq("is_published", true)
-          .eq("country_code", cc)
-          .neq("slug", excludeSlug)
-          .order("published_at", { ascending: false })
-          .order("id", { ascending: false })
-          .limit(limit * 2);
-        result = dedupeSummaries([...result, ...((byCountry ?? []) as ArticleSummary[])], limit);
-      }
+    const { data: sameCat, error } = await supabase.rpc("get_related_articles", {
+      p_category: data.category,
+      p_exclude_slug: data.excludeSlug,
+      p_limit: data.limit,
+    });
+    if (error) throw new Error(error.message);
+    let result = dedupeSummaries((sameCat ?? []) as ArticleSummary[], data.limit);
+    if (result.length < data.limit) {
+      const { data: recent } = await supabase.rpc("get_briefing_articles", { p_limit: data.limit * 3 });
+      const recentRows = ((recent ?? []) as ArticleSummary[]).filter((r) => r.slug !== data.excludeSlug);
+      result = dedupeSummaries([...result, ...recentRows], data.limit);
     }
-
-    // 3. Recent from any category (final fallback)
-    if (result.length < limit) {
-      const { data: recent } = await supabase
-        .from("articles")
-        .select(summaryCols)
-        .eq("is_published", true)
-        .neq("slug", excludeSlug)
-        .order("published_at", { ascending: false })
-        .order("id", { ascending: false })
-        .limit(limit * 3);
-      result = dedupeSummaries([...result, ...((recent ?? []) as ArticleSummary[])], limit);
-    }
-
     return result;
   });
 
@@ -798,14 +677,10 @@ export const searchArticles = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     const supabase = publicClient();
     const term = `%${data.q.replace(/[%_]/g, " ")}%`;
-    const { data: rows, error } = await supabase
-      .from("articles")
-      .select(summaryCols)
-      .eq("is_published", true)
-      .or(`title.ilike.${term},dek.ilike.${term},category.ilike.${term}`)
-      .order("published_at", { ascending: false })
-      .order("id", { ascending: false })
-      .limit(40);
+    const { data: rows, error } = await supabase.rpc("search_articles", {
+      p_search_term: term,
+      p_limit: 40,
+    });
     if (error) throw new Error(error.message);
     return (rows ?? []) as ArticleSummary[];
   });
@@ -845,23 +720,13 @@ export const getBriefingToday = createServerFn({ method: "GET" }).handler(async 
   const buildFromArticles = async (): Promise<Briefing> => {
     const today = new Date().toISOString().slice(0, 10);
     const fetchCat = async (cats: string[], limit: number) => {
-      const { data: rows } = await supabase
-        .from("articles")
-        .select(summaryCols)
-        .eq("is_published", true)
-        .in("category", cats)
-        .order("published_at", { ascending: false })
-        .order("id", { ascending: false })
-        .limit(limit);
+      const { data: rows } = await supabase.rpc("get_briefing_by_category", {
+        p_categories: cats,
+        p_limit: limit,
+      });
       return dedupeSummaries((rows ?? []) as ArticleSummary[], limit);
     };
-    const { data: latest } = await supabase
-      .from("articles")
-      .select(summaryCols)
-      .eq("is_published", true)
-      .order("published_at", { ascending: false })
-      .order("id", { ascending: false })
-      .limit(80);
+    const { data: latest } = await supabase.rpc("get_briefing_articles", { p_limit: 80 });
     const latestRows = dedupeSummaries((latest ?? []) as ArticleSummary[], 60);
 
     const top = latestRows.slice(0, 8);
