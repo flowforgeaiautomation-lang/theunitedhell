@@ -50,7 +50,7 @@ function TrendingPage() {
   const q = useSuspenseQuery(
     queryOptions({
       queryKey: ["trending", sort],
-      queryFn: async () => (await listArticles({ data: { sort, limit: 36 } })).items,
+      queryFn: async () => (await listArticles({ data: { sort, limit: 60 } })).items,
     }),
   );
 
