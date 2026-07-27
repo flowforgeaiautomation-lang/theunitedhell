@@ -21,7 +21,7 @@ import { t as Route$23 } from "./editions._slug-BeAX0Adc.mjs";
 import { t as statsQ } from "./map-BHOrCesD.mjs";
 import { t as Route$24 } from "./search-De6SSYsq.mjs";
 import { t as homeQuery } from "./routes-BiN3i1gr.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/router-C0CQNhIb.js
+//#region node_modules/.nitro/vite/services/ssr/assets/router-BsJ0meTG.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var styles_default = "/assets/styles-DSqimoSo.css";
@@ -854,29 +854,14 @@ function SiteFooter({ signedIn = false }) {
 		})]
 	});
 }
-var DISMISS_KEY = "tuh-book-anchor-dismissed";
 var ROTATION_MS = 17e3;
 var STORAGE_INDEX_KEY = "tuh-book-anchor-index";
-function isDismissed() {
-	try {
-		const ts = Number(localStorage.getItem(DISMISS_KEY) || 0);
-		if (!ts) return false;
-		return Date.now() - ts < 1440 * 60 * 1e3;
-	} catch {
-		return false;
-	}
-}
 function BookAnchorCard() {
-	const [visible, setVisible] = (0, import_react.useState)(false);
+	const [visible, setVisible] = (0, import_react.useState)(true);
 	const [index, setIndex] = (0, import_react.useState)(0);
 	const [fade, setFade] = (0, import_react.useState)(true);
 	const pausedRef = (0, import_react.useRef)(false);
 	const navigate = useNavigate();
-	(0, import_react.useEffect)(() => {
-		if (isDismissed()) return;
-		const t = setTimeout(() => setVisible(true), 800);
-		return () => clearTimeout(t);
-	}, []);
 	(0, import_react.useEffect)(() => {
 		try {
 			const saved = Number(localStorage.getItem(STORAGE_INDEX_KEY) || 0);
@@ -904,9 +889,6 @@ function BookAnchorCard() {
 	}, [visible, rotate]);
 	function dismiss() {
 		setVisible(false);
-		try {
-			localStorage.setItem(DISMISS_KEY, String(Date.now()));
-		} catch {}
 	}
 	function viewBook(slug) {
 		navigate({

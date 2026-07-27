@@ -3,32 +3,17 @@ import { useNavigate } from "@tanstack/react-router";
 import { X, ExternalLink, BookOpen } from "lucide-react";
 import { BOOKS } from "@/lib/editions-data";
 
-const DISMISS_KEY = "tuh-book-anchor-dismissed";
 const ROTATION_MS = 17000;
 const STORAGE_INDEX_KEY = "tuh-book-anchor-index";
 
-function isDismissed(): boolean {
-  try {
-    const ts = Number(localStorage.getItem(DISMISS_KEY) || 0);
-    if (!ts) return false;
-    return Date.now() - ts < 24 * 60 * 60 * 1000;
-  } catch {
-    return false;
-  }
-}
-
 export function BookAnchorCard() {
-  const [visible, setVisible] = useState(false);
+  const [visible, setVisible] = useState(true);
   const [index, setIndex] = useState(0);
   const [fade, setFade] = useState(true);
   const pausedRef = useRef(false);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (isDismissed()) return;
-    const t = setTimeout(() => setVisible(true), 800);
-    return () => clearTimeout(t);
-  }, []);
+
 
   useEffect(() => {
     try {
@@ -58,7 +43,6 @@ export function BookAnchorCard() {
 
   function dismiss() {
     setVisible(false);
-    try { localStorage.setItem(DISMISS_KEY, String(Date.now())); } catch {}
   }
 
   function viewBook(slug: string) {

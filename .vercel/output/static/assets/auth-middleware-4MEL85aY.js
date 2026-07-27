@@ -1,0 +1,1 @@
+import{Wt as e}from"./index-B8gyw2X7.js";var t=e({type:`function`});export{t};
