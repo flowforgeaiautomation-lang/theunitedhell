@@ -1,4 +1,4 @@
-export const SITE_URL = (process.env.SITE_URL || process.env.VITE_SITE_URL || "https://theunitedhell.com").replace(/\/$/, "");
+export const SITE_URL = (process.env.SITE_URL || process.env.VITE_SITE_URL || "https://www.theunitedhell.in").replace(/\/$/, "");
 
 export const SITE_NAME = "The United Hell";
 export const SITE_TAGLINE = "Beyond comfort. Beyond headlines.";

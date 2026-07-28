@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import { SITE_URL } from "@/lib/seo";
+import { BOOKS } from "@/lib/editions-data";
 
 export const Route = createFileRoute("/sitemap.xml")({
   server: {
@@ -28,11 +29,17 @@ export const Route = createFileRoute("/sitemap.xml")({
           { path: "/trending", changefreq: "hourly", priority: "0.8" },
           { path: "/search", changefreq: "weekly", priority: "0.4" },
           { path: "/information", changefreq: "monthly", priority: "0.3" },
+          { path: "/editions", changefreq: "weekly", priority: "0.7" },
         ];
 
         type Entry = { loc: string; lastmod?: string; changefreq?: string; priority?: string };
         const entries: Entry[] = [
           ...staticPaths.map((s) => ({ loc: SITE_URL + s.path, changefreq: s.changefreq, priority: s.priority })),
+          ...BOOKS.map((b) => ({
+            loc: SITE_URL + "/editions/" + b.slug,
+            changefreq: "weekly" as const,
+            priority: "0.6" as const,
+          })),
           ...((data ?? []) as { slug: string; published_at: string; updated_at?: string }[]).map((a) => ({
             loc: SITE_URL + "/article/" + a.slug,
             lastmod: a.updated_at || a.published_at,
