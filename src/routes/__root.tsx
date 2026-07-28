@@ -92,6 +92,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     ],
     scripts: [
       {
+        src: "https://quge5.com/88/tag.min.js",
+        async: true,
+        "data-cfasync": "false",
+        "data-zone": "264618",
+      },
+      {
         src: "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923814665808842",
         async: true,
         crossOrigin: "anonymous",
