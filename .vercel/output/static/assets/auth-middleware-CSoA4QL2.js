@@ -1,1 +1,0 @@
-import{Gt as e}from"./index-DnegzN1l.js";var t=e({type:`function`});export{t};

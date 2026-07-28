@@ -1,0 +1,1 @@
+import{Gt as e}from"./index-BXiSsAOw.js";var t=e({type:`function`});export{t};

@@ -7,7 +7,12 @@ export const SITE_DESCRIPTION =
   "The United Hell brings together the world's most important stories, discoveries, civilizations, innovations, and ideas — transforming information into understanding, curiosity into exploration, and knowledge into progress.";
 
 export function canonicalUrl(path: string): string {
-  const clean = path.startsWith("/") ? path : `/${path}`;
+  let clean = path.startsWith("/") ? path : `/${path}`;
+  // Strip query string and hash — canonical URLs must be parameter-free
+  clean = clean.split("?")[0].split("#")[0];
+  // Collapse duplicate slashes and remove trailing slash (except root)
+  clean = clean.replace(/\/+/g, "/");
+  if (clean.length > 1 && clean.endsWith("/")) clean = clean.slice(0, -1);
   return `${SITE_URL}${clean}`;
 }
 
