@@ -259,13 +259,30 @@ function InformationPage() {
             onToggle={() => toggleSection("privacy")}
           >
             <p className="font-serif text-lg leading-relaxed mb-4">
-              We respect user privacy.
+              We respect user privacy and are committed to protecting your personal data.
             </p>
             <p className="font-serif text-lg leading-relaxed mb-4">
-              Information may be used to improve services, personalize experiences, maintain security, and operate the platform.
+              <strong>Data Collection:</strong> We may collect anonymous usage data such as pages visited, time spent, browser type, and device information. If you create an account, we store your email address and reading preferences.
+            </p>
+            <p className="font-serif text-lg leading-relaxed mb-4">
+              <strong>Google AdSense & Cookies:</strong> Third-party vendors, including Google, use cookies to serve ads based on a user's prior visits to this and other websites. Google's use of advertising cookies enables it and its partners to serve ads to you based on your visit to this site and/or other sites on the internet.
+            </p>
+            <ul className="font-serif text-lg leading-relaxed space-y-2 mb-4 pl-6 list-disc">
+              <li>Google may use the DoubleClick DART cookie to serve ads based on prior visits.</li>
+              <li>Users may opt out of personalized advertising by visiting <a href="https://www.google.com/settings/ads" className="text-foreground underline hover:no-underline" target="_blank" rel="noopener noreferrer">Google Ads Settings</a>.</li>
+              <li>Third-party vendors and ad networks may also use cookies for ad serving. You can opt out at <a href="https://www.aboutads.info/choices/" className="text-foreground underline hover:no-underline" target="_blank" rel="noopener noreferrer">aboutads.info/choices</a>.</li>
+            </ul>
+            <p className="font-serif text-lg leading-relaxed mb-4">
+              <strong>Analytics:</strong> We use Google Analytics and Microsoft Clarity to understand site usage. These tools collect anonymous, aggregated data.
+            </p>
+            <p className="font-serif text-lg leading-relaxed mb-4">
+              <strong>Data Retention:</strong> Anonymous usage data is retained for up to 14 months. Account data is retained until account deletion is requested.
+            </p>
+            <p className="font-serif text-lg leading-relaxed mb-4">
+              <strong>Your Rights:</strong> You may request access to, correction of, or deletion of your personal data by contacting us at theunitedhell@gmail.com.
             </p>
             <p className="font-serif text-lg leading-relaxed">
-              We do not knowingly sell personal information.
+              We do not knowingly sell personal information to third parties.
             </p>
           </Section>
 

@@ -19,7 +19,6 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { supabase } from "@/integrations/supabase/client";
 import { SITE_URL, SITE_NAME, SITE_TAGLINE, SITE_LOGO, SITE_DESCRIPTION, organizationJsonLd, websiteJsonLd } from "@/lib/seo";
-// Translation is handled by the user's browser (Chrome/Edge "Translate page" in the ⋮ menu).
 
 function NotFoundComponent() {
   return (
@@ -76,6 +75,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: `${SITE_NAME} — ${SITE_TAGLINE}` },
       { name: "google-site-verification", content: "J7AZ3nQHhZDYiNmZs8E-WRFyL00uc8TiX59qq-XT_EY" },
+      { name: "google-adsense-account", content: "ca-pub-3923814665808842" },
       { name: "description", content: SITE_DESCRIPTION },
       { name: "author", content: SITE_NAME },
       { property: "og:site_name", content: SITE_NAME },
@@ -90,10 +90,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:image", content: SITE_LOGO },
     ],
     scripts: [
-      {
-        src: "https://js.puter.com/v2/",
-        async: true,
-      },
       {
         src: "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923814665808842",
         async: true,
@@ -153,23 +149,6 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
-function EzoicScriptLoader() {
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    (window as any).ezstandalone = (window as any).ezstandalone || { cmd: [] };
-    const script = document.createElement("script");
-    script.src = "https://www.ezojs.com/ezoic/sa.min.js";
-    script.async = true;
-    script.onload = () => {
-      (window as any).ezstandalone?.cmd.push(function () {
-        if ((window as any).ezstandalone) (window as any).ezstandalone.showAds();
-      });
-    };
-    document.head.appendChild(script);
-  }, []);
-  return null;
-}
-
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
@@ -206,7 +185,6 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <EzoicScriptLoader />
       <div className="min-h-screen flex flex-col bg-background text-foreground">
         <SiteHeader />
         <BookAnchorCard />

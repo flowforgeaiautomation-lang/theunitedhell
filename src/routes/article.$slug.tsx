@@ -25,6 +25,7 @@ import { WordSearch } from "@/components/word-search";
 import { KnowledgeCheck } from "@/components/KnowledgeCheck";
 import { EnhancedVocabCard } from "@/components/EnhancedVocabCard";
 import { canonicalUrl, articleUrl, newsArticleJsonLd, breadcrumbJsonLd, SITE_NAME, SITE_LOGO, SITE_URL } from "@/lib/seo";
+import { AdSenseInArticle } from "@/components/ads/AdSenseAd";
 
 const articleQ = (slug: string) =>
   queryOptions({
@@ -362,6 +363,8 @@ function ArticlePage() {
         articleSections={story.sections?.map((s: any, i: number) => ({ id: `section-${i}`, label: s.heading || s.title || `Section ${i + 1}` })) || []}
       />
       <ArticleAudioPlayer articleContentRef={articleContentRef} articleTitle={article.title} />
+
+      <AdSenseInArticle />
 
       {/* Comments */}
       <Discussion articleId={article.id} />
