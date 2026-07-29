@@ -59,6 +59,9 @@ function EditionsPage() {
           <p className="text-sm text-muted-foreground max-w-xl mx-auto leading-relaxed">
             A timeless collection of books by Altair Veda — created to inspire knowledge, curiosity, wisdom, and lifelong learning.
           </p>
+          <a href="/editions/epaper" className="inline-flex items-center gap-2 mt-6 px-6 py-3 bg-foreground text-background text-xs font-semibold uppercase tracking-[0.15em] hover:opacity-80 transition-opacity">
+            Read the Daily E-Paper <ArrowRight className="h-3.5 w-3.5" />
+          </a>
         </div>
       </section>
 
