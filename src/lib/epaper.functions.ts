@@ -3,9 +3,16 @@ import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import type { ArticleSummary } from "./types";
 
+const SUPABASE_URL = "https://myrteqlcfwckgdokzzhg.supabase.co";
+const SUPABASE_ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im15cnRlcWxjZndja2dkb2t6emhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3MjE4OTgsImV4cCI6MjA5ODI5Nzg5OH0.lGAyAxmYrJAag1yONChoqV4-A1QQAkdWKxZp5IMJyII";
+
 function publicClient() {
-  const url = process.env.SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL;
-  const key = process.env.SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  const url = process.env.SUPABASE_URL || SUPABASE_URL;
+  const key =
+    process.env.SUPABASE_PUBLISHABLE_KEY ||
+    process.env.SUPABASE_ANON_KEY ||
+    SUPABASE_ANON_KEY;
   return createClient<Database>(url, key, {
     auth: { persistSession: false, autoRefreshToken: false, storage: undefined },
   });
@@ -45,7 +52,6 @@ type MarketSnap = {
   available: boolean;
 };
 
-// Map epaper sections to existing category slugs in the DB
 const SECTION_MAP: { id: string; label: string; kicker: string; cats: string[] }[] = [
   { id: "world", label: "World", kicker: "Planet Earth", cats: ["world", "world-discovery", "global-affairs", "geopolitics", "politics", "government", "diplomacy", "international-relations"] },
   { id: "india", label: "India", kicker: "Nation", cats: ["india", "indian-innovation", "indian-startups", "indian-history", "indian-culture", "indian-science", "indian-wildlife"] },
@@ -60,9 +66,6 @@ const SECTION_MAP: { id: string; label: string; kicker: string; cats: string[] }
   { id: "sports", label: "Sports", kicker: "The Game", cats: ["cricket", "football", "olympics", "athletes", "sports-science", "major-events", "esports"] },
   { id: "future", label: "Future of Humanity", kicker: "Tomorrow", cats: ["future", "future-of-ai", "future-of-work", "future-of-civilization", "future-predictions", "future-energy", "future-cities"] },
 ];
-
-const SUPABASE_URL = "https://myrteqlcfwckgdokzzhg.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im15cnRlcWxjZndja2dkb2t6emhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3MjE4OTgsImV4cCI6MjA5ODI5Nzg5OH0.lGAyAxmYrJAag1yONChoqV4-A1QQAkdWKxZp5IMJyII";
 
 async function fetchMarketSnapshot(): Promise<MarketSnap[]> {
   try {
@@ -105,44 +108,51 @@ function pickDaily<T>(arr: T[], dateKey: string): T {
 }
 
 export const getEpaperData = createServerFn({ method: "GET" }).handler(async () => {
-  const supabase = publicClient();
   const today = new Date();
   const dateStr = today.toISOString().slice(0, 10);
-  const dateDisplay = today.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
-
-  // Fetch a large pool of today's articles, then distribute by section
-  const startOfDay = new Date();
-  startOfDay.setHours(0, 0, 0, 0);
-  const sevenDaysAgo = new Date(Date.now() - 7 * 86400000);
-
-  const { data: todayRows } = await supabase
-    .from("articles")
-    .select(SUMMARY_COLS)
-    .eq("is_published", true)
-    .gte("published_at", sevenDaysAgo.toISOString())
-    .order("published_at", { ascending: false })
-    .limit(200);
-
-  const allArticles = (todayRows ?? []) as unknown as ArticleSummary[];
-
-  // Deduplicate by id
-  const seen = new Set<string>();
-  const deduped = allArticles.filter((a) => {
-    if (!a.id || seen.has(a.id)) return false;
-    seen.add(a.id);
-    return true;
+  const dateDisplay = today.toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
   });
 
-  // Top stories = first 10 by recency
-  const topStories = deduped.slice(0, 10);
+  let deduped: ArticleSummary[] = [];
+  try {
+    const supabase = publicClient();
+    const sevenDaysAgo = new Date(Date.now() - 7 * 86400000);
+    const { data: todayRows, error } = await supabase
+      .from("articles")
+      .select(SUMMARY_COLS)
+      .eq("is_published", true)
+      .gte("published_at", sevenDaysAgo.toISOString())
+      .order("published_at", { ascending: false })
+      .limit(200);
 
-  // Editor's picks = highest view_count from the pool
+    if (error) {
+      console.error("[epaper] articles query error:", error.message);
+    }
+
+    const allArticles = (todayRows ?? []) as unknown as ArticleSummary[];
+    const seen = new Set<string>();
+    deduped = allArticles.filter((a) => {
+      if (!a.id || seen.has(a.id)) return false;
+      seen.add(a.id);
+      return true;
+    });
+  } catch (err) {
+    console.error("[epaper] failed to fetch articles:", err);
+  }
+
+  const topStories = deduped.slice(0, 10);
   const editorsPicks = [...deduped]
     .sort((a, b) => (b.view_count ?? 0) - (a.view_count ?? 0))
     .slice(0, 5);
 
-  // Build sections from category mapping
-  const usedIds = new Set<string>([...topStories.slice(0, 5).map((a) => a.id), ...editorsPicks.map((a) => a.id)]);
+  const usedIds = new Set<string>([
+    ...topStories.slice(0, 5).map((a) => a.id),
+    ...editorsPicks.map((a) => a.id),
+  ]);
   const sections: EpaperSection[] = SECTION_MAP.map((sec) => {
     const articles = deduped
       .filter((a) => sec.cats.includes(a.category) && !usedIds.has(a.id))
@@ -151,12 +161,19 @@ export const getEpaperData = createServerFn({ method: "GET" }).handler(async () 
     return { id: sec.id, label: sec.label, kicker: sec.kicker, articles };
   }).filter((s) => s.articles.length > 0);
 
-  const marketSnapshot = await fetchMarketSnapshot();
+  let marketSnapshot: MarketSnap[] = [];
+  try {
+    marketSnapshot = await fetchMarketSnapshot();
+  } catch (err) {
+    console.error("[epaper] failed to fetch market snapshot:", err);
+  }
+
   const quoteOfDay = pickDaily(QUOTES, dateStr);
   const thisDayHistory = [pickDaily(HISTORY_FACTS, dateStr)];
+  const photoArticle = deduped.find((a) => a.cover_image_url);
   const photoOfDay = {
-    url: deduped.find((a) => a.cover_image_url)?.cover_image_url ?? "",
-    caption: deduped.find((a) => a.cover_image_url)?.title ?? "Today's featured image",
+    url: photoArticle?.cover_image_url ?? "",
+    caption: photoArticle?.title ?? "Today's featured image",
     credit: "The United Hell",
   };
 

@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
-import { Search, X, ArrowRight, ExternalLink } from "lucide-react";
+import { Search, X, ArrowRight, ExternalLink, Newspaper } from "lucide-react";
 import { BOOKS, AUTHOR, type EditionBook } from "@/lib/editions-data";
 import { canonicalUrl, SITE_NAME } from "@/lib/seo";
 
@@ -59,9 +59,6 @@ function EditionsPage() {
           <p className="text-sm text-muted-foreground max-w-xl mx-auto leading-relaxed">
             A timeless collection of books by Altair Veda — created to inspire knowledge, curiosity, wisdom, and lifelong learning.
           </p>
-          <Link to="/editions/epaper" className="inline-flex items-center gap-2 mt-6 px-6 py-3 bg-foreground text-background text-xs font-semibold uppercase tracking-[0.15em] hover:opacity-80 transition-opacity">
-            Read the Daily E-Paper <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
         </div>
       </section>
 
@@ -149,6 +146,38 @@ function EditionsPage() {
             </p>
           ) : (
             <div className="divide-y divide-border border-y border-border">
+              <Link
+                to="/editions/epaper"
+                className="group flex items-center gap-4 sm:gap-6 py-5 px-2 sm:px-4 transition-colors animate-fade-in cursor-pointer hover:bg-muted/50 bg-muted/30"
+                style={{ animationDelay: "0ms" }}
+              >
+                <div className="shrink-0 w-14 h-[84px] sm:w-16 sm:h-24 border border-border overflow-hidden bg-foreground flex items-center justify-center">
+                  <Newspaper className="h-7 w-7 text-background" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[0.6rem] uppercase tracking-[0.2em] text-foreground font-semibold">Daily Edition</span>
+                    <span className="text-[0.55rem] uppercase tracking-[0.15em] text-foreground border border-foreground px-1.5 py-0.5">Live</span>
+                  </div>
+                  <h3 className="font-serif text-base sm:text-lg font-bold leading-tight">
+                    The Daily Discovery E-Paper
+                  </h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 line-clamp-1">
+                    Beyond Headlines. Beyond Discovery. — AI-powered daily newspaper
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1 line-clamp-2 hidden sm:block">
+                    Your daily digital newspaper featuring the world's most important stories, science, innovation, and knowledge — curated by AI.
+                  </p>
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-[0.65rem] text-muted-foreground">
+                    <span>Updated Daily</span>
+                    <span>·</span>
+                    <span>English</span>
+                  </div>
+                </div>
+                <div className="shrink-0 hidden sm:flex items-center gap-1.5 px-4 py-2 bg-foreground text-background text-[0.65rem] font-semibold uppercase tracking-[0.12em]">
+                  Read <ArrowRight className="h-3 w-3" />
+                </div>
+              </Link>
               {filteredBooks.map((book, i) => (
                 <BookListRow
                   key={book.slug}

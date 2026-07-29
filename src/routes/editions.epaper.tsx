@@ -3,12 +3,11 @@ import { useSuspenseQuery, queryOptions } from "@tanstack/react-query";
 import { useEffect, useState, useRef } from "react";
 import {
   Newspaper, Clock, TrendingUp, TrendingDown, Sun, Moon, Type,
-  ArrowRight, ChevronRight, Quote, CalendarDays, Camera, BarChart3,
-  Activity, Globe, Sparkles,
+  ArrowRight, Quote, CalendarDays, Camera, BarChart3,
+  Globe, Sparkles,
 } from "lucide-react";
 import { getEpaperData, type EpaperData, type EpaperSection } from "@/lib/epaper.functions";
 import { ArticleCard } from "@/components/article-card";
-import { ArticleCardSkeletonGrid } from "@/components/ArticleCardSkeleton";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { canonicalUrl, SITE_NAME, SITE_LOGO } from "@/lib/seo";
 import { fallbackCoverUrl } from "@/lib/article-images";
@@ -34,9 +33,6 @@ export const Route = createFileRoute("/editions/epaper")({
     ],
     links: [{ rel: "canonical", href: canonicalUrl("/editions/epaper") }],
   }),
-  loader: async ({ context }) => {
-    try { await context.queryClient.prefetchQuery(epaperQ); } catch {}
-  },
   component: EpaperPage,
   errorComponent: ({ error }) => (
     <div className="container-read py-20">
