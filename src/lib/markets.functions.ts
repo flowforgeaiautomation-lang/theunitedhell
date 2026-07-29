@@ -10,6 +10,7 @@ export type MarketQuote = {
   change: number | null;
   changePercent: number | null;
   updatedAt: string | null;
+  lastUpdated: number | null;
   source: string | null;
   available: boolean;
 };
@@ -113,7 +114,7 @@ async function tryFinnhub(cfg: MarketSymbolConfig): Promise<MarketQuote | null> 
   return {
     symbol: cfg.symbol, name: cfg.name, category: cfg.category, region: cfg.region,
     price, change, changePercent, updatedAt: new Date().toISOString(),
-    source: "Finnhub", available: true,
+    lastUpdated: Date.now(), source: "Finnhub", available: true,
   };
 }
 
@@ -130,7 +131,7 @@ async function tryTwelvedata(cfg: MarketSymbolConfig): Promise<MarketQuote | nul
   return {
     symbol: cfg.symbol, name: cfg.name, category: cfg.category, region: cfg.region,
     price, change, changePercent, updatedAt: data.datetime ? new Date(data.datetime).toISOString() : new Date().toISOString(),
-    source: "Twelve Data", available: true,
+    lastUpdated: Date.now(), source: "Twelve Data", available: true,
   };
 }
 
@@ -145,7 +146,7 @@ async function tryFmp(cfg: MarketSymbolConfig): Promise<MarketQuote | null> {
   return {
     symbol: cfg.symbol, name: cfg.name, category: cfg.category, region: cfg.region,
     price, change: validNum(d.change) ?? 0, changePercent: validNum(d.changesPercentage) ?? 0,
-    updatedAt: new Date().toISOString(), source: "FMP", available: true,
+    updatedAt: new Date().toISOString(), lastUpdated: Date.now(), source: "FMP", available: true,
   };
 }
 
@@ -163,7 +164,7 @@ async function tryPolygon(cfg: MarketSymbolConfig): Promise<MarketQuote | null> 
   return {
     symbol: cfg.symbol, name: cfg.name, category: cfg.category, region: cfg.region,
     price, change, changePercent, updatedAt: new Date(r.t).toISOString(),
-    source: "Polygon", available: true,
+    lastUpdated: Date.now(), source: "Polygon", available: true,
   };
 }
 
@@ -198,7 +199,7 @@ async function tryAlphavantage(cfg: MarketSymbolConfig): Promise<MarketQuote | n
   return {
     symbol: cfg.symbol, name: cfg.name, category: cfg.category, region: cfg.region,
     price, change: change ?? 0, changePercent: changePercent ?? 0,
-    updatedAt: new Date().toISOString(), source: "Alpha Vantage", available: true,
+    updatedAt: new Date().toISOString(), lastUpdated: Date.now(), source: "Alpha Vantage", available: true,
   };
 }
 
@@ -220,7 +221,7 @@ async function fetchQuote(cfg: MarketSymbolConfig): Promise<MarketQuote> {
   const unavailable: MarketQuote = {
     symbol: cfg.symbol, name: cfg.name, category: cfg.category, region: cfg.region,
     price: null, change: null, changePercent: null, updatedAt: null,
-    source: null, available: false,
+    lastUpdated: null, source: null, available: false,
   };
   cache.set(cacheKey, { data: unavailable, ts: Date.now() });
   return unavailable;

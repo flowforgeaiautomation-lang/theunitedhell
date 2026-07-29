@@ -16,9 +16,13 @@ import type { MarketQuote } from "@/lib/markets.functions";
 const quotesQuery = queryOptions({
   queryKey: ["market-quotes-page"],
   queryFn: () => getMarketQuotes(),
-  staleTime: 10_000,
-  refetchInterval: 20_000,
+  staleTime: 15_000,
+  gcTime: 5 * 60_000,
+  refetchInterval: 30_000,
   refetchIntervalInBackground: false,
+  retry: 2,
+  retryDelay: 5_000,
+  placeholderData: (prev: any) => prev,
 });
 
 const PAGE_SIZE = 24;

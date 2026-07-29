@@ -1,23 +1,9 @@
-import { useEffect, useState, useRef, useCallback, useMemo } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery, queryOptions } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { TrendingUp, TrendingDown, Activity } from "lucide-react";
 import { getMarketQuotes, type MarketQuote } from "@/lib/markets.functions";
-
-const quotesQuery = queryOptions({
-  queryKey: ["market-quotes"],
-  queryFn: () => getMarketQuotes(),
-  staleTime: 10_000,
-  refetchInterval: (query: any) => {
-    const data = query?.state?.data as MarketQuote[] | undefined;
-    if (!data || data.length === 0) return 15_000;
-    const now = Date.now();
-    const anyUpdatedRecently = data.some((q) => q.lastUpdated && (now - q.lastUpdated) < 60_000);
-    return anyUpdatedRecently ? 20_000 : 60_000;
-  },
-  refetchIntervalInBackground: false,
-});
 
 function formatPrice(price: number | null): string {
   if (price === null) return "—";
@@ -28,8 +14,7 @@ function formatPrice(price: number | null): string {
 
 function formatTime(ts: number | null): string {
   if (!ts) return "";
-  const d = new Date(ts);
-  return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
+  return new Date(ts).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
 function Sparkline({ positive, seed }: { positive: boolean; seed: number }) {
@@ -110,43 +95,84 @@ function SkeletonCard() {
   );
 }
 
+// Static fallback so the ticker NEVER disappears even if all APIs fail
+const FALLBACK_QUOTES: MarketQuote[] = [
+  { symbol: "SENSEX", name: "Sensex", category: "indices", region: "India", price: null, change: null, changePercent: null, updatedAt: null, lastUpdated: null, source: null, available: false },
+  { symbol: "NIFTY50", name: "NIFTY 50", category: "indices", region: "India", price: null, change: null, changePercent: null, updatedAt: null, lastUpdated: null, source: null, available: false },
+  { symbol: "BANKNIFTY", name: "Bank NIFTY", category: "indices", region: "India", price: null, change: null, changePercent: null, updatedAt: null, lastUpdated: null, source: null, available: false },
+  { symbol: "NIFTYIT", name: "NIFTY IT", category: "indices", region: "India", price: null, change: null, changePercent: null, updatedAt: null, lastUpdated: null, source: null, available: false },
+  { symbol: "IXIC", name: "NASDAQ Composite", category: "indices", region: "US", price: null, change: null, changePercent: null, updatedAt: null, lastUpdated: null, source: null, available: false },
+  { symbol: "SPX", name: "S&P 500", category: "indices", region: "US", price: null, change: null, changePercent: null, updatedAt: null, lastUpdated: null, source: null, available: false },
+  { symbol: "DJI", name: "Dow Jones", category: "indices", region: "US", price: null, change: null, changePercent: null, updatedAt: null, lastUpdated: null, source: null, available: false },
+  { symbol: "FTSE100", name: "FTSE 100", category: "indices", region: "Europe", price: null, change: null, changePercent: null, updatedAt: null, lastUpdated: null, source: null, available: false },
+  { symbol: "DAX", name: "DAX", category: "indices", region: "Europe", price: null, change: null, changePercent: null, updatedAt: null, lastUpdated: null, source: null, available: false },
+  { symbol: "CAC40", name: "CAC 40", category: "indices", region: "Europe", price: null, change: null, changePercent: null, updatedAt: null, lastUpdated: null, source: null, available: false },
+  { symbol: "N225", name: "Nikkei 225", category: "indices", region: "Asia", price: null, change: null, changePercent: null, updatedAt: null, lastUpdated: null, source: null, available: false },
+  { symbol: "HSI", name: "Hang Seng", category: "indices", region: "Asia", price: null, change: null, changePercent: null, updatedAt: null, lastUpdated: null, source: null, available: false },
+  { symbol: "SSEC", name: "Shanghai Composite", category: "indices", region: "Asia", price: null, change: null, changePercent: null, updatedAt: null, lastUpdated: null, source: null, available: false },
+  { symbol: "GOLD", name: "Gold", category: "commodities", region: "Global", price: null, change: null, changePercent: null, updatedAt: null, lastUpdated: null, source: null, available: false },
+  { symbol: "SILVER", name: "Silver", category: "commodities", region: "Global", price: null, change: null, changePercent: null, updatedAt: null, lastUpdated: null, source: null, available: false },
+  { symbol: "BRENT", name: "Brent Crude", category: "commodities", region: "Global", price: null, change: null, changePercent: null, updatedAt: null, lastUpdated: null, source: null, available: false },
+  { symbol: "WTI", name: "WTI Crude", category: "commodities", region: "Global", price: null, change: null, changePercent: null, updatedAt: null, lastUpdated: null, source: null, available: false },
+  { symbol: "NATGAS", name: "Natural Gas", category: "commodities", region: "Global", price: null, change: null, changePercent: null, updatedAt: null, lastUpdated: null, source: null, available: false },
+  { symbol: "USDINR", name: "USD/INR", category: "forex", region: "Global", price: null, change: null, changePercent: null, updatedAt: null, lastUpdated: null, source: null, available: false },
+  { symbol: "EURUSD", name: "EUR/USD", category: "forex", region: "Global", price: null, change: null, changePercent: null, updatedAt: null, lastUpdated: null, source: null, available: false },
+  { symbol: "GBPUSD", name: "GBP/USD", category: "forex", region: "Global", price: null, change: null, changePercent: null, updatedAt: null, lastUpdated: null, source: null, available: false },
+  { symbol: "USDJPY", name: "USD/JPY", category: "forex", region: "Global", price: null, change: null, changePercent: null, updatedAt: null, lastUpdated: null, source: null, available: false },
+  { symbol: "BTC", name: "Bitcoin", category: "crypto", region: "Global", price: null, change: null, changePercent: null, updatedAt: null, lastUpdated: null, source: null, available: false },
+  { symbol: "ETH", name: "Ethereum", category: "crypto", region: "Global", price: null, change: null, changePercent: null, updatedAt: null, lastUpdated: null, source: null, available: false },
+];
+
 export function MarketTicker() {
   const fetchQuotes = useServerFn(getMarketQuotes);
   const query = useQuery({
-    ...quotesQuery,
+    queryKey: ["market-quotes"],
     queryFn: () => fetchQuotes(),
-    retry: 1,
+    staleTime: 15_000,
+    gcTime: 5 * 60_000,
+    refetchInterval: 30_000,
+    refetchIntervalInBackground: false,
+    retry: 2,
+    retryDelay: 5_000,
+    placeholderData: (prev: any) => prev,
   });
   const scrollRef = useRef<HTMLDivElement>(null);
   const [paused, setPaused] = useState(false);
-  const [page, setPage] = useState(0);
+  const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const quotes = (query.data ?? []) as MarketQuote[];
-  const showSkeletons = query.isLoading && quotes.length === 0;
-  const showError = query.isError && quotes.length === 0;
+  // Always have quotes to show — never let the ticker be empty
+  const quotes = (query.data ?? FALLBACK_QUOTES) as MarketQuote[];
+  const showSkeletons = query.isLoading && !query.data;
 
-  // Page-based auto-rotation every 6 seconds
+  // Auto-rotation every 6 seconds — scroll one "page" of cards
   useEffect(() => {
-    if (paused || showSkeletons || showError || quotes.length === 0) return;
+    if (paused || showSkeletons || quotes.length === 0) return;
     const id = setInterval(() => {
       const el = scrollRef.current;
       if (!el) return;
       const cardWidth = 220;
-      const visibleCards = Math.floor(el.clientWidth / cardWidth);
-      const maxPage = Math.ceil(quotes.length / Math.max(1, visibleCards));
-      setPage((p) => {
-        const next = (p + 1) % maxPage;
-        el.scrollTo({ left: next * visibleCards * cardWidth, behavior: "smooth" });
-        return next;
-      });
+      const visibleCards = Math.max(1, Math.floor(el.clientWidth / cardWidth));
+      const maxScroll = el.scrollWidth - el.clientWidth;
+      if (maxScroll <= 0) return;
+      const currentPos = el.scrollLeft;
+      // If near end, wrap to start; otherwise advance one page
+      const nextPos = currentPos + visibleCards * cardWidth >= maxScroll - 10
+        ? 0
+        : currentPos + visibleCards * cardWidth;
+      el.scrollTo({ left: nextPos, behavior: "smooth" });
     }, 6000);
     return () => clearInterval(id);
-  }, [paused, showSkeletons, showError, quotes.length]);
+  }, [paused, showSkeletons, quotes.length]);
 
-  const resetPage = useCallback(() => {
-    setPage(0);
-    const el = scrollRef.current;
-    if (el) el.scrollTo({ left: 0, behavior: "smooth" });
+  // When user manually scrolls, pause auto-rotation temporarily
+  function handleManualScroll() {
+    setPaused(true);
+    if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
+    scrollTimerRef.current = setTimeout(() => setPaused(false), 10_000);
+  }
+
+  useEffect(() => {
+    return () => { if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current); };
   }, []);
 
   return (
@@ -170,16 +196,14 @@ export function MarketTicker() {
             onMouseLeave={() => setPaused(false)}
             onFocus={() => setPaused(true)}
             onBlur={() => setPaused(false)}
-            onScroll={resetPage}
+            onScroll={handleManualScroll}
             style={{ scrollbarWidth: "none" }}
             role="marquee"
             aria-live="polite"
           >
             {showSkeletons
               ? Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)
-              : showError
-                ? <div className="px-4 py-2 text-xs text-muted-foreground">Market data loading…</div>
-                : quotes.map((q, i) => <MarketCard key={q.symbol} quote={q} index={i} />)}
+              : quotes.map((q, i) => <MarketCard key={q.symbol} quote={q} index={i} />)}
           </div>
         </div>
       </div>
