@@ -5,11 +5,6 @@
       "has": [{ "type": "host", "value": "theunitedhell.in" }],
       "destination": "https://www.theunitedhell.in/:path*",
       "permanent": true
-    },
-    {
-      "source": "/:path*/",
-      "destination": "https://www.theunitedhell.in/:path*",
-      "permanent": true
     }
   ],
   "headers": [
