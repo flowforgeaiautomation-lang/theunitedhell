@@ -18,6 +18,7 @@ import { MarketTicker } from "@/components/MarketTicker";
 import { ReadingSettings } from "@/components/ReadingSettings";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ScrollToTop } from "@/components/ScrollToTop";
+import { SafeComponent } from "@/components/SafeComponent";
 import { supabase } from "@/integrations/supabase/client";
 import { SITE_URL, SITE_NAME, SITE_TAGLINE, SITE_LOGO, SITE_DESCRIPTION, organizationJsonLd, websiteJsonLd } from "@/lib/seo";
 
@@ -44,12 +45,18 @@ function NotFoundComponent() {
 
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
+  useEffect(() => {
+    const t = setTimeout(() => reset(), 1500);
+    return () => clearTimeout(t);
+  }, [reset]);
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="container-read text-center">
-        <div className="kicker">Loading issue</div>
-        <h1 className="display-2 mt-3">We're having trouble loading this page</h1>
-        <p className="dek mt-3">This usually resolves itself in a moment. Please try again.</p>
+        <div className="flex justify-center mb-4">
+          <div className="h-8 w-8 border-2 border-foreground border-t-transparent rounded-full animate-spin" />
+        </div>
+        <h1 className="display-2 mt-3">Loading…</h1>
+        <p className="dek mt-3">One moment while we reload this page.</p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
             onClick={() => { reset(); }}
@@ -188,14 +195,24 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <div className="min-h-screen flex flex-col bg-background text-foreground">
-        <SiteHeader />
-        <BookAnchorCard />
-        <MarketTicker />
+        <SafeComponent name="SiteHeader" fallback={null}>
+          <SiteHeader />
+        </SafeComponent>
+        <SafeComponent name="BookAnchorCard" fallback={null}>
+          <BookAnchorCard />
+        </SafeComponent>
+        <SafeComponent name="MarketTicker" fallback={null}>
+          <MarketTicker />
+        </SafeComponent>
         <main className="flex-1 page-enter">
           <Outlet />
         </main>
-        <SiteFooter />
-        <ReadingSettings />
+        <SafeComponent name="SiteFooter" fallback={null}>
+          <SiteFooter />
+        </SafeComponent>
+        <SafeComponent name="ReadingSettings" fallback={null}>
+          <ReadingSettings />
+        </SafeComponent>
         <ScrollToTop />
       </div>
       <Toaster
