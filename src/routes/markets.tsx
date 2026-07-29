@@ -1,29 +1,16 @@
 import { createFileRoute, useSearch, useNavigate } from "@tanstack/react-router";
 import { useQuery, queryOptions } from "@tanstack/react-query";
 import { useEffect, useState, useRef, useCallback } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import { Loader2, TrendingUp, TrendingDown, Activity, X } from "lucide-react";
 import { motion } from "framer-motion";
-import { getMarketQuotes, MARKET_GROUPS, MARKET_SYMBOLS } from "@/lib/markets.functions";
+import { MARKET_GROUPS, MARKET_SYMBOLS } from "@/lib/markets.functions";
+import { supabase } from "@/integrations/supabase/client";
 import { listArticles } from "@/lib/articles.functions";
 import { ArticleCard } from "@/components/article-card";
 import { ArticleCardSkeletonGrid } from "@/components/ArticleCardSkeleton";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { canonicalUrl, SITE_NAME, SITE_LOGO } from "@/lib/seo";
 import type { ArticleSummary } from "@/lib/types";
-import type { MarketQuote } from "@/lib/markets.functions";
-
-const quotesQuery = queryOptions({
-  queryKey: ["market-quotes-page"],
-  queryFn: () => getMarketQuotes(),
-  staleTime: 15_000,
-  gcTime: 5 * 60_000,
-  refetchInterval: 30_000,
-  refetchIntervalInBackground: false,
-  retry: 2,
-  retryDelay: 5_000,
-  placeholderData: (prev: any) => prev,
-});
 
 const PAGE_SIZE = 24;
 
@@ -71,9 +58,11 @@ function formatPrice(price: number | null): string {
   return price.toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 6 });
 }
 
-function formatTime(ts: number | null): string {
+function formatTime(ts: string | null): string {
   if (!ts) return "";
-  return new Date(ts).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) return "";
+  return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
 function Sparkline({ positive, seed }: { positive: boolean; seed: number }) {
@@ -118,9 +107,26 @@ export const Route = createFileRoute("/markets")({
 function MarketsPage() {
   const search = useSearch({ from: "/markets" });
   const navigate = useNavigate();
-  const fetchQuotes = useServerFn(getMarketQuotes);
-  const query = useQuery({ ...quotesQuery, queryFn: () => fetchQuotes() });
-  const quotes = (query.data ?? []) as MarketQuote[];
+  const [quotes, setQuotes] = useState<any[]>([]);
+
+  // Fetch prices from Supabase — instant, no external API calls
+  useEffect(() => {
+    let mounted = true;
+    async function fetchPrices() {
+      try {
+        const { data } = await supabase
+          .from("market_prices")
+          .select("symbol, name, category, region, price, change, change_percent, source, available, updated_at")
+          .order("symbol");
+        if (mounted && data) setQuotes(data);
+      } catch {
+        // keep empty
+      }
+    }
+    fetchPrices();
+    const interval = setInterval(fetchPrices, 30_000);
+    return () => { mounted = false; clearInterval(interval); };
+  }, []);
 
   const [articles, setArticles] = useState<ArticleSummary[]>([]);
   const [hasMore, setHasMore] = useState(true);
@@ -256,13 +262,13 @@ function MarketsPage() {
                             <div className={`text-sm tabular-nums mt-1 ${positive ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
                               {q.change !== null ? `${q.change >= 0 ? "+" : ""}${q.change.toFixed(2)}` : "—"}
                               {" "}
-                              ({q.changePercent !== null ? `${q.changePercent >= 0 ? "+" : ""}${q.changePercent.toFixed(2)}%` : "—"})
+                              ({q.change_percent !== null ? `${q.change_percent >= 0 ? "+" : ""}${q.change_percent.toFixed(2)}%` : "—"})
                             </div>
                           ) : (
                             <div className="text-xs text-muted-foreground mt-1">Data temporarily unavailable</div>
                           )}
-                          {q.available && q.lastUpdated && (
-                            <div className="text-[0.55rem] text-muted-foreground/50 mt-1">Updated {formatTime(q.lastUpdated)}</div>
+                          {q.available && q.updated_at && (
+                            <div className="text-[0.55rem] text-muted-foreground/50 mt-1">Updated {formatTime(q.updated_at)}</div>
                           )}
                         </div>
                         {q.available && <Sparkline positive={positive} seed={qi} />}
