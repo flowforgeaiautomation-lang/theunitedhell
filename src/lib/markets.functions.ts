@@ -79,11 +79,19 @@ export const MARKET_GROUPS: MarketGroup[] = [
 const cache = new Map<string, { data: MarketQuote; ts: number }>();
 const CACHE_TTL = 20_000;
 
+const API_KEYS = {
+  finnhub: "d9kccs1r01qq9sqfu130d9kccs1r01qq9sqfu13g",
+  twelvedata: "35cc7540b81e4d13932cfb931dba4ec1",
+  alphavantage: "UCL7D9WS75IGTMQM",
+  fmp: "Gmej9XaScIABNc9kxCZ8aDO6g8zeVuJx",
+  polygon: "z9rRBTzme1CqLQbvwmQQcUCI7mesEp3b",
+};
+
 function getEnv(key: string): string | undefined {
-  return process.env[key] || (import.meta as any).env?.[`VITE_${key}`];
+  return process.env[key] || (import.meta as any).env?.[`VITE_${key}`] || undefined;
 }
 
-async function fetchJson(url: string, timeoutMs = 8000): Promise<any | null> {
+async function fetchJson(url: string, timeoutMs = 5000): Promise<any | null> {
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -102,7 +110,7 @@ function validNum(v: unknown): number | null {
 }
 
 async function tryFinnhub(cfg: MarketSymbolConfig): Promise<MarketQuote | null> {
-  const key = getEnv("FINNHUB_API_KEY");
+  const key = getEnv("FINNHUB_API_KEY") || API_KEYS.finnhub;
   if (!key || !cfg.finnhub) return null;
   const data = await fetchJson(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(cfg.finnhub)}&token=${key}`);
   if (!data || !data.c) return null;
@@ -119,7 +127,7 @@ async function tryFinnhub(cfg: MarketSymbolConfig): Promise<MarketQuote | null> 
 }
 
 async function tryTwelvedata(cfg: MarketSymbolConfig): Promise<MarketQuote | null> {
-  const key = getEnv("TWELVEDATA_API_KEY");
+  const key = getEnv("TWELVEDATA_API_KEY") || API_KEYS.twelvedata;
   if (!key || !cfg.twelvedata) return null;
   const data = await fetchJson(`https://api.twelvedata.com/quote?symbol=${encodeURIComponent(cfg.twelvedata)}&apikey=${key}`);
   if (!data || data.status === "error" || !data.close) return null;
@@ -136,7 +144,7 @@ async function tryTwelvedata(cfg: MarketSymbolConfig): Promise<MarketQuote | nul
 }
 
 async function tryFmp(cfg: MarketSymbolConfig): Promise<MarketQuote | null> {
-  const key = getEnv("FMP_API_KEY");
+  const key = getEnv("FMP_API_KEY") || API_KEYS.fmp;
   if (!key || !cfg.fmp) return null;
   const data = await fetchJson(`https://financialmodelingprep.com/api/v3/quote/${encodeURIComponent(cfg.fmp)}?apikey=${key}`);
   if (!data || !Array.isArray(data) || data.length === 0) return null;
@@ -151,7 +159,7 @@ async function tryFmp(cfg: MarketSymbolConfig): Promise<MarketQuote | null> {
 }
 
 async function tryPolygon(cfg: MarketSymbolConfig): Promise<MarketQuote | null> {
-  const key = getEnv("POLYGON_API_KEY");
+  const key = getEnv("POLYGON_API_KEY") || API_KEYS.polygon;
   if (!key || !cfg.polygon) return null;
   const data = await fetchJson(`https://api.polygon.io/v2/aggs/ticker/${encodeURIComponent(cfg.polygon)}/prev?adjusted=true&apiKey=${key}`);
   if (!data || !data.results || data.results.length === 0) return null;
@@ -169,7 +177,7 @@ async function tryPolygon(cfg: MarketSymbolConfig): Promise<MarketQuote | null> 
 }
 
 async function tryAlphavantage(cfg: MarketSymbolConfig): Promise<MarketQuote | null> {
-  const key = getEnv("ALPHAVANTAGE_API_KEY");
+  const key = getEnv("ALPHAVANTAGE_API_KEY") || API_KEYS.alphavantage;
   if (!key || !cfg.alphavantage) return null;
   const isForex = cfg.category === "forex" || cfg.alphavantage.includes("/");
   const isCrypto = cfg.category === "crypto";
@@ -203,7 +211,7 @@ async function tryAlphavantage(cfg: MarketSymbolConfig): Promise<MarketQuote | n
   };
 }
 
-const PROVIDERS = [tryPolygon, tryFinnhub, tryTwelvedata, tryFmp, tryAlphavantage];
+const PROVIDERS = [tryFinnhub, tryTwelvedata, tryFmp, tryPolygon, tryAlphavantage];
 
 async function fetchQuote(cfg: MarketSymbolConfig): Promise<MarketQuote> {
   const cacheKey = cfg.symbol;
@@ -229,7 +237,14 @@ async function fetchQuote(cfg: MarketSymbolConfig): Promise<MarketQuote> {
 
 export const getMarketQuotes = createServerFn({ method: "GET" })(
   async () => {
-    const results = await Promise.all(MARKET_SYMBOLS.map(fetchQuote));
+    // Process in batches of 6 to avoid rate limits and speed up loading
+    const BATCH_SIZE = 6;
+    const results: MarketQuote[] = [];
+    for (let i = 0; i < MARKET_SYMBOLS.length; i += BATCH_SIZE) {
+      const batch = MARKET_SYMBOLS.slice(i, i + BATCH_SIZE);
+      const batchResults = await Promise.all(batch.map(fetchQuote));
+      results.push(...batchResults);
+    }
     return results;
   },
 );
