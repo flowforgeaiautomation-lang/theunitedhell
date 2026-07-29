@@ -76,7 +76,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: `${SITE_NAME} — ${SITE_TAGLINE}` },
       { name: "google-site-verification", content: "J7AZ3nQHhZDYiNmZs8E-WRFyL00uc8TiX59qq-XT_EY" },
       { name: "google-adsense-account", content: "ca-pub-3923814665808842" },
-      { name: "monetag", content: "9385428941aac96c4eafcc07ae761ca0" },
       { name: "description", content: SITE_DESCRIPTION },
       { name: "author", content: SITE_NAME },
       { property: "og:site_name", content: SITE_NAME },
@@ -91,12 +90,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:image", content: SITE_LOGO },
     ],
     scripts: [
-      {
-        src: "https://quge5.com/88/tag.min.js",
-        async: true,
-        "data-cfasync": "false",
-        "data-zone": "264618",
-      },
       {
         src: "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3923814665808842",
         async: true,
