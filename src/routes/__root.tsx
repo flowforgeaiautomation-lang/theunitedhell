@@ -14,6 +14,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { SiteHeader, SiteFooter } from "@/components/site-chrome";
 import { BookAnchorCard } from "@/components/BookAnchorCard";
+import { MarketTicker } from "@/components/MarketTicker";
 import { ReadingSettings } from "@/components/ReadingSettings";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ScrollToTop } from "@/components/ScrollToTop";
@@ -189,6 +190,7 @@ function RootComponent() {
       <div className="min-h-screen flex flex-col bg-background text-foreground">
         <SiteHeader />
         <BookAnchorCard />
+        <MarketTicker />
         <main className="flex-1 page-enter">
           <Outlet />
         </main>

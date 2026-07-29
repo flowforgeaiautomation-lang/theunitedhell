@@ -250,14 +250,7 @@ function Home() {
 
       {showEmptyState && (
         <div className="text-center py-16">
-          <p className="dek">No stories found yet. Explore the full archive on Discover.</p>
-          <Link
-            to="/discover"
-            preload="intent"
-            className="mt-4 inline-block border border-foreground px-4 py-2 text-xs uppercase tracking-widest hover:bg-foreground hover:text-background transition"
-          >
-            Discover stories
-          </Link>
+          <p className="dek">Stories are being curated. Check back shortly.</p>
         </div>
       )}
 
@@ -284,12 +277,6 @@ function Home() {
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       )}
-
-      <div className="mt-16 text-center">
-        <Link to="/map" className="kicker hover:opacity-60">
-          Or explore by country →
-        </Link>
-      </div>
 
       <CategoryModal isOpen={showModal} onClose={() => setShowModal(false)} />
       <ScrollToTop />

@@ -255,14 +255,7 @@ function DiscoverPage() {
 
       {articles.length === 0 && !articlesQuery.isLoading && !articlesQuery.isError && articlesQuery.isFetched && (
         <div className="text-center py-16">
-          <p className="dek">No stories found in this category yet.</p>
-          <Link
-            to="/"
-            preload="intent"
-            className="mt-4 inline-block border border-foreground px-4 py-2 text-xs uppercase tracking-widest hover:bg-foreground hover:text-background transition"
-          >
-            Back to homepage
-          </Link>
+          <p className="dek">Stories are being curated. Check back shortly.</p>
         </div>
       )}
 
@@ -289,12 +282,6 @@ function DiscoverPage() {
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       )}
-
-      <div className="mt-16 text-center">
-        <Link to="/map" className="kicker hover:opacity-60">
-          Or explore by country →
-        </Link>
-      </div>
 
       <CategoryModal isOpen={showModal} onClose={() => setShowModal(false)} />
       <ScrollToTop />
