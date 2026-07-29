@@ -4,7 +4,6 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { Loader2, TrendingUp, TrendingDown, Activity, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { MARKET_GROUPS, MARKET_SYMBOLS } from "@/lib/markets.functions";
-import { supabase } from "@/integrations/supabase/client";
 import { listArticles } from "@/lib/articles.functions";
 import { ArticleCard } from "@/components/article-card";
 import { ArticleCardSkeletonGrid } from "@/components/ArticleCardSkeleton";
@@ -104,27 +103,40 @@ export const Route = createFileRoute("/markets")({
   component: MarketsPage,
 });
 
+const SUPABASE_URL = "https://myrteqlcfwckgdokzzhg.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im15cnRlcWxjZndja2dkb2t6emhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3MjE4OTgsImV4cCI6MjA5ODI5Nzg5OH0.lGAyAxmYrJAag1yONChoqV4-A1QQAkdWKxZp5IMJyII";
+
+async function fetchMarketPrices(): Promise<any[]> {
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/market_prices?select=symbol,name,category,region,price,change,change_percent,source,available,updated_at&order=symbol.asc`,
+      { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+
 function MarketsPage() {
   const search = useSearch({ from: "/markets" });
   const navigate = useNavigate();
-  const [quotes, setQuotes] = useState<any[]>([]);
+  const [quotes, setQuotes] = useState<any[]>(MARKET_SYMBOLS.map((m) => ({
+    symbol: m.symbol, name: m.name, category: m.category, region: m.region,
+    price: null, change: null, change_percent: null, source: null, available: false, updated_at: "",
+  })));
 
-  // Fetch prices from Supabase — instant, no external API calls
+  // Fetch prices from database REST API — instant, no external API calls
   useEffect(() => {
     let mounted = true;
-    async function fetchPrices() {
-      try {
-        const { data } = await supabase
-          .from("market_prices")
-          .select("symbol, name, category, region, price, change, change_percent, source, available, updated_at")
-          .order("symbol");
-        if (mounted && data) setQuotes(data);
-      } catch {
-        // keep empty
-      }
+    async function load() {
+      const data = await fetchMarketPrices();
+      if (mounted && data.length > 0) setQuotes(data);
     }
-    fetchPrices();
-    const interval = setInterval(fetchPrices, 30_000);
+    load();
+    const interval = setInterval(load, 30_000);
     return () => { mounted = false; clearInterval(interval); };
   }, []);
 

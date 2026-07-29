@@ -1,7 +1,6 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { TrendingUp, TrendingDown, Activity } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 
 type MarketPrice = {
   symbol: string;
@@ -16,6 +15,7 @@ type MarketPrice = {
   updated_at: string;
 };
 
+// Hardcoded fallback — always visible, never disappears
 const FALLBACK: MarketPrice[] = [
   { symbol: "SENSEX", name: "Sensex", category: "indices", region: "India", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "" },
   { symbol: "NIFTY50", name: "NIFTY 50", category: "indices", region: "India", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "" },
@@ -42,6 +42,30 @@ const FALLBACK: MarketPrice[] = [
   { symbol: "BTC", name: "Bitcoin", category: "crypto", region: "Global", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "" },
   { symbol: "ETH", name: "Ethereum", category: "crypto", region: "Global", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "" },
 ];
+
+const SUPABASE_URL = "https://myrteqlcfwckgdokzzhg.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im15cnRlcWxjZndja2dkb2t6emhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3MjE4OTgsImV4cCI6MjA5ODI5Nzg5OH0.lGAyAxmYrJAag1yONChoqV4-A1QQAkdWKxZp5IMJyII";
+
+// Direct fetch to Supabase REST API — works in both SSR and client, no client singleton
+async function fetchPrices(): Promise<MarketPrice[] | null> {
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/market_prices?select=symbol,name,category,region,price,change,change_percent,source,available,updated_at&order=symbol.asc`,
+      {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+      }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!Array.isArray(data) || data.length === 0) return null;
+    return data as MarketPrice[];
+  } catch {
+    return null;
+  }
+}
 
 function formatPrice(price: number | null): string {
   if (price === null) return "—";
@@ -136,35 +160,28 @@ function SkeletonCard() {
 }
 
 export function MarketTicker() {
+  // Start with fallback immediately — ticker is ALWAYS visible, no blank state
   const [quotes, setQuotes] = useState<MarketPrice[]>(FALLBACK);
-  const [loading, setLoading] = useState(true);
+  const [loaded, setLoaded] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [paused, setPaused] = useState(false);
   const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Fetch prices from Supabase on mount, then poll every 30 seconds
   useEffect(() => {
     let mounted = true;
 
-    async function fetchPrices() {
-      try {
-        const { data, error } = await supabase
-          .from("market_prices")
-          .select("symbol, name, category, region, price, change, change_percent, source, available, updated_at")
-          .order("symbol");
-
-        if (error) return;
-        if (mounted && data && data.length > 0) {
-          setQuotes(data as MarketPrice[]);
-          setLoading(false);
-        }
-      } catch {
-        // Keep fallback data — ticker never disappears
+    async function load() {
+      const data = await fetchPrices();
+      if (mounted && data && data.length > 0) {
+        setQuotes(data);
+        setLoaded(true);
+      } else if (mounted) {
+        setLoaded(true);
       }
     }
 
-    fetchPrices();
-    const interval = setInterval(fetchPrices, 30_000);
+    load();
+    const interval = setInterval(load, 30_000);
 
     return () => {
       mounted = false;
@@ -227,7 +244,7 @@ export function MarketTicker() {
             role="marquee"
             aria-live="polite"
           >
-            {loading
+            {!loaded
               ? Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)
               : quotes.map((q, i) => <MarketCard key={q.symbol} quote={q} index={i} />)}
           </div>
