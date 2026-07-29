@@ -90,6 +90,7 @@ export function MarketTicker() {
   const query = useQuery({
     ...quotesQuery,
     queryFn: () => fetchQuotes(),
+    retry: 1,
   });
   const scrollRef = useRef<HTMLDivElement>(null);
   const [paused, setPaused] = useState(false);
@@ -112,6 +113,8 @@ export function MarketTicker() {
   }, [autoScroll]);
 
   const quotes = (query.data ?? []) as MarketQuote[];
+  const showSkeletons = query.isLoading && quotes.length === 0;
+  const showError = query.isError && quotes.length === 0;
 
   return (
     <section
@@ -133,9 +136,11 @@ export function MarketTicker() {
             onMouseLeave={() => setPaused(false)}
             style={{ scrollbarWidth: "none" }}
           >
-            {query.isLoading && quotes.length === 0
+            {showSkeletons
               ? Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)
-              : quotes.map((q) => <MarketCard key={q.symbol} quote={q} />)}
+              : showError
+                ? <div className="px-4 py-2 text-xs text-muted-foreground">Market data loading…</div>
+                : quotes.map((q) => <MarketCard key={q.symbol} quote={q} />)}
           </div>
         </div>
       </div>
