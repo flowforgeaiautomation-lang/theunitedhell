@@ -46,7 +46,10 @@ function NotFoundComponent() {
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   useEffect(() => {
-    const t = setTimeout(() => reset(), 1500);
+    const t = setTimeout(() => {
+      try { reset(); } catch {}
+      window.location.reload();
+    }, 1500);
     return () => clearTimeout(t);
   }, [reset]);
   return (
