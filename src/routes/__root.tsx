@@ -46,12 +46,12 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="container-read text-center">
-        <div className="kicker">Error</div>
-        <h1 className="display-2 mt-3">Something went wrong</h1>
-        <p className="dek mt-3">Please try refreshing the page.</p>
+        <div className="kicker">Loading issue</div>
+        <h1 className="display-2 mt-3">We're having trouble loading this page</h1>
+        <p className="dek mt-3">This usually resolves itself in a moment. Please try again.</p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
-            onClick={() => reset()}
+            onClick={() => { reset(); }}
             className="border border-foreground px-4 py-2 text-xs uppercase tracking-widest hover:bg-foreground hover:text-background transition"
           >
             Try again

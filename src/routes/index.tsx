@@ -66,6 +66,12 @@ export const Route = createFileRoute("/")({
   errorComponent: ({ error }) => (
     <div className="container-edit py-20 text-center">
       <p className="dek">We couldn't load the front page. {error.message}</p>
+      <button
+        onClick={() => window.location.reload()}
+        className="mt-4 border border-foreground px-4 py-2 text-xs uppercase tracking-widest hover:bg-foreground hover:text-background transition"
+      >
+        Refresh page
+      </button>
     </div>
   ),
   notFoundComponent: () => null,

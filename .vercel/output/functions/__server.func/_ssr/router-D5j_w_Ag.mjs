@@ -22,7 +22,7 @@ import { t as Route$24 } from "./editions._slug-DIH5SsqY.mjs";
 import { t as statsQ } from "./map-diZha0or.mjs";
 import { t as homeQuery } from "./routes-BPqif7b4.mjs";
 import { t as Route$25 } from "./search-CSHnZYbJ.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/router-z8RzUO09.js
+//#region node_modules/.nitro/vite/services/ssr/assets/router-D5j_w_Ag.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var styles_default = "/assets/styles-B9hHQ__p.css";
@@ -1769,20 +1769,22 @@ function ErrorComponent({ error, reset }) {
 			children: [
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 					className: "kicker",
-					children: "Error"
+					children: "Loading issue"
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
 					className: "display-2 mt-3",
-					children: "Something went wrong"
+					children: "We're having trouble loading this page"
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 					className: "dek mt-3",
-					children: "Please try refreshing the page."
+					children: "This usually resolves itself in a moment. Please try again."
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "mt-6 flex flex-wrap justify-center gap-2",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-						onClick: () => reset(),
+						onClick: () => {
+							reset();
+						},
 						className: "border border-foreground px-4 py-2 text-xs uppercase tracking-widest hover:bg-foreground hover:text-background transition",
 						children: "Try again"
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("a", {
@@ -1985,7 +1987,7 @@ function RootComponent() {
 	});
 }
 var $$splitNotFoundComponentImporter$3 = () => import("./routes-CbXvFb9p.mjs");
-var $$splitErrorComponentImporter$3 = () => import("./routes-AkwwU2Dx.mjs");
+var $$splitErrorComponentImporter$3 = () => import("./routes-BVn3n0uB.mjs");
 var $$splitComponentImporter$14 = () => import("./routes-B-CuR4oH.mjs");
 var Route$21 = createFileRoute("/")({
 	validateSearch: (s) => ({ category: typeof s.category === "string" ? s.category : void 0 }),

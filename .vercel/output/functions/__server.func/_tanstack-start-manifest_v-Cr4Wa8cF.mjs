@@ -1,4 +1,4 @@
-//#region node_modules/.nitro/vite/services/ssr/assets/_tanstack-start-manifest_v-CgoprOEn.js
+//#region node_modules/.nitro/vite/services/ssr/assets/_tanstack-start-manifest_v-Cr4Wa8cF.js
 var tsrStartManifest = () => ({ routes: {
 	__root__: {
 		filePath: "/tmp/cc-agent/68356398/project/src/routes/__root.tsx",
@@ -26,7 +26,7 @@ var tsrStartManifest = () => ({ routes: {
 			"/api/public/hooks/reprocess"
 		],
 		preloads: [
-			"/assets/index-CkuJWVDD.js",
+			"/assets/index-Cc3opY2I.js",
 			"/assets/jsx-runtime-CZcjcDnw.js",
 			"/assets/react-9A9D8-nk.js",
 			"/assets/react-dom-GeBy4_Aw.js",
@@ -59,7 +59,7 @@ var tsrStartManifest = () => ({ routes: {
 		scripts: [{ attrs: {
 			type: "module",
 			async: !0,
-			src: "/assets/index-CkuJWVDD.js"
+			src: "/assets/index-Cc3opY2I.js"
 		} }]
 	},
 	"/": {
@@ -67,11 +67,11 @@ var tsrStartManifest = () => ({ routes: {
 		children: void 0,
 		preloads: [
 			"/assets/routes-DMLX_4ye.js",
-			"/assets/routes-DU8vnwBu.js",
-			"/assets/routes-F--bCKaX.js",
+			"/assets/routes-DMo3DpbW.js",
+			"/assets/routes-DvAi_PIr.js",
 			"/assets/useQuery-D_U5M-FO.js",
 			"/assets/categories-BnNyXmpY.js",
-			"/assets/ai.functions-BtOAdTey.js",
+			"/assets/ai.functions-Q5tmGE-6.js",
 			"/assets/article-card-BeDTjYA6.js",
 			"/assets/proxy-REMeQpEs.js",
 			"/assets/ArticleCardSkeleton-DNf5paeq.js"
@@ -84,13 +84,13 @@ var tsrStartManifest = () => ({ routes: {
 			"/_authenticated/bookmarks",
 			"/_authenticated/profile"
 		],
-		preloads: ["/assets/route-B9w-JJaK.js"]
+		preloads: ["/assets/route-CUD-TPue.js"]
 	},
 	"/auth": {
 		filePath: "/tmp/cc-agent/68356398/project/src/routes/auth.tsx",
 		children: void 0,
 		preloads: [
-			"/assets/auth-CwINqfwV.js",
+			"/assets/auth-DP6FDm2h.js",
 			"/assets/eye-off-BiE6crNA.js",
 			"/assets/eye-Cfww4WUR.js"
 		]
@@ -100,7 +100,7 @@ var tsrStartManifest = () => ({ routes: {
 		children: void 0,
 		preloads: [
 			"/assets/briefing--yxFY013.js",
-			"/assets/briefing-BPM4juoF.js",
+			"/assets/briefing-BLQZ6DbI.js",
 			"/assets/useSuspenseQuery-3c0m5w2p.js",
 			"/assets/briefing-DMLX_4ye.js"
 		]
@@ -109,10 +109,10 @@ var tsrStartManifest = () => ({ routes: {
 		filePath: "/tmp/cc-agent/68356398/project/src/routes/discover.tsx",
 		children: void 0,
 		preloads: [
-			"/assets/discover-l4AyPhXg.js",
+			"/assets/discover-94Kazifr.js",
 			"/assets/useQuery-D_U5M-FO.js",
 			"/assets/categories-BnNyXmpY.js",
-			"/assets/ai.functions-BtOAdTey.js",
+			"/assets/ai.functions-Q5tmGE-6.js",
 			"/assets/article-card-BeDTjYA6.js",
 			"/assets/proxy-REMeQpEs.js",
 			"/assets/ArticleCardSkeleton-DNf5paeq.js"
@@ -132,12 +132,12 @@ var tsrStartManifest = () => ({ routes: {
 		filePath: "/tmp/cc-agent/68356398/project/src/routes/map.tsx",
 		children: void 0,
 		preloads: [
-			"/assets/map-DMLX_4ye.js",
-			"/assets/map-DkKS8tP3.js",
+			"/assets/map-BRBFNLN0.js",
 			"/assets/useQuery-D_U5M-FO.js",
 			"/assets/useSuspenseQuery-3c0m5w2p.js",
 			"/assets/categories-BnNyXmpY.js",
 			"/assets/article-card-BeDTjYA6.js",
+			"/assets/map-DMLX_4ye.js",
 			"/assets/map-SpmEMUux.js"
 		]
 	},
@@ -145,7 +145,7 @@ var tsrStartManifest = () => ({ routes: {
 		filePath: "/tmp/cc-agent/68356398/project/src/routes/markets.tsx",
 		children: void 0,
 		preloads: [
-			"/assets/markets-HTzkLh0E.js",
+			"/assets/markets-2B0K0vn8.js",
 			"/assets/useQuery-D_U5M-FO.js",
 			"/assets/trending-up-CwYdH9qv.js",
 			"/assets/article-card-BeDTjYA6.js",
@@ -157,7 +157,7 @@ var tsrStartManifest = () => ({ routes: {
 		filePath: "/tmp/cc-agent/68356398/project/src/routes/reset-password.tsx",
 		children: void 0,
 		preloads: [
-			"/assets/reset-password-B-hhD2TE.js",
+			"/assets/reset-password-QU9O6ScL.js",
 			"/assets/eye-off-BiE6crNA.js",
 			"/assets/eye-Cfww4WUR.js"
 		]
@@ -166,7 +166,7 @@ var tsrStartManifest = () => ({ routes: {
 		filePath: "/tmp/cc-agent/68356398/project/src/routes/search.tsx",
 		children: void 0,
 		preloads: [
-			"/assets/search-CVMe2We2.js",
+			"/assets/search-BmAssPmf.js",
 			"/assets/useQuery-D_U5M-FO.js",
 			"/assets/sliders-horizontal-CWMbrK6R.js",
 			"/assets/categories-BnNyXmpY.js",
@@ -193,18 +193,18 @@ var tsrStartManifest = () => ({ routes: {
 	"/_authenticated/admin": {
 		filePath: "/tmp/cc-agent/68356398/project/src/routes/_authenticated/admin.tsx",
 		children: void 0,
-		preloads: ["/assets/admin-B3rHo0WD.js", "/assets/ai.functions-BtOAdTey.js"]
+		preloads: ["/assets/admin-QXKBaPa9.js", "/assets/ai.functions-Q5tmGE-6.js"]
 	},
 	"/_authenticated/bookmarks": {
 		filePath: "/tmp/cc-agent/68356398/project/src/routes/_authenticated/bookmarks.tsx",
 		children: void 0,
 		preloads: [
-			"/assets/bookmarks-DWgA3Ety.js",
+			"/assets/bookmarks-Df9Ili0O.js",
 			"/assets/useQuery-D_U5M-FO.js",
 			"/assets/trash-2-2q87iql-.js",
 			"/assets/volume-2-CmBSwSrx.js",
-			"/assets/interactions.functions-HkJGvMb6.js",
-			"/assets/quiz.functions-DcR-h9Iq.js",
+			"/assets/interactions.functions-Bf79LejQ.js",
+			"/assets/quiz.functions-J_efR7uv.js",
 			"/assets/article-card-BeDTjYA6.js"
 		]
 	},
@@ -212,23 +212,23 @@ var tsrStartManifest = () => ({ routes: {
 		filePath: "/tmp/cc-agent/68356398/project/src/routes/_authenticated/profile.tsx",
 		children: void 0,
 		preloads: [
-			"/assets/profile-D6WtSdn7.js",
+			"/assets/profile-B0L9MnlI.js",
 			"/assets/useQuery-D_U5M-FO.js",
 			"/assets/categories-BnNyXmpY.js",
-			"/assets/interactions.functions-HkJGvMb6.js"
+			"/assets/interactions.functions-Bf79LejQ.js"
 		]
 	},
 	"/article/$slug": {
 		filePath: "/tmp/cc-agent/68356398/project/src/routes/article.$slug.tsx",
 		children: void 0,
 		preloads: [
-			"/assets/article._slug-C68_CXJV.js",
+			"/assets/article._slug-CQZJdgUO.js",
 			"/assets/useQuery-D_U5M-FO.js",
 			"/assets/trending-up-CwYdH9qv.js",
 			"/assets/volume-2-CmBSwSrx.js",
 			"/assets/categories-BnNyXmpY.js",
-			"/assets/interactions.functions-HkJGvMb6.js",
-			"/assets/quiz.functions-DcR-h9Iq.js",
+			"/assets/interactions.functions-Bf79LejQ.js",
+			"/assets/quiz.functions-J_efR7uv.js",
 			"/assets/SmartImage-lOtWXX-B.js",
 			"/assets/proxy-REMeQpEs.js",
 			"/assets/article._slug-Cb4jHAk9.js",
@@ -239,7 +239,7 @@ var tsrStartManifest = () => ({ routes: {
 		filePath: "/tmp/cc-agent/68356398/project/src/routes/editions.$slug.tsx",
 		children: void 0,
 		preloads: [
-			"/assets/editions._slug-ClEvKF5L.js",
+			"/assets/editions._slug-BnwnZV7w.js",
 			"/assets/eye-Cfww4WUR.js",
 			"/assets/editions._slug-ZHsy-xKl.js"
 		]
