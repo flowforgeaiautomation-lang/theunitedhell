@@ -201,11 +201,11 @@ function RootComponent() {
         <SafeComponent name="SiteHeader" fallback={null}>
           <SiteHeader />
         </SafeComponent>
-        <SafeComponent name="MarketTicker" fallback={null}>
-          <MarketTicker />
-        </SafeComponent>
         <SafeComponent name="BookAnchorCard" fallback={null}>
           <BookAnchorCard />
+        </SafeComponent>
+        <SafeComponent name="MarketTicker" fallback={null}>
+          <MarketTicker />
         </SafeComponent>
         <main className="flex-1 page-enter">
           <Outlet />

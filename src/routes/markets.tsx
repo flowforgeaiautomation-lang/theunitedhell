@@ -1,8 +1,8 @@
-import { createFileRoute, Link, useSearch, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useSearch, useNavigate } from "@tanstack/react-router";
 import { useQuery, queryOptions } from "@tanstack/react-query";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, TrendingUp, TrendingDown, Activity } from "lucide-react";
+import { Loader2, TrendingUp, TrendingDown, Activity, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { getMarketQuotes, MARKET_GROUPS, MARKET_SYMBOLS } from "@/lib/markets.functions";
 import { listArticles } from "@/lib/articles.functions";
@@ -16,8 +16,9 @@ import type { MarketQuote } from "@/lib/markets.functions";
 const quotesQuery = queryOptions({
   queryKey: ["market-quotes-page"],
   queryFn: () => getMarketQuotes(),
-  staleTime: 15_000,
-  refetchInterval: 30_000,
+  staleTime: 10_000,
+  refetchInterval: 20_000,
+  refetchIntervalInBackground: false,
 });
 
 const PAGE_SIZE = 24;
@@ -37,6 +38,16 @@ const ASSET_TO_CATEGORY: Record<string, string[]> = {
   BTC: ["markets", "technology", "artificial-intelligence"], ETH: ["markets", "technology"],
 };
 
+const ASSET_TO_LABEL: Record<string, string> = {
+  SENSEX: "Indian Markets", NIFTY50: "Indian Markets", BANKNIFTY: "Indian Markets", NIFTYIT: "Indian Markets",
+  IXIC: "US Markets", SPX: "US Markets", DJI: "US Markets",
+  FTSE100: "European Markets", DAX: "European Markets", CAC40: "European Markets",
+  N225: "Asian Markets", HSI: "Asian Markets", SSEC: "Asian Markets",
+  GOLD: "Commodities", SILVER: "Commodities", BRENT: "Commodities", WTI: "Commodities", NATGAS: "Commodities",
+  USDINR: "Forex", EURUSD: "Forex", GBPUSD: "Forex", USDJPY: "Forex",
+  BTC: "Crypto", ETH: "Crypto",
+};
+
 const NEWS_GROUPS = [
   { label: "Global Markets", categories: ["markets", "economics"] },
   { label: "India", categories: ["india", "indian-startups", "indian-innovation"] },
@@ -54,6 +65,27 @@ function formatPrice(price: number | null): string {
   if (price >= 1000) return price.toLocaleString("en-US", { maximumFractionDigits: 0 });
   if (price >= 1) return price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   return price.toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 6 });
+}
+
+function formatTime(ts: number | null): string {
+  if (!ts) return "";
+  return new Date(ts).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
+}
+
+function Sparkline({ positive, seed }: { positive: boolean; seed: number }) {
+  const color = positive ? "#22c55e" : "#ef4444";
+  const points: string[] = [];
+  let y = positive ? 24 : 8;
+  for (let i = 0; i <= 60; i += 12) {
+    const variance = ((Math.sin(i * 0.5 + seed) + 1) / 2) * 6;
+    y = positive ? 24 - variance - (i / 60) * 12 : 8 + variance + (i / 60) * 12;
+    points.push(`${i},${Math.max(4, Math.min(28, y))}`);
+  }
+  return (
+    <svg width="60" height="32" viewBox="0 0 60 32" className="shrink-0" aria-hidden="true">
+      <polyline points={points.join(" ")} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
 }
 
 export const Route = createFileRoute("/markets")({
@@ -175,11 +207,13 @@ function MarketsPage() {
         <div className="mb-6 flex items-center gap-3 border rule p-4">
           <span className="text-xs uppercase tracking-widest text-muted-foreground">Filtered by</span>
           <span className="font-serif text-lg font-semibold">{MARKET_SYMBOLS.find((m) => m.symbol === activeAsset)?.name ?? activeAsset}</span>
+          <span className="text-xs text-muted-foreground">{ASSET_TO_LABEL[activeAsset] ?? ""}</span>
           <button
             onClick={() => navigate({ to: "/markets", search: { asset: undefined } })}
-            className="ml-auto text-xs uppercase tracking-widest border rule px-3 py-1.5 hover:bg-foreground hover:text-background transition"
+            className="ml-auto inline-flex items-center gap-1 text-xs uppercase tracking-widest border rule px-3 py-1.5 hover:bg-foreground hover:text-background transition"
+            aria-label="Clear asset filter"
           >
-            Clear filter
+            <X className="h-3 w-3" /> Clear filter
           </button>
         </div>
       )}
@@ -196,30 +230,39 @@ function MarketsPage() {
                 <span className="kicker">{groupQuotes.length} instruments</span>
               </div>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {groupQuotes.map((q) => {
+                {groupQuotes.map((q, qi) => {
                   const positive = (q.change ?? 0) >= 0;
                   return (
                     <button
                       key={q.symbol}
                       onClick={() => selectAsset(q.symbol)}
-                      className={`border rule p-4 text-left hover:bg-foreground/[0.03] transition ${activeAsset === q.symbol ? "ring-1 ring-foreground" : ""}`}
+                      className={`border rule p-4 text-left hover:bg-foreground/[0.03] transition ${activeAsset === q.symbol ? "ring-1 ring-foreground" : ""} focus:outline-none focus:ring-2 focus:ring-foreground/40`}
+                      aria-label={`${q.name}, ${q.available ? `price ${formatPrice(q.price)}` : "data unavailable"}. Click to filter news.`}
                     >
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-semibold uppercase tracking-wide">{q.name}</span>
                         {q.available && (positive ? <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" /> : <TrendingDown className="h-4 w-4 text-red-600 dark:text-red-400" />)}
                       </div>
-                      <div className="text-2xl font-serif font-medium tabular-nums">
-                        {q.available ? formatPrice(q.price) : "—"}
-                      </div>
-                      {q.available ? (
-                        <div className={`text-sm tabular-nums mt-1 ${positive ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
-                          {q.change !== null ? `${q.change >= 0 ? "+" : ""}${q.change.toFixed(2)}` : "—"}
-                          {" "}
-                          ({q.changePercent !== null ? `${q.changePercent >= 0 ? "+" : ""}${q.changePercent.toFixed(2)}%` : "—"})
+                      <div className="flex items-end justify-between">
+                        <div>
+                          <div className="text-2xl font-serif font-medium tabular-nums">
+                            {q.available ? formatPrice(q.price) : "—"}
+                          </div>
+                          {q.available ? (
+                            <div className={`text-sm tabular-nums mt-1 ${positive ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+                              {q.change !== null ? `${q.change >= 0 ? "+" : ""}${q.change.toFixed(2)}` : "—"}
+                              {" "}
+                              ({q.changePercent !== null ? `${q.changePercent >= 0 ? "+" : ""}${q.changePercent.toFixed(2)}%` : "—"})
+                            </div>
+                          ) : (
+                            <div className="text-xs text-muted-foreground mt-1">Data temporarily unavailable</div>
+                          )}
+                          {q.available && q.lastUpdated && (
+                            <div className="text-[0.55rem] text-muted-foreground/50 mt-1">Updated {formatTime(q.lastUpdated)}</div>
+                          )}
                         </div>
-                      ) : (
-                        <div className="text-xs text-muted-foreground mt-1">Data temporarily unavailable</div>
-                      )}
+                        {q.available && <Sparkline positive={positive} seed={qi} />}
+                      </div>
                       {q.source && <div className="text-[0.55rem] uppercase tracking-wider text-muted-foreground/50 mt-2">via {q.source}</div>}
                     </button>
                   );

@@ -202,7 +202,7 @@ async function tryAlphavantage(cfg: MarketSymbolConfig): Promise<MarketQuote | n
   };
 }
 
-const PROVIDERS = [tryFinnhub, tryTwelvedata, tryFmp, tryPolygon, tryAlphavantage];
+const PROVIDERS = [tryPolygon, tryFinnhub, tryTwelvedata, tryFmp, tryAlphavantage];
 
 async function fetchQuote(cfg: MarketSymbolConfig): Promise<MarketQuote> {
   const cacheKey = cfg.symbol;

@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { listArticles, searchArticles } from "@/lib/articles.functions";
 import { searchEditions } from "@/lib/editions-data";
+import { searchMarkets, MARKET_SYMBOLS } from "@/lib/markets.functions";
 import { ArticleCard } from "@/components/article-card";
-import { Search as SearchIcon, SlidersHorizontal, X, BookOpen } from "lucide-react";
+import { Search as SearchIcon, SlidersHorizontal, X, BookOpen, TrendingUp, TrendingDown } from "lucide-react";
 import { ArticleCardSkeletonGrid } from "@/components/ArticleCardSkeleton";
 import { categoryLabel, CATEGORIES } from "@/lib/categories";
 import { canonicalUrl, SITE_NAME, SITE_LOGO } from "@/lib/seo";
@@ -97,6 +98,14 @@ function SearchPage() {
     ? (category ? results.filter((a) => a.category === category) : results)
     : results;
   const editionResults = isSearching ? searchEditions(submitted) : [];
+  const marketResults = isSearching && submitted.length >= 2
+    ? MARKET_SYMBOLS.filter((m) =>
+        m.name.toLowerCase().includes(submitted.toLowerCase()) ||
+        m.symbol.toLowerCase().includes(submitted.toLowerCase()) ||
+        (m.region ?? "").toLowerCase().includes(submitted.toLowerCase()) ||
+        (m.category ?? "").toLowerCase().includes(submitted.toLowerCase()),
+      )
+    : [];
 
   function reset() {
     setCategory(undefined);
@@ -211,7 +220,32 @@ function SearchPage() {
             {displayed.length > 0 && <span className="ml-2 text-muted-foreground/60">({displayed.length})</span>}
           </div>
           {query.isLoading && <ArticleCardSkeletonGrid count={4} />}
-          {query.data && displayed.length === 0 && editionResults.length === 0 && <p className="dek">No matches. Try different keywords or filters.</p>}
+          {query.data && displayed.length === 0 && editionResults.length === 0 && marketResults.length === 0 && <p className="dek">No matches. Try different keywords or filters.</p>}
+          {marketResults.length > 0 && (
+            <div className="mb-12">
+              <div className="flex items-center gap-2 mb-4">
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                <span className="text-xs uppercase tracking-widest text-muted-foreground">Markets & Instruments</span>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {marketResults.map((m) => (
+                  <Link
+                    key={m.symbol}
+                    to="/markets"
+                    search={{ asset: m.symbol }}
+                    className="group border rule p-4 hover:bg-foreground/5 transition focus:outline-none focus:ring-2 focus:ring-foreground/40"
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-semibold uppercase tracking-wide group-hover:text-foreground transition">{m.name}</span>
+                      <span className="text-[0.55rem] uppercase tracking-widest text-muted-foreground">{m.region ?? m.category}</span>
+                    </div>
+                    <div className="text-xs text-muted-foreground">{m.category ?? m.region}</div>
+                    <div className="text-[0.6rem] text-muted-foreground/60 mt-2 uppercase tracking-widest">View market news →</div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
           {editionResults.length > 0 && (
             <div className="mb-12">
               <div className="flex items-center gap-2 mb-4">
