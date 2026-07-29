@@ -23,12 +23,14 @@ export const Route = createFileRoute("/search")({
     q: typeof s.q === "string" ? s.q : "",
   }),
   loader: async ({ context }) => {
-    await context.queryClient.prefetchQuery(
-      queryOptions({
-        queryKey: ["search", "", undefined, undefined, "recent"],
-        queryFn: async () => (await listArticles({ data: { limit: 36 } })).items,
-      }),
-    );
+    try {
+      await context.queryClient.prefetchQuery(
+        queryOptions({
+          queryKey: ["search", "", undefined, undefined, "recent"],
+          queryFn: async () => (await listArticles({ data: { limit: 36 } })).items,
+        }),
+      );
+    } catch {}
   },
   head: () => ({
     meta: [

@@ -61,7 +61,9 @@ export const Route = createFileRoute("/discover")({
     links: [{ rel: "canonical", href: canonicalUrl("/discover") }],
   }),
   loader: async ({ context }) => {
-    await context.queryClient.prefetchQuery(discoverQuery(undefined, undefined));
+    try {
+      await context.queryClient.prefetchQuery(discoverQuery(undefined, undefined));
+    } catch {}
   },
   component: DiscoverPage,
 });

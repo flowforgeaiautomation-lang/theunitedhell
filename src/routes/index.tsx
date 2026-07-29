@@ -60,7 +60,9 @@ export const Route = createFileRoute("/")({
     links: [{ rel: "canonical", href: canonicalUrl("/") }],
   }),
   loader: async ({ context }) => {
-    await context.queryClient.prefetchQuery(homeQuery(undefined, undefined));
+    try {
+      await context.queryClient.prefetchQuery(homeQuery(undefined, undefined));
+    } catch {}
   },
   component: Home,
   errorComponent: ({ error }) => (

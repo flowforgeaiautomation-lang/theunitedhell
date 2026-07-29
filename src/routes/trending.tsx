@@ -33,13 +33,16 @@ export const Route = createFileRoute("/trending")({
       { rel: "canonical", href: canonicalUrl("/trending") },
     ],
   }),
-  loader: ({ context }) =>
-    context.queryClient.ensureQueryData(
-      queryOptions({
-        queryKey: ["trending", "trending"],
-        queryFn: async () => (await listArticles({ data: { sort: "trending", limit: 60 } })).items,
-      }),
-    ),
+  loader: async ({ context }) => {
+    try {
+      await context.queryClient.prefetchQuery(
+        queryOptions({
+          queryKey: ["trending", "trending"],
+          queryFn: async () => (await listArticles({ data: { sort: "trending", limit: 60 } })).items,
+        }),
+      );
+    } catch {}
+  },
   component: TrendingPage,
   errorComponent: ({ error }) => <div className="container-edit py-20"><p className="dek">{error.message}</p></div>,
   notFoundComponent: () => null,

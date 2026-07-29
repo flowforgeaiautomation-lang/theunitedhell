@@ -24,7 +24,9 @@ export const Route = createFileRoute("/briefing")({
       { rel: "canonical", href: canonicalUrl("/briefing") },
     ],
   }),
-  loader: ({ context }) => context.queryClient.ensureQueryData(briefingQ),
+  loader: async ({ context }) => {
+    try { await context.queryClient.prefetchQuery(briefingQ.queryFn()); } catch {}
+  },
   component: BriefingPage,
   errorComponent: ({ error }) => (
     <div className="container-read py-20"><p className="dek">Could not load briefing: {error.message}</p></div>
