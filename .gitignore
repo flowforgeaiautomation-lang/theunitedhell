@@ -1,6 +1,8 @@
 node_modules
-dist
+.dist
 .tmp
 .vite
+.vercel/output
+.vercel
 *.local
 .DS_Store
