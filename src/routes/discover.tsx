@@ -91,14 +91,25 @@ function DiscoverPage() {
   const countryParam = country === "WORLD" ? undefined : country;
   const articlesQuery = useQuery(discoverQuery(active, countryParam));
 
-  // Seed articles directly from query data — no race condition
+  // Seed articles from query data — merge new items instead of replacing
   useEffect(() => {
     const result = articlesQuery.data;
     if (!result) return;
     const items = (result as any).items ?? (Array.isArray(result) ? result : []);
-    setArticles(items);
-    offsetRef.current = items.length;
-    setHasMore((result as any).hasMore ?? true);
+    setArticles((prev) => {
+      if (prev.length === 0) {
+        offsetRef.current = items.length;
+        setHasMore((result as any).hasMore ?? true);
+        return items;
+      }
+      // Merge: prepend any new items that aren't already in the list
+      const existingIds = new Set(prev.map((a) => a.id));
+      const newItems = items.filter((a: ArticleSummary) => !existingIds.has(a.id));
+      if (newItems.length > 0) {
+        return [...newItems, ...prev];
+      }
+      return prev;
+    });
   }, [articlesQuery.data]);
 
   useEffect(() => {

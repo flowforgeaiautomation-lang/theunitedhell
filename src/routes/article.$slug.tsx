@@ -2,7 +2,7 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useQuery, queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { getArticleBySlug, getRelated, listComments, postReflection, bumpLike, getLikedComments } from "@/lib/articles.functions";
+import { getArticleBySlug, getRelated, listComments, postReflection, bumpLike, getLikedComments, deleteCommentAnon } from "@/lib/articles.functions";
 
 
 import { ArticleActions } from "@/components/article-actions";
@@ -11,7 +11,7 @@ import { categoryLabel } from "@/lib/categories";
 
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { Quote, Lightbulb, Clock, TrendingUp, Users, Building2, Globe2, Hash, Sparkles, Info, Bookmark, ChevronRight, ArrowBigUp, MessageCircle, CornerDownRight } from "lucide-react";
+import { Quote, Lightbulb, Clock, TrendingUp, Users, Building2, Globe2, Hash, Sparkles, Info, Bookmark, ChevronRight, ArrowBigUp, MessageCircle, CornerDownRight, Trash2 } from "lucide-react";
 import type { CommentRow, ArticleStory, KeyNumber, PersonInvolved, OrganizationInvolved, CountryInvolved, VocabEntry } from "@/lib/types";
 import { SmartImage } from "@/components/SmartImage";
 import { ReadingExperience } from "@/components/ReadingExperience";
@@ -819,6 +819,7 @@ function Discussion({ articleId }: { articleId: string }) {
   const fetchComments = useServerFn(listComments);
   const sendReflection = useServerFn(postReflection);
   const likeFn = useServerFn(bumpLike);
+  const deleteFn = useServerFn(deleteCommentAnon);
   const fetchLiked = useServerFn(getLikedComments);
   const [prompt, setPrompt] = useState<typeof PROMPTS[number]["id"]>("perspective");
   const [body, setBody] = useState("");
@@ -941,6 +942,23 @@ function Discussion({ articleId }: { articleId: string }) {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (commentId: string) => deleteFn({ data: { commentId } }),
+    onMutate: (commentId) => {
+      qc.setQueryData<CommentRow[]>(["comments", articleId, sort], (old = []) =>
+        old.filter((c) => c.id !== commentId),
+      );
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["comments", articleId] });
+      toast.success("Comment deleted");
+    },
+    onError: () => {
+      qc.invalidateQueries({ queryKey: ["comments", articleId] });
+      toast.error("Could not delete comment");
+    },
+  });
+
   function renderComment(c: CommentRow, isReply: boolean) {
     const isLiked = likedComments.has(c.id);
     const count = c.like_count ?? 0;
@@ -987,6 +1005,18 @@ function Discussion({ articleId }: { articleId: string }) {
                   <span>Reply{replyCount > 0 && ` (${replyCount})`}</span>
                 </button>
               )}
+              <button
+                onClick={() => {
+                  if (confirm("Delete this comment? This cannot be undone.")) {
+                    deleteMutation.mutate(c.id);
+                  }
+                }}
+                disabled={deleteMutation.isPending}
+                className="flex items-center gap-1 text-sm text-muted-foreground hover:text-red-600 transition disabled:opacity-40"
+                aria-label="Delete comment"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
             </div>
 
             {replyingTo === c.id && (

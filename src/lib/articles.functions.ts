@@ -613,7 +613,32 @@ export const listArticles = createServerFn({ method: "GET" })
     if (data.country) query = query.eq("country_code", data.country);
 
     if (data.sort === "trending") {
-      query = query.order("view_count", { ascending: false }).order("id", { ascending: false });
+      // Real trending algorithm: fetch recent articles and score them by
+      // views + likes + saves + comments, weighted by recency.
+      // We fetch a larger pool then sort in-memory by the composite score.
+      const poolLimit = Math.max(data.limit * 4, 100);
+      const { data: poolRows, error: poolErr } = await supabase
+        .from("articles")
+        .select("id,slug,title,dek,category,subcategory,cover_image_url,read_time_minutes,country_code,featured_slot,published_at,created_at,view_count,like_count,bookmark_count,comment_count")
+        .eq("is_published", true)
+        .order("published_at", { ascending: false })
+        .limit(poolLimit);
+      if (poolErr) throw new Error(poolErr.message);
+      const pool = ((poolRows ?? []) as ArticleSummary[]).map((r) => decodeSummary(r));
+      const now = Date.now();
+      const scored = pool.map((a) => {
+        const ageHours = Math.max(1, (now - new Date(a.published_at ?? a.created_at ?? now).getTime()) / 3_600_000);
+        const recencyWeight = 1 / Math.pow(ageHours, 0.3);
+        const score =
+          ((a.view_count ?? 0) * 1) +
+          ((a.like_count ?? 0) * 5) +
+          ((a.bookmark_count ?? 0) * 4) +
+          ((a.comment_count ?? 0) * 3);
+        return { ...a, _score: score * recencyWeight };
+      }).sort((a, b) => (b as any)._score - (a as any)._score);
+      const items = scored.slice(0, data.limit).map(({ ...a }) => a);
+      const hasMore = pool.length > data.limit + data.offset;
+      return { items, nextCursor: undefined, hasMore };
     } else if (data.sort === "most_read") {
       query = query.order("view_count", { ascending: false }).order("id", { ascending: false });
     } else if (data.sort === "most_saved") {

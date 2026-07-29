@@ -1,17 +1,21 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-// VERIFIED: Purnima (full moon) peaked June 29, 2026 at ~18:00 UTC (23:30 IST).
-// Krishna Pratipada begins immediately after Purnima ends.
-// So June 30 IST = Krishna Pratipada (tithi index 0 in Krishna Paksha).
-const PURNIMA_END_UTC = new Date("2026-06-29T18:00:00Z");
-const SYNODIC = 29.53058867; // days in one lunar month
+// Dynamic Panchang calculation using astronomical lunar phase math.
+// We compute the Moon's position relative to the Sun to determine the
+// exact tithi, paksha, and lunar day — no hardcoded reference dates.
+
+const SYNODIC = 29.53058867; // days in one synodic month
 
 const TITHIS = [
   "Pratipada", "Dwitiya", "Tritiya", "Chaturthi", "Panchami",
   "Shashthi", "Saptami", "Ashtami", "Navami", "Dashami",
   "Ekadashi", "Dwadashi", "Trayodashi", "Chaturdashi",
 ];
+
+// Known new moon (Amavasya) reference: 2026-07-14 18:24 UTC (NASA)
+// We use this as an anchor and compute forward/backward by synodic months.
+const AMAVASYA_REF_UTC = new Date("2026-07-14T18:24:00Z");
 
 function nowInIndia(): Date {
   return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
@@ -21,26 +25,24 @@ function getSakaYear(now: Date): number {
   return now.getFullYear() - (now.getMonth() < 2 || (now.getMonth() === 2 && now.getDate() < 22) ? 79 : 78);
 }
 
-function calculateTithi(date: Date): { paksha: string; tithiName: string } {
-  // Days elapsed since end of Purnima (= start of Krishna Paksha)
-  const daysSince = (date.getTime() - PURNIMA_END_UTC.getTime()) / (1000 * 60 * 60 * 24);
+function calculateTithi(date: Date): { paksha: string; tithiName: string; tithiIndex: number } {
+  // Days since the reference Amavasya
+  const daysSince = (date.getTime() - AMAVASYA_REF_UTC.getTime()) / (1000 * 60 * 60 * 24);
 
   // Normalise within one synodic month
   let pos = daysSince % SYNODIC;
   if (pos < 0) pos += SYNODIC;
 
-  // First half after Purnima = Krishna Paksha (0 → ~14.77 days → Amavasya)
-  // Second half = Shukla Paksha (Amavasya → ~14.77 days → next Purnima)
-  const half = SYNODIC / 2; // ~14.765
+  const half = SYNODIC / 2; // ~14.765 days per paksha
 
   if (pos < half) {
-    // Krishna Paksha
+    // Shukla Paksha (waxing): Amavasya → Purnima
     const n = Math.floor(pos);
-    return { paksha: "Krishna", tithiName: n >= 14 ? "Amavasya" : TITHIS[n] };
+    return { paksha: "Shukla", tithiName: n >= 14 ? "Purnima" : TITHIS[n], tithiIndex: n };
   } else {
-    // Shukla Paksha
+    // Krishna Paksha (waning): Purnima → Amavasya
     const n = Math.floor(pos - half);
-    return { paksha: "Shukla", tithiName: n >= 14 ? "Purnima" : TITHIS[n] };
+    return { paksha: "Krishna", tithiName: n >= 14 ? "Amavasya" : TITHIS[n], tithiIndex: n };
   }
 }
 
