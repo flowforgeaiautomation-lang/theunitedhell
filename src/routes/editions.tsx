@@ -163,10 +163,10 @@ function EditionsPage() {
                     The Daily Discovery E-Paper
                   </h3>
                   <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 line-clamp-1">
-                    Beyond Headlines. Beyond Discovery. — AI-powered daily newspaper
+                    Beyond Headlines. Beyond Discovery. — Your daily digital newspaper
                   </p>
                   <p className="text-xs text-muted-foreground mt-1 line-clamp-2 hidden sm:block">
-                    Your daily digital newspaper featuring the world's most important stories, science, innovation, and knowledge — curated by AI.
+                    Your daily digital newspaper featuring the world's most important stories, science, innovation, and knowledge — curated daily for the curious reader.
                   </p>
                   <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-[0.65rem] text-muted-foreground">
                     <span>Updated Daily</span>

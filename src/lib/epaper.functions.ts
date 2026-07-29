@@ -120,12 +120,11 @@ export const getEpaperData = createServerFn({ method: "GET" }).handler(async () 
   let deduped: ArticleSummary[] = [];
   try {
     const supabase = publicClient();
-    const sevenDaysAgo = new Date(Date.now() - 7 * 86400000);
     const { data: todayRows, error } = await supabase
       .from("articles")
       .select(SUMMARY_COLS)
       .eq("is_published", true)
-      .gte("published_at", sevenDaysAgo.toISOString())
+      .gte("published_at", new Date(Date.now() - 30 * 86400000).toISOString())
       .order("published_at", { ascending: false })
       .limit(200);
 

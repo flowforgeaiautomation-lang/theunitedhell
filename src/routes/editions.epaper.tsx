@@ -20,10 +20,10 @@ export const Route = createFileRoute("/editions/epaper")({
   head: () => ({
     meta: [
       { title: "The Daily Discovery Edition — The United Hell" },
-      { name: "description", content: "Beyond Headlines. Beyond Discovery. Your AI-powered daily digital newspaper — the world's most important stories, science, innovation, and knowledge in one premium edition." },
+      { name: "description", content: "Beyond Headlines. Beyond Discovery. Your daily digital newspaper — the world's most important stories, science, innovation, and knowledge in one premium edition." },
       { property: "og:site_name", content: SITE_NAME },
       { property: "og:title", content: "The Daily Discovery Edition — The United Hell" },
-      { property: "og:description", content: "Beyond Headlines. Beyond Discovery. Your AI-powered daily digital newspaper." },
+      { property: "og:description", content: "Beyond Headlines. Beyond Discovery. Your daily digital newspaper." },
       { property: "og:type", content: "website" },
       { property: "og:url", content: canonicalUrl("/editions/epaper") },
       { property: "og:image", content: SITE_LOGO },
