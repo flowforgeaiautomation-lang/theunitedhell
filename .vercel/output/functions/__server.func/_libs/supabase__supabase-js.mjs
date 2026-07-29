@@ -4,7 +4,7 @@ import { t as RealtimeClient } from "./supabase__realtime-js.mjs";
 import { t as StorageClient } from "./@supabase/storage-js+[...].mjs";
 import { t as AuthClient } from "./supabase__auth-js.mjs";
 //#region node_modules/@supabase/supabase-js/dist/index.mjs
-var version = "2.108.2";
+var version = "2.111.0";
 var JS_ENV = "";
 var JS_RUNTIME_VERSION;
 if (typeof Deno !== "undefined") {
@@ -16,7 +16,8 @@ else if (typeof navigator !== "undefined" && navigator.product === "ReactNative"
 else {
 	var _process$version;
 	JS_ENV = "node";
-	JS_RUNTIME_VERSION = typeof process !== "undefined" ? (_process$version = process.version) === null || _process$version === void 0 ? void 0 : _process$version.replace(/^v/, "") : void 0;
+	const _process = globalThis["process"];
+	JS_RUNTIME_VERSION = _process === null || _process === void 0 || (_process$version = _process["version"]) === null || _process$version === void 0 ? void 0 : _process$version.replace(/^v/, "");
 }
 var _runtimeMeta = [`runtime=${JS_ENV}`];
 if (JS_RUNTIME_VERSION) _runtimeMeta.push(`runtime-version=${JS_RUNTIME_VERSION}`);
@@ -292,18 +293,43 @@ var resolveFetch = (customFetch) => {
 var resolveHeadersConstructor = () => {
 	return Headers;
 };
-var fetchWithAuth = (supabaseKey, supabaseUrl, getAccessToken, customFetch, tracePropagationOptions) => {
+/**
+* New-format Supabase API keys (`sb_publishable_…` / `sb_secret_…`) are not JWTs and
+* must never be sent as a Bearer token — they belong only in the `apikey` header.
+* All other keys (legacy JWT keys, `sb_temp_…` temporary keys, unrecognized `sb_`
+* subtypes) keep the Bearer fallback.
+*/
+var isNewApiKey = (key) => key.startsWith("sb_publishable_") || key.startsWith("sb_secret_");
+var TEMP_KEY_PREFIX = "sb_temp_";
+var warnedKeySubtypes = /* @__PURE__ */ new Set();
+/**
+* Warn (once per subtype) when an `sb_` key isn't a subtype this SDK version recognizes.
+* Never throws — the server, not the SDK, decides key validity. The key value is never
+* included in the message.
+*/
+var checkApiKeyFormat = (key) => {
+	var _key$match$, _key$match;
+	if (!key.startsWith("sb_") || isNewApiKey(key) || key.startsWith(TEMP_KEY_PREFIX)) return;
+	const subtype = (_key$match$ = (_key$match = key.match(/^sb_[a-zA-Z0-9]+_/)) === null || _key$match === void 0 ? void 0 : _key$match[0]) !== null && _key$match$ !== void 0 ? _key$match$ : "unknown";
+	if (warnedKeySubtypes.has(subtype)) return;
+	warnedKeySubtypes.add(subtype);
+	console.warn("@supabase/supabase-js: Unrecognized Supabase API key format. The client will proceed and send this key as-is; if you see authentication errors you may need to upgrade @supabase/supabase-js to a version that recognizes this key type.");
+};
+var fetchWithAuth = (supabaseKey, supabaseUrl, getAccessToken, customFetch, tracePropagationOptions, options) => {
 	const fetch$1 = resolveFetch(customFetch);
 	const HeadersConstructor = resolveHeadersConstructor();
 	const traceEnabled = (tracePropagationOptions === null || tracePropagationOptions === void 0 ? void 0 : tracePropagationOptions.enabled) === true;
 	const respectSampling = (tracePropagationOptions === null || tracePropagationOptions === void 0 ? void 0 : tracePropagationOptions.respectSamplingDecision) !== false;
 	const traceTargets = traceEnabled ? getDefaultPropagationTargets(supabaseUrl) : null;
+	const allowKeyAsBearer = !((options === null || options === void 0 ? void 0 : options.omitApiKeyAsBearer) && isNewApiKey(supabaseKey));
 	return async (input, init) => {
-		var _await$getAccessToken;
-		const accessToken = (_await$getAccessToken = await getAccessToken()) !== null && _await$getAccessToken !== void 0 ? _await$getAccessToken : supabaseKey;
+		const realToken = await getAccessToken();
 		let headers = new HeadersConstructor(init === null || init === void 0 ? void 0 : init.headers);
 		if (!headers.has("apikey")) headers.set("apikey", supabaseKey);
-		if (!headers.has("Authorization")) headers.set("Authorization", `Bearer ${accessToken}`);
+		if (!headers.has("Authorization")) {
+			const bearer = realToken !== null && realToken !== void 0 ? realToken : allowKeyAsBearer ? supabaseKey : null;
+			if (bearer) headers.set("Authorization", `Bearer ${bearer}`);
+		}
 		if (traceTargets) {
 			const traceHeaders = await getTraceHeaders(input, traceTargets, respectSampling);
 			if (traceHeaders) {
@@ -388,14 +414,15 @@ var SupabaseClient = class {
 	*
 	* @param supabaseUrl The unique Supabase URL which is supplied when you create a new project in your project dashboard.
 	* @param supabaseKey The unique Supabase Key which is supplied when you create a new project in your project dashboard.
-	* @param options.db.schema You can switch in between schemas. The schema needs to be on the list of exposed schemas inside Supabase.
-	* @param options.auth.autoRefreshToken Set to "true" if you want to automatically refresh the token before expiring.
-	* @param options.auth.persistSession Set to "true" if you want to automatically save the user session into local storage.
-	* @param options.auth.detectSessionInUrl Set to "true" if you want to automatically detects OAuth grants in the URL and signs in the user.
-	* @param options.realtime Options passed along to realtime-js constructor.
-	* @param options.storage Options passed along to the storage-js constructor.
-	* @param options.global.fetch A custom fetch implementation.
-	* @param options.global.headers Any additional headers to send with each network request.
+	* @param options Optional configuration for the client:
+	* - `db.schema` — You can switch in between schemas. The schema needs to be on the list of exposed schemas inside Supabase.
+	* - `auth.autoRefreshToken` — Set to `true` if you want to automatically refresh the token before expiring.
+	* - `auth.persistSession` — Set to `true` if you want to automatically save the user session into local storage.
+	* - `auth.detectSessionInUrl` — Set to `true` if you want to automatically detect OAuth grants in the URL and sign in the user.
+	* - `realtime` — Options passed along to the realtime-js constructor.
+	* - `storage` — Options passed along to the storage-js constructor.
+	* - `global.fetch` — A custom fetch implementation.
+	* - `global.headers` — Any additional headers to send with each network request.
 	*
 	* @example Creating a client
 	* ```js
@@ -450,9 +477,9 @@ var SupabaseClient = class {
 	* ```
 	*
 	* @exampleDescription Custom fetch implementation
-	* `supabase-js` uses the [`cross-fetch`](https://www.npmjs.com/package/cross-fetch) library to make HTTP requests,
+	* `supabase-js` uses the runtime's global `fetch` to make HTTP requests,
 	* but an alternative `fetch` implementation can be provided as an option.
-	* This is most useful in environments where `cross-fetch` is not compatible (for instance Cloudflare Workers).
+	* This is useful in environments where the global `fetch` is unavailable or where you want to customize request behavior.
 	*
 	* @example Custom fetch implementation
 	* ```js
@@ -598,6 +625,7 @@ var SupabaseClient = class {
 		this.supabaseKey = supabaseKey;
 		const baseUrl = validateSupabaseUrl(supabaseUrl);
 		if (!supabaseKey) throw new Error("supabaseKey is required.");
+		checkApiKeyFormat(supabaseKey);
 		this.realtimeUrl = new URL("realtime/v1", baseUrl);
 		this.realtimeUrl.protocol = this.realtimeUrl.protocol.replace("http", "ws");
 		this.authUrl = new URL("auth/v1", baseUrl);
@@ -624,7 +652,8 @@ var SupabaseClient = class {
 				throw new Error(`@supabase/supabase-js: Supabase Client is configured with the accessToken option, accessing supabase.auth.${String(prop)} is not possible`);
 			} });
 		}
-		this.fetch = fetchWithAuth(supabaseKey, supabaseUrl, this._getAccessToken.bind(this), settings.global.fetch, settings.tracePropagation);
+		this.fetch = fetchWithAuth(supabaseKey, supabaseUrl, this._getSessionToken.bind(this), settings.global.fetch, settings.tracePropagation);
+		this.functionsFetch = fetchWithAuth(supabaseKey, supabaseUrl, this._getSessionToken.bind(this), settings.global.fetch, settings.tracePropagation, { omitApiKeyAsBearer: true });
 		this.realtime = this._initRealtimeClient(_objectSpread2({
 			headers: this.headers,
 			accessToken: this._getAccessToken.bind(this),
@@ -647,7 +676,7 @@ var SupabaseClient = class {
 	get functions() {
 		return new FunctionsClient(this.functionsUrl.href, {
 			headers: this.headers,
-			customFetch: this.fetch
+			customFetch: this.functionsFetch
 		});
 	}
 	/**
@@ -757,12 +786,22 @@ var SupabaseClient = class {
 	removeAllChannels() {
 		return this.realtime.removeAllChannels();
 	}
-	async _getAccessToken() {
+	/**
+	* The raw session token — the custom `accessToken` result or the signed-in user's JWT —
+	* or `null` when there is no session. Unlike {@link _getAccessToken} it does not fall back
+	* to `supabaseKey`, so callers can distinguish "no session" from "has session".
+	*/
+	async _getSessionToken() {
 		var _this = this;
 		var _data$session$access_, _data$session;
 		if (_this.accessToken) return await _this.accessToken();
 		const { data } = await _this.auth.getSession();
-		return (_data$session$access_ = (_data$session = data.session) === null || _data$session === void 0 ? void 0 : _data$session.access_token) !== null && _data$session$access_ !== void 0 ? _data$session$access_ : _this.supabaseKey;
+		return (_data$session$access_ = (_data$session = data.session) === null || _data$session === void 0 ? void 0 : _data$session.access_token) !== null && _data$session$access_ !== void 0 ? _data$session$access_ : null;
+	}
+	async _getAccessToken() {
+		var _this2 = this;
+		var _await$this$_getSessi;
+		return (_await$this$_getSessi = await _this2._getSessionToken()) !== null && _await$this$_getSessi !== void 0 ? _await$this$_getSessi : _this2.supabaseKey;
 	}
 	_initSupabaseAuthClient({ autoRefreshToken, persistSession, detectSessionInUrl, storage, userStorage, storageKey, flowType, lock, debug, throwOnError, experimental, lockAcquireTimeout, skipAutoInitialize }, headers, fetch$1) {
 		const authHeaders = {
@@ -798,7 +837,7 @@ var SupabaseClient = class {
 		});
 	}
 	_handleTokenChanged(event, source, token) {
-		if ((event === "TOKEN_REFRESHED" || event === "SIGNED_IN") && this.changedAccessToken !== token) {
+		if ((event === "TOKEN_REFRESHED" || event === "SIGNED_IN" || event === "INITIAL_SESSION") && this.changedAccessToken !== token) {
 			this.changedAccessToken = token;
 			this.realtime.setAuth(token);
 		} else if (event === "SIGNED_OUT") {
@@ -823,15 +862,15 @@ var createClient = (supabaseUrl, supabaseKey, options) => {
 	return new SupabaseClient(supabaseUrl, supabaseKey, options);
 };
 function shouldShowDeprecationWarning() {
-	if (typeof window !== "undefined") return false;
+	if (typeof window !== "undefined" || globalThis["Deno"] !== void 0) return false;
 	const _process = globalThis["process"];
 	if (!_process) return false;
 	const processVersion = _process["version"];
 	if (processVersion === void 0 || processVersion === null) return false;
 	const versionMatch = processVersion.match(/^v(\d+)\./);
 	if (!versionMatch) return false;
-	return parseInt(versionMatch[1], 10) <= 18;
+	return parseInt(versionMatch[1], 10) <= 20;
 }
-if (shouldShowDeprecationWarning()) console.warn("⚠️  Node.js 18 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 20 or later. For more information, visit: https://github.com/orgs/supabase/discussions/37217");
+if (shouldShowDeprecationWarning()) console.warn("⚠️  Node.js 20 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 22 or later. For more information, visit: https://github.com/orgs/supabase/discussions/45715");
 //#endregion
 export { createClient as t };

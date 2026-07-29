@@ -1,1 +1,0 @@
-import{Gt as e}from"./index-D9gLlIf4.js";var t=e({type:`function`});export{t};

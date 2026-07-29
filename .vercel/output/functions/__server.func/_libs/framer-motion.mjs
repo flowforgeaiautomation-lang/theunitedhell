@@ -1,5 +1,33 @@
 import { a as __toCommonJS, n as __esmMin, o as __toESM, r as __exportAll } from "../_runtime.mjs";
 import { c as require_react, s as require_jsx_runtime } from "./react+tanstack__react-query.mjs";
+//#region node_modules/framer-motion/dist/es/context/LayoutGroupContext.mjs
+var import_jsx_runtime = require_jsx_runtime();
+var import_react = /* @__PURE__ */ __toESM(require_react(), 1);
+var LayoutGroupContext = (0, import_react.createContext)({});
+//#endregion
+//#region node_modules/framer-motion/dist/es/utils/use-constant.mjs
+/**
+* Creates a constant value over the lifecycle of a component.
+*
+* Even if `useMemo` is provided an empty array as its final argument, it doesn't offer
+* a guarantee that it won't re-run for performance reasons later on. By using `useConstant`
+* you can ensure that initialisers don't execute twice or more.
+*/
+function useConstant(init) {
+	const ref = (0, import_react.useRef)(null);
+	if (ref.current === null) ref.current = init();
+	return ref.current;
+}
+//#endregion
+//#region node_modules/framer-motion/dist/es/utils/use-isomorphic-effect.mjs
+var useIsomorphicLayoutEffect = typeof window !== "undefined" ? import_react.useLayoutEffect : import_react.useEffect;
+//#endregion
+//#region node_modules/framer-motion/dist/es/context/PresenceContext.mjs
+/**
+* @public
+*/
+var PresenceContext = /* @__PURE__ */ (0, import_react.createContext)(null);
+//#endregion
 //#region node_modules/motion-utils/dist/es/array.mjs
 function addUniqueItem(arr, item) {
 	if (arr.indexOf(item) === -1) arr.push(item);
@@ -157,13 +185,13 @@ var easeIn = /*@__PURE__*/ cubicBezier(.42, 0, 1, 1);
 var easeOut = /*@__PURE__*/ cubicBezier(0, 0, .58, 1);
 var easeInOut = /*@__PURE__*/ cubicBezier(.42, 0, .58, 1);
 //#endregion
-//#region node_modules/motion-utils/dist/es/easing/utils/is-bezier-definition.mjs
-var isBezierDefinition = /* @__NO_SIDE_EFFECTS__ */ (easing) => Array.isArray(easing) && typeof easing[0] === "number";
-//#endregion
 //#region node_modules/motion-utils/dist/es/easing/utils/is-easing-array.mjs
 var isEasingArray = /* @__NO_SIDE_EFFECTS__ */ (ease) => {
 	return Array.isArray(ease) && typeof ease[0] !== "number";
 };
+//#endregion
+//#region node_modules/motion-utils/dist/es/easing/utils/is-bezier-definition.mjs
+var isBezierDefinition = /* @__NO_SIDE_EFFECTS__ */ (easing) => Array.isArray(easing) && typeof easing[0] === "number";
 //#endregion
 //#region node_modules/motion-utils/dist/es/easing/utils/map.mjs
 var easingLookup = {
@@ -1022,7 +1050,8 @@ function spring(optionsOrVisualDuration = springDefaults.visualDuration, bounce 
 		angularFreq = calcAngularFreq(undampedAngularFreq, dampingRatio);
 		A = (initialVelocity + dampingRatio * undampedAngularFreq * initialDelta) / angularFreq;
 		resolveSpring = (t) => {
-			return target - Math.exp(-dampingRatio * undampedAngularFreq * t) * (A * Math.sin(angularFreq * t) + initialDelta * Math.cos(angularFreq * t));
+			const envelope = Math.exp(-dampingRatio * undampedAngularFreq * t);
+			return target - envelope * (A * Math.sin(angularFreq * t) + initialDelta * Math.cos(angularFreq * t));
 		};
 		sinCoeff = dampingRatio * undampedAngularFreq * A + initialDelta * angularFreq;
 		cosCoeff = dampingRatio * undampedAngularFreq * initialDelta - A * angularFreq;
@@ -2284,7 +2313,8 @@ var acceleratedValues = /* @__PURE__ */ new Set([
 	"opacity",
 	"clipPath",
 	"filter",
-	"transform"
+	"transform",
+	"backgroundColor"
 ]);
 //#endregion
 //#region node_modules/motion-dom/dist/es/animation/waapi/utils/is-browser-color.mjs
@@ -2310,13 +2340,15 @@ var colorProperties = /* @__PURE__ */ new Set([
 var supportsWaapi = /*@__PURE__*/ memo(() => Object.hasOwnProperty.call(Element.prototype, "animate"));
 function supportsBrowserAnimation(options) {
 	const { motionValue, name, repeatDelay, repeatType, damping, type, keyframes } = options;
+	const subject = motionValue?.owner?.current;
 	/**
-	* We use this check instead of isHTMLElement() because we explicitly
-	* **don't** want elements in different timing contexts (i.e. popups)
-	* to be accelerated, as it's not possible to sync these animations
-	* properly with those driven from the main window frameloop.
+	* We use instanceof checks instead of isHTMLElement()/isSVGElement()
+	* because we explicitly **don't** want elements in different timing
+	* contexts (i.e. popups) to be accelerated, as it's not possible to sync
+	* these animations properly with those driven from the main window
+	* frameloop.
 	*/
-	if (!(motionValue?.owner?.current instanceof HTMLElement)) return false;
+	if (!(subject instanceof HTMLElement) && !(subject instanceof SVGElement)) return false;
 	const { onUpdate, transformTemplate } = motionValue.owner.getProps();
 	return supportsWaapi() && name && (acceleratedValues.has(name) || colorProperties.has(name) && hasBrowserOnlyColors(keyframes)) && (name !== "transform" || !transformTemplate) && !onUpdate && !repeatDelay && repeatType !== "mirror" && damping !== 0 && type !== "inertia";
 }
@@ -2469,6 +2501,286 @@ var AsyncMotionValueAnimation = class extends WithPromise {
 		this.keyframeResolver?.cancel();
 	}
 };
+//#endregion
+//#region node_modules/motion-dom/dist/es/animation/utils/calc-child-stagger.mjs
+function calcChildStagger(children, child, delayChildren, staggerChildren = 0, staggerDirection = 1) {
+	const index = Array.from(children).sort((a, b) => a.sortNodePosition(b)).indexOf(child);
+	const numChildren = children.size;
+	const maxStaggerDuration = (numChildren - 1) * staggerChildren;
+	return typeof delayChildren === "function" ? delayChildren(index, numChildren) : staggerDirection === 1 ? index * staggerChildren : maxStaggerDuration - index * staggerChildren;
+}
+//#endregion
+//#region node_modules/motion-dom/dist/es/value/index.mjs
+/**
+* Maximum time between the value of two frames, beyond which we
+* assume the velocity has since been 0.
+*/
+var MAX_VELOCITY_DELTA = 30;
+var isFloat = (value) => {
+	return !isNaN(parseFloat(value));
+};
+var collectMotionValues = { current: void 0 };
+/**
+* `MotionValue` is used to track the state and velocity of motion values.
+*
+* @public
+*/
+var MotionValue = class {
+	/**
+	* @param init - The initiating value
+	* @param config - Optional configuration options
+	*
+	* -  `transformer`: A function to transform incoming values with.
+	*/
+	constructor(init, options = {}) {
+		/**
+		* Tracks whether this value can output a velocity. Currently this is only true
+		* if the value is numerical, but we might be able to widen the scope here and support
+		* other value types.
+		*
+		* @internal
+		*/
+		this.canTrackVelocity = null;
+		/**
+		* An object containing a SubscriptionManager for each active event.
+		*/
+		this.events = {};
+		this.updateAndNotify = (v) => {
+			const currentTime = time.now();
+			/**
+			* If we're updating the value during another frame or eventloop
+			* than the previous frame, then the we set the previous frame value
+			* to current.
+			*/
+			if (this.updatedAt !== currentTime) this.setPrevFrameValue();
+			this.prev = this.current;
+			this.setCurrent(v);
+			if (this.current !== this.prev) {
+				this.events.change?.notify(this.current);
+				if (this.dependents) for (const dependent of this.dependents) dependent.dirty();
+			}
+		};
+		this.hasAnimated = false;
+		this.setCurrent(init);
+		this.owner = options.owner;
+	}
+	setCurrent(current) {
+		this.current = current;
+		this.updatedAt = time.now();
+		if (this.canTrackVelocity === null && current !== void 0) this.canTrackVelocity = isFloat(this.current);
+	}
+	setPrevFrameValue(prevFrameValue = this.current) {
+		this.prevFrameValue = prevFrameValue;
+		this.prevUpdatedAt = this.updatedAt;
+	}
+	/**
+	* Adds a function that will be notified when the `MotionValue` is updated.
+	*
+	* It returns a function that, when called, will cancel the subscription.
+	*
+	* When calling `onChange` inside a React component, it should be wrapped with the
+	* `useEffect` hook. As it returns an unsubscribe function, this should be returned
+	* from the `useEffect` function to ensure you don't add duplicate subscribers..
+	*
+	* ```jsx
+	* export const MyComponent = () => {
+	*   const x = useMotionValue(0)
+	*   const y = useMotionValue(0)
+	*   const opacity = useMotionValue(1)
+	*
+	*   useEffect(() => {
+	*     function updateOpacity() {
+	*       const maxXY = Math.max(x.get(), y.get())
+	*       const newOpacity = transform(maxXY, [0, 100], [1, 0])
+	*       opacity.set(newOpacity)
+	*     }
+	*
+	*     const unsubscribeX = x.on("change", updateOpacity)
+	*     const unsubscribeY = y.on("change", updateOpacity)
+	*
+	*     return () => {
+	*       unsubscribeX()
+	*       unsubscribeY()
+	*     }
+	*   }, [])
+	*
+	*   return <motion.div style={{ x }} />
+	* }
+	* ```
+	*
+	* @param subscriber - A function that receives the latest value.
+	* @returns A function that, when called, will cancel this subscription.
+	*
+	* @deprecated
+	*/
+	onChange(subscription) {
+		return this.on("change", subscription);
+	}
+	on(eventName, callback) {
+		if (!this.events[eventName]) this.events[eventName] = new SubscriptionManager();
+		const unsubscribe = this.events[eventName].add(callback);
+		if (eventName === "change") return () => {
+			unsubscribe();
+			/**
+			* If we have no more change listeners by the start
+			* of the next frame, stop active animations.
+			*/
+			frame.read(() => {
+				if (!this.events.change.getSize()) this.stop();
+			});
+		};
+		return unsubscribe;
+	}
+	clearListeners() {
+		for (const eventManagers in this.events) this.events[eventManagers].clear();
+	}
+	/**
+	* Attaches a passive effect to the `MotionValue`.
+	*/
+	attach(passiveEffect, stopPassiveEffect) {
+		this.passiveEffect = passiveEffect;
+		this.stopPassiveEffect = stopPassiveEffect;
+	}
+	/**
+	* Sets the state of the `MotionValue`.
+	*
+	* @remarks
+	*
+	* ```jsx
+	* const x = useMotionValue(0)
+	* x.set(10)
+	* ```
+	*
+	* @param latest - Latest value to set.
+	* @param render - Whether to notify render subscribers. Defaults to `true`
+	*
+	* @public
+	*/
+	set(v) {
+		if (!this.passiveEffect) this.updateAndNotify(v);
+		else this.passiveEffect(v, this.updateAndNotify);
+	}
+	setWithVelocity(prev, current, delta) {
+		this.set(current);
+		this.prev = void 0;
+		this.prevFrameValue = prev;
+		this.prevUpdatedAt = this.updatedAt - delta;
+	}
+	/**
+	* Set the state of the `MotionValue`, stopping any active animations,
+	* effects, and resets velocity to `0`.
+	*/
+	jump(v, endAnimation = true) {
+		this.updateAndNotify(v);
+		this.prev = v;
+		this.prevUpdatedAt = this.prevFrameValue = void 0;
+		endAnimation && this.stop();
+		if (this.stopPassiveEffect) this.stopPassiveEffect();
+	}
+	dirty() {
+		this.events.change?.notify(this.current);
+	}
+	addDependent(dependent) {
+		if (!this.dependents) this.dependents = /* @__PURE__ */ new Set();
+		this.dependents.add(dependent);
+	}
+	removeDependent(dependent) {
+		if (this.dependents) this.dependents.delete(dependent);
+	}
+	/**
+	* Returns the latest state of `MotionValue`
+	*
+	* @returns - The latest state of `MotionValue`
+	*
+	* @public
+	*/
+	get() {
+		if (collectMotionValues.current) collectMotionValues.current.push(this);
+		return this.current;
+	}
+	/**
+	* @public
+	*/
+	getPrevious() {
+		return this.prev;
+	}
+	/**
+	* Returns the latest velocity of `MotionValue`
+	*
+	* @returns - The latest velocity of `MotionValue`. Returns `0` if the state is non-numerical.
+	*
+	* @public
+	*/
+	getVelocity() {
+		const currentTime = time.now();
+		if (!this.canTrackVelocity || this.prevFrameValue === void 0 || currentTime - this.updatedAt > MAX_VELOCITY_DELTA) return 0;
+		const delta = Math.min(this.updatedAt - this.prevUpdatedAt, MAX_VELOCITY_DELTA);
+		return /* @__PURE__ */ velocityPerSecond(parseFloat(this.current) - parseFloat(this.prevFrameValue), delta);
+	}
+	/**
+	* Registers a new animation to control this `MotionValue`. Only one
+	* animation can drive a `MotionValue` at one time.
+	*
+	* ```jsx
+	* value.start()
+	* ```
+	*
+	* @param animation - A function that starts the provided animation
+	*/
+	start(startAnimation) {
+		this.stop();
+		return new Promise((resolve) => {
+			this.hasAnimated = true;
+			this.animation = startAnimation(resolve);
+			if (this.events.animationStart) this.events.animationStart.notify();
+		}).then(() => {
+			if (this.events.animationComplete) this.events.animationComplete.notify();
+			this.clearAnimation();
+		});
+	}
+	/**
+	* Stop the currently active animation.
+	*
+	* @public
+	*/
+	stop() {
+		if (this.animation) {
+			this.animation.stop();
+			if (this.events.animationCancel) this.events.animationCancel.notify();
+		}
+		this.clearAnimation();
+	}
+	/**
+	* Returns `true` if this value is currently animating.
+	*
+	* @public
+	*/
+	isAnimating() {
+		return !!this.animation;
+	}
+	clearAnimation() {
+		delete this.animation;
+	}
+	/**
+	* Destroy and clean up subscribers to this `MotionValue`.
+	*
+	* The `MotionValue` hooks like `useMotionValue` and `useTransform` automatically
+	* handle the lifecycle of the returned `MotionValue`, so this method is only necessary if you've manually
+	* created a `MotionValue` via the `motionValue` function.
+	*
+	* @public
+	*/
+	destroy() {
+		this.dependents?.clear();
+		this.events.destroy?.notify();
+		this.clearListeners();
+		this.stop();
+		if (this.stopPassiveEffect) this.stopPassiveEffect();
+	}
+};
+function motionValue(init, options) {
+	return new MotionValue(init, options);
+}
 //#endregion
 //#region node_modules/motion-dom/dist/es/animation/utils/resolve-transition.mjs
 /**
@@ -2636,411 +2948,110 @@ var animateMotionValue = (name, value, target, transition = {}, element, isHando
 	return valueTransition.isSync ? new JSAnimation(options) : new AsyncMotionValueAnimation(options);
 };
 //#endregion
-//#region node_modules/motion-dom/dist/es/render/dom/utils/camel-to-dash.mjs
-function camelToDash(str) {
-	return str.replace(/([A-Z])/g, (match) => `-${match.toLowerCase()}`);
-}
-var optimizedAppearDataAttribute = "data-" + camelToDash("framerAppearId");
-//#endregion
-//#region node_modules/motion-dom/dist/es/frameloop/microtask.mjs
-var { schedule: microtask, cancel: cancelMicrotask } = /* @__PURE__ */ createRenderBatcher(queueMicrotask, false);
-//#endregion
-//#region node_modules/motion-dom/dist/es/gestures/drag/state/is-active.mjs
-var isDragging = {
-	x: false,
-	y: false
-};
-function isDragActive() {
-	return isDragging.x || isDragging.y;
-}
-//#endregion
-//#region node_modules/motion-dom/dist/es/gestures/drag/state/set-active.mjs
-function setDragLock(axis) {
-	if (axis === "x" || axis === "y") if (isDragging[axis]) return null;
-	else {
-		isDragging[axis] = true;
-		return () => {
-			isDragging[axis] = false;
-		};
-	}
-	else if (isDragging.x || isDragging.y) return null;
-	else {
-		isDragging.x = isDragging.y = true;
-		return () => {
-			isDragging.x = isDragging.y = false;
-		};
-	}
-}
-//#endregion
-//#region node_modules/motion-dom/dist/es/utils/resolve-elements.mjs
-function resolveElements(elementOrSelector, scope, selectorCache) {
-	if (elementOrSelector == null) return [];
-	if (elementOrSelector instanceof EventTarget) return [elementOrSelector];
-	else if (typeof elementOrSelector === "string") {
-		let root = document;
-		if (scope) root = scope.current;
-		const elements = selectorCache?.[elementOrSelector] ?? root.querySelectorAll(elementOrSelector);
-		return elements ? Array.from(elements) : [];
-	}
-	return Array.from(elementOrSelector).filter((element) => element != null);
-}
-//#endregion
-//#region node_modules/motion-dom/dist/es/gestures/utils/setup.mjs
-function setupGesture(elementOrSelector, options) {
-	const elements = resolveElements(elementOrSelector);
-	const gestureAbortController = new AbortController();
-	const eventOptions = {
-		passive: true,
-		...options,
-		signal: gestureAbortController.signal
-	};
-	const cancel = () => gestureAbortController.abort();
-	return [
-		elements,
-		eventOptions,
-		cancel
-	];
-}
-//#endregion
-//#region node_modules/motion-dom/dist/es/gestures/hover.mjs
-function isValidHover(event) {
-	return !(event.pointerType === "touch" || isDragActive());
-}
+//#region node_modules/motion-dom/dist/es/animation/utils/css-variables-conversion.mjs
 /**
-* Create a hover gesture. hover() is different to .addEventListener("pointerenter")
-* in that it has an easier syntax, filters out polyfilled touch events, interoperates
-* with drag gestures, and automatically removes the "pointerennd" event listener when the hover ends.
+* Parse Framer's special CSS variable format into a CSS token and a fallback.
 *
-* @public
+* ```
+* `var(--foo, #fff)` => [`--foo`, '#fff']
+* ```
+*
+* @param current
 */
-function hover(elementOrSelector, onHoverStart, options = {}) {
-	const [elements, eventOptions, cancel] = setupGesture(elementOrSelector, options);
-	elements.forEach((element) => {
-		let isPressed = false;
-		let deferredHoverEnd = false;
-		let hoverEndCallback;
-		const removePointerLeave = () => {
-			element.removeEventListener("pointerleave", onPointerLeave);
-		};
-		const endHover = (event) => {
-			if (hoverEndCallback) {
-				hoverEndCallback(event);
-				hoverEndCallback = void 0;
-			}
-			removePointerLeave();
-		};
-		const onPointerUp = (event) => {
-			isPressed = false;
-			window.removeEventListener("pointerup", onPointerUp);
-			window.removeEventListener("pointercancel", onPointerUp);
-			if (deferredHoverEnd) {
-				deferredHoverEnd = false;
-				endHover(event);
-			}
-		};
-		const onPointerDown = () => {
-			isPressed = true;
-			window.addEventListener("pointerup", onPointerUp, eventOptions);
-			window.addEventListener("pointercancel", onPointerUp, eventOptions);
-		};
-		const onPointerLeave = (leaveEvent) => {
-			if (leaveEvent.pointerType === "touch") return;
-			if (isPressed) {
-				deferredHoverEnd = true;
-				return;
-			}
-			endHover(leaveEvent);
-		};
-		const onPointerEnter = (enterEvent) => {
-			if (!isValidHover(enterEvent)) return;
-			deferredHoverEnd = false;
-			const onHoverEnd = onHoverStart(element, enterEvent);
-			if (typeof onHoverEnd !== "function") return;
-			hoverEndCallback = onHoverEnd;
-			element.addEventListener("pointerleave", onPointerLeave, eventOptions);
-		};
-		element.addEventListener("pointerenter", onPointerEnter, eventOptions);
-		element.addEventListener("pointerdown", onPointerDown, eventOptions);
+var splitCSSVariableRegex = /^var\(--(?:([\w-]+)|([\w-]+), ?([a-zA-Z\d ()%#.,-]+))\)/u;
+function parseCSSVariable(current) {
+	const match = splitCSSVariableRegex.exec(current);
+	if (!match) return [,];
+	const [, token1, token2, fallback] = match;
+	return [`--${token1 ?? token2}`, fallback];
+}
+function getVariableValue(current, element, depth = 1) {
+	`${current}`;
+	const [token, fallback] = parseCSSVariable(current);
+	if (!token) return;
+	const resolved = window.getComputedStyle(element).getPropertyValue(token);
+	if (resolved) {
+		const trimmed = resolved.trim();
+		return isNumericalString(trimmed) ? parseFloat(trimmed) : trimmed;
+	}
+	return isCSSVariableToken(fallback) ? getVariableValue(fallback, element, depth + 1) : fallback;
+}
+//#endregion
+//#region node_modules/motion-dom/dist/es/render/utils/resolve-variants.mjs
+function getValueState(visualElement) {
+	const state = [{}, {}];
+	visualElement?.values.forEach((value, key) => {
+		state[0][key] = value.get();
+		state[1][key] = value.getVelocity();
 	});
-	return cancel;
+	return state;
 }
-//#endregion
-//#region node_modules/motion-dom/dist/es/utils/is-html-element.mjs
-/**
-* Checks if an element is an HTML element in a way
-* that works across iframes
-*/
-function isHTMLElement(element) {
-	return isObject(element) && "offsetHeight" in element && !("ownerSVGElement" in element);
-}
-//#endregion
-//#region node_modules/motion-dom/dist/es/gestures/utils/is-node-or-child.mjs
-/**
-* Recursively traverse up the tree to check whether the provided child node
-* is the parent or a descendant of it.
-*
-* @param parent - Element to find
-* @param child - Element to test against parent
-*/
-var isNodeOrChild = (parent, child) => {
-	if (!child) return false;
-	else if (parent === child) return true;
-	else return isNodeOrChild(parent, child.parentElement);
-};
-//#endregion
-//#region node_modules/motion-dom/dist/es/gestures/utils/is-primary-pointer.mjs
-var isPrimaryPointer = (event) => {
-	if (event.pointerType === "mouse") return typeof event.button !== "number" || event.button <= 0;
-	else
- /**
-	* isPrimary is true for all mice buttons, whereas every touch point
-	* is regarded as its own input. So subsequent concurrent touch points
-	* will be false.
-	*
-	* Specifically match against false here as incomplete versions of
-	* PointerEvents in very old browser might have it set as undefined.
-	*/
-	return event.isPrimary !== false;
-};
-//#endregion
-//#region node_modules/motion-dom/dist/es/gestures/press/utils/is-keyboard-accessible.mjs
-var keyboardAccessibleElements = /* @__PURE__ */ new Set([
-	"BUTTON",
-	"INPUT",
-	"SELECT",
-	"TEXTAREA",
-	"A"
-]);
-/**
-* Checks if an element is natively keyboard accessible (focusable).
-* Used by the press gesture to determine if we need to add tabIndex.
-*/
-function isElementKeyboardAccessible(element) {
-	return keyboardAccessibleElements.has(element.tagName) || element.isContentEditable === true;
-}
-var textInputElements = /* @__PURE__ */ new Set([
-	"INPUT",
-	"SELECT",
-	"TEXTAREA"
-]);
-/**
-* Checks if an element has text selection or direct interaction behavior
-* that should block drag gestures from starting.
-*
-* This specifically targets form controls where the user might want to select
-* text or interact with the control (e.g., sliders, dropdowns).
-*
-* Buttons and links are NOT included because they don't have click-and-move
-* actions of their own - they only respond to click events, so dragging
-* should still work when initiated from these elements.
-*/
-function isElementTextInput(element) {
-	return textInputElements.has(element.tagName) || element.isContentEditable === true;
-}
-//#endregion
-//#region node_modules/motion-dom/dist/es/gestures/press/utils/state.mjs
-var isPressing = /* @__PURE__ */ new WeakSet();
-//#endregion
-//#region node_modules/motion-dom/dist/es/gestures/press/utils/keyboard.mjs
-/**
-* Filter out events that are not "Enter" keys.
-*/
-function filterEvents(callback) {
-	return (event) => {
-		if (event.key !== "Enter") return;
-		callback(event);
-	};
-}
-function firePointerEvent(target, type) {
-	target.dispatchEvent(new PointerEvent("pointer" + type, {
-		isPrimary: true,
-		bubbles: true
-	}));
-}
-var enableKeyboardPress = (focusEvent, eventOptions) => {
-	const element = focusEvent.currentTarget;
-	if (!element) return;
-	const handleKeydown = filterEvents(() => {
-		if (isPressing.has(element)) return;
-		firePointerEvent(element, "down");
-		const handleKeyup = filterEvents(() => {
-			firePointerEvent(element, "up");
-		});
-		const handleBlur = () => firePointerEvent(element, "cancel");
-		element.addEventListener("keyup", handleKeyup, eventOptions);
-		element.addEventListener("blur", handleBlur, eventOptions);
-	});
-	element.addEventListener("keydown", handleKeydown, eventOptions);
+function resolveVariantFromProps(props, definition, custom, visualElement) {
 	/**
-	* Add an event listener that fires on blur to remove the keydown events.
+	* If the variant definition is a function, resolve.
 	*/
-	element.addEventListener("blur", () => element.removeEventListener("keydown", handleKeydown), eventOptions);
+	if (typeof definition === "function") {
+		const [current, velocity] = getValueState(visualElement);
+		definition = definition(custom !== void 0 ? custom : props.custom, current, velocity);
+	}
+	/**
+	* If the variant definition is a variant label, or
+	* the function returned a variant label, resolve.
+	*/
+	if (typeof definition === "string") definition = props.variants && props.variants[definition];
+	/**
+	* At this point we've resolved both functions and variant labels,
+	* but the resolved variant label might itself have been a function.
+	* If so, resolve. This can only have returned a valid target object.
+	*/
+	if (typeof definition === "function") {
+		const [current, velocity] = getValueState(visualElement);
+		definition = definition(custom !== void 0 ? custom : props.custom, current, velocity);
+	}
+	return definition;
+}
+//#endregion
+//#region node_modules/motion-dom/dist/es/render/utils/resolve-dynamic-variants.mjs
+function resolveVariant(visualElement, definition, custom) {
+	const props = visualElement.getProps();
+	return resolveVariantFromProps(props, definition, custom !== void 0 ? custom : props.custom, visualElement);
+}
+//#endregion
+//#region node_modules/motion-dom/dist/es/render/utils/keys-position.mjs
+var positionalKeys = /* @__PURE__ */ new Set([
+	"width",
+	"height",
+	"top",
+	"left",
+	"right",
+	"bottom",
+	...transformPropOrder
+]);
+//#endregion
+//#region node_modules/motion-dom/dist/es/render/utils/is-keyframes-target.mjs
+var isKeyframesTarget = (v) => {
+	return Array.isArray(v);
 };
 //#endregion
-//#region node_modules/motion-dom/dist/es/gestures/press/index.mjs
+//#region node_modules/motion-dom/dist/es/render/utils/setters.mjs
 /**
-* Filter out events that are not primary pointer events, or are triggering
-* while a Motion gesture is active.
+* Set VisualElement's MotionValue, creating a new MotionValue for it if
+* it doesn't exist.
 */
-function isValidPressEvent(event) {
-	return isPrimaryPointer(event) && !isDragActive();
+function setMotionValue(visualElement, key, value) {
+	if (visualElement.hasValue(key)) visualElement.getValue(key).set(value);
+	else visualElement.addValue(key, motionValue(value));
 }
-var claimedPointerDownEvents = /* @__PURE__ */ new WeakSet();
-/**
-* Create a press gesture.
-*
-* Press is different to `"pointerdown"`, `"pointerup"` in that it
-* automatically filters out secondary pointer events like right
-* click and multitouch.
-*
-* It also adds accessibility support for keyboards, where
-* an element with a press gesture will receive focus and
-*  trigger on Enter `"keydown"` and `"keyup"` events.
-*
-* This is different to a browser's `"click"` event, which does
-* respond to keyboards but only for the `"click"` itself, rather
-* than the press start and end/cancel. The element also needs
-* to be focusable for this to work, whereas a press gesture will
-* make an element focusable by default.
-*
-* @public
-*/
-function press(targetOrSelector, onPressStart, options = {}) {
-	const [targets, eventOptions, cancelEvents] = setupGesture(targetOrSelector, options);
-	const startPress = (startEvent) => {
-		const target = startEvent.currentTarget;
-		if (!isValidPressEvent(startEvent)) return;
-		if (claimedPointerDownEvents.has(startEvent)) return;
-		isPressing.add(target);
-		if (options.stopPropagation) claimedPointerDownEvents.add(startEvent);
-		const onPressEnd = onPressStart(target, startEvent);
-		/**
-		* End listeners run in the capture phase so a descendant calling
-		* stopPropagation() in its own pointerup handler can't prevent the
-		* press gesture from ending. This also keeps the gesture-end
-		* ordering consistent with the drag gesture. See #2794.
-		*/
-		const endEventOptions = {
-			...eventOptions,
-			capture: true
-		};
-		const onPointerEnd = (endEvent, success) => {
-			window.removeEventListener("pointerup", onPointerUp, endEventOptions);
-			window.removeEventListener("pointercancel", onPointerCancel, endEventOptions);
-			if (isPressing.has(target)) isPressing.delete(target);
-			if (!isValidPressEvent(endEvent)) return;
-			if (typeof onPressEnd === "function") onPressEnd(endEvent, { success });
-		};
-		const onPointerUp = (upEvent) => {
-			onPointerEnd(upEvent, target === window || target === document || options.useGlobalTarget || isNodeOrChild(target, upEvent.target));
-		};
-		const onPointerCancel = (cancelEvent) => {
-			onPointerEnd(cancelEvent, false);
-		};
-		window.addEventListener("pointerup", onPointerUp, endEventOptions);
-		window.addEventListener("pointercancel", onPointerCancel, endEventOptions);
+function resolveFinalValueInKeyframes(v) {
+	return isKeyframesTarget(v) ? v[v.length - 1] || 0 : v;
+}
+function setTarget(visualElement, definition) {
+	let { transitionEnd = {}, transition = {}, ...target } = resolveVariant(visualElement, definition) || {};
+	target = {
+		...target,
+		...transitionEnd
 	};
-	targets.forEach((target) => {
-		(options.useGlobalTarget ? window : target).addEventListener("pointerdown", startPress, eventOptions);
-		if (isHTMLElement(target)) {
-			target.addEventListener("focus", (event) => enableKeyboardPress(event, eventOptions));
-			if (!isElementKeyboardAccessible(target) && !target.hasAttribute("tabindex")) target.tabIndex = 0;
-		}
-	});
-	return cancelEvents;
-}
-//#endregion
-//#region node_modules/motion-dom/dist/es/utils/is-svg-element.mjs
-/**
-* Checks if an element is an SVG element in a way
-* that works across iframes
-*/
-function isSVGElement(element) {
-	return isObject(element) && "ownerSVGElement" in element;
-}
-//#endregion
-//#region node_modules/motion-dom/dist/es/resize/handle-element.mjs
-var resizeHandlers = /* @__PURE__ */ new WeakMap();
-var observer;
-var getSize = (borderBoxAxis, svgAxis, htmlAxis) => (target, borderBoxSize) => {
-	if (borderBoxSize && borderBoxSize[0]) return borderBoxSize[0][borderBoxAxis + "Size"];
-	else if (isSVGElement(target) && "getBBox" in target) return target.getBBox()[svgAxis];
-	else return target[htmlAxis];
-};
-var getWidth = /*@__PURE__*/ getSize("inline", "width", "offsetWidth");
-var getHeight = /*@__PURE__*/ getSize("block", "height", "offsetHeight");
-function notifyTarget({ target, borderBoxSize }) {
-	resizeHandlers.get(target)?.forEach((handler) => {
-		handler(target, {
-			get width() {
-				return getWidth(target, borderBoxSize);
-			},
-			get height() {
-				return getHeight(target, borderBoxSize);
-			}
-		});
-	});
-}
-function notifyAll(entries) {
-	entries.forEach(notifyTarget);
-}
-function createResizeObserver() {
-	if (typeof ResizeObserver === "undefined") return;
-	observer = new ResizeObserver(notifyAll);
-}
-function resizeElement(target, handler) {
-	if (!observer) createResizeObserver();
-	const elements = resolveElements(target);
-	elements.forEach((element) => {
-		let elementHandlers = resizeHandlers.get(element);
-		if (!elementHandlers) {
-			elementHandlers = /* @__PURE__ */ new Set();
-			resizeHandlers.set(element, elementHandlers);
-		}
-		elementHandlers.add(handler);
-		observer?.observe(element);
-	});
-	return () => {
-		elements.forEach((element) => {
-			const elementHandlers = resizeHandlers.get(element);
-			elementHandlers?.delete(handler);
-			if (!elementHandlers?.size) observer?.unobserve(element);
-		});
-	};
-}
-//#endregion
-//#region node_modules/motion-dom/dist/es/resize/handle-window.mjs
-var windowCallbacks = /* @__PURE__ */ new Set();
-var windowResizeHandler;
-function createWindowResizeHandler() {
-	windowResizeHandler = () => {
-		const info = {
-			get width() {
-				return window.innerWidth;
-			},
-			get height() {
-				return window.innerHeight;
-			}
-		};
-		windowCallbacks.forEach((callback) => callback(info));
-	};
-	window.addEventListener("resize", windowResizeHandler);
-}
-function resizeWindow(callback) {
-	windowCallbacks.add(callback);
-	if (!windowResizeHandler) createWindowResizeHandler();
-	return () => {
-		windowCallbacks.delete(callback);
-		if (!windowCallbacks.size && typeof windowResizeHandler === "function") {
-			window.removeEventListener("resize", windowResizeHandler);
-			windowResizeHandler = void 0;
-		}
-	};
-}
-//#endregion
-//#region node_modules/motion-dom/dist/es/resize/index.mjs
-function resize(a, b) {
-	return typeof a === "function" ? resizeWindow(a) : resizeElement(a, b);
+	for (const key in target) setMotionValue(visualElement, key, resolveFinalValueInKeyframes(target[key]));
 }
 //#endregion
 //#region node_modules/motion-dom/dist/es/value/utils/is-motion-value.mjs
@@ -3066,204 +3077,146 @@ function addValueToWillChange(visualElement, key) {
 	}
 }
 //#endregion
-//#region node_modules/motion-dom/dist/es/render/Feature.mjs
-/**
-* Feature base class for extending VisualElement functionality.
-* Features are plugins that can be mounted/unmounted to add behavior
-* like gestures, animations, or layout tracking.
-*/
-var Feature = class {
-	constructor(node) {
-		this.isMounted = false;
-		this.node = node;
-	}
-	update() {}
-};
+//#region node_modules/motion-dom/dist/es/render/dom/utils/camel-to-dash.mjs
+function camelToDash(str) {
+	return str.replace(/([A-Z])/g, (match) => `-${match.toLowerCase()}`);
+}
+var optimizedAppearDataAttribute = "data-" + camelToDash("framerAppearId");
 //#endregion
-//#region node_modules/motion-dom/dist/es/projection/geometry/conversion.mjs
-/**
-* Bounding boxes tend to be defined as top, left, right, bottom. For various operations
-* it's easier to consider each axis individually. This function returns a bounding box
-* as a map of single-axis min/max values.
-*/
-function convertBoundingBoxToBox({ top, left, right, bottom }) {
-	return {
-		x: {
-			min: left,
-			max: right
-		},
-		y: {
-			min: top,
-			max: bottom
-		}
-	};
-}
-function convertBoxToBoundingBox({ x, y }) {
-	return {
-		top: y.min,
-		right: x.max,
-		bottom: y.max,
-		left: x.min
-	};
-}
-/**
-* Applies a TransformPoint function to a bounding box. TransformPoint is usually a function
-* provided by Framer to allow measured points to be corrected for device scaling. This is used
-* when measuring DOM elements and DOM event points.
-*/
-function transformBoxPoints(point, transformPoint) {
-	if (!transformPoint) return point;
-	const topLeft = transformPoint({
-		x: point.left,
-		y: point.top
-	});
-	const bottomRight = transformPoint({
-		x: point.right,
-		y: point.bottom
-	});
-	return {
-		top: topLeft.y,
-		left: topLeft.x,
-		bottom: bottomRight.y,
-		right: bottomRight.x
-	};
+//#region node_modules/motion-dom/dist/es/animation/optimized-appear/get-appear-id.mjs
+function getOptimisedAppearId(visualElement) {
+	return visualElement.props[optimizedAppearDataAttribute];
 }
 //#endregion
-//#region node_modules/motion-dom/dist/es/projection/utils/has-transform.mjs
-function isIdentityScale(scale) {
-	return scale === void 0 || scale === 1;
-}
-function hasScale({ scale, scaleX, scaleY }) {
-	return !isIdentityScale(scale) || !isIdentityScale(scaleX) || !isIdentityScale(scaleY);
-}
-function hasTransform(values) {
-	return hasScale(values) || has2DTranslate(values) || values.z || values.rotate || values.rotateX || values.rotateY || values.skewX || values.skewY;
-}
-function has2DTranslate(values) {
-	return is2DTranslate(values.x) || is2DTranslate(values.y);
-}
-function is2DTranslate(value) {
-	return value && value !== "0%";
-}
-//#endregion
-//#region node_modules/motion-dom/dist/es/projection/geometry/delta-apply.mjs
+//#region node_modules/motion-dom/dist/es/animation/interfaces/visual-element-target.mjs
 /**
-* Scales a point based on a factor and an originPoint
+* Decide whether we should block this animation. Previously, we achieved this
+* just by checking whether the key was listed in protectedKeys, but this
+* posed problems if an animation was triggered by afterChildren and protectedKeys
+* had been set to true in the meantime.
 */
-function scalePoint(point, scale, originPoint) {
-	return originPoint + scale * (point - originPoint);
+function shouldBlockAnimation({ protectedKeys, needsAnimating }, key) {
+	const shouldBlock = protectedKeys.hasOwnProperty(key) && needsAnimating[key] !== true;
+	needsAnimating[key] = false;
+	return shouldBlock;
 }
-/**
-* Applies a translate/scale delta to a point
-*/
-function applyPointDelta(point, translate, scale, originPoint, boxScale) {
-	if (boxScale !== void 0) point = scalePoint(point, boxScale, originPoint);
-	return scalePoint(point, scale, originPoint) + translate;
-}
-/**
-* Applies a translate/scale delta to an axis
-*/
-function applyAxisDelta(axis, translate = 0, scale = 1, originPoint, boxScale) {
-	axis.min = applyPointDelta(axis.min, translate, scale, originPoint, boxScale);
-	axis.max = applyPointDelta(axis.max, translate, scale, originPoint, boxScale);
-}
-/**
-* Applies a translate/scale delta to a box
-*/
-function applyBoxDelta(box, { x, y }) {
-	applyAxisDelta(box.x, x.translate, x.scale, x.originPoint);
-	applyAxisDelta(box.y, y.translate, y.scale, y.originPoint);
-}
-var TREE_SCALE_SNAP_MIN = .999999999999;
-var TREE_SCALE_SNAP_MAX = 1.0000000000001;
-/**
-* Apply a tree of deltas to a box. We do this to calculate the effect of all the transforms
-* in a tree upon our box before then calculating how to project it into our desired viewport-relative box
-*
-* This is the final nested loop within updateLayoutDelta for future refactoring
-*/
-function applyTreeDeltas(box, treeScale, treePath, isSharedTransition = false) {
-	const treeLength = treePath.length;
-	if (!treeLength) return;
-	treeScale.x = treeScale.y = 1;
-	let node;
-	let delta;
-	for (let i = 0; i < treeLength; i++) {
-		node = treePath[i];
-		delta = node.projectionDelta;
+function animateTarget(visualElement, targetAndTransition, { delay = 0, transitionOverride, type } = {}) {
+	let { transition, transitionEnd, ...target } = targetAndTransition;
+	const defaultTransition = visualElement.getDefaultTransition();
+	transition = transition ? resolveTransition(transition, defaultTransition) : defaultTransition;
+	const reduceMotion = transition?.reduceMotion;
+	const skipAnimations = transition?.skipAnimations;
+	if (transitionOverride) transition = transitionOverride;
+	const animations = [];
+	const animationTypeState = type && visualElement.animationState && visualElement.animationState.getState()[type];
+	const path = transition?.path;
+	if (path) path.animateVisualElement(visualElement, target, transition, delay, animations);
+	for (const key in target) {
+		const value = visualElement.getValue(key, visualElement.latestValues[key] ?? null);
+		const valueTarget = target[key];
+		if (valueTarget === void 0 || animationTypeState && shouldBlockAnimation(animationTypeState, key)) continue;
+		const valueTransition = {
+			delay,
+			...getValueTransition(transition || {}, key)
+		};
+		if (skipAnimations) valueTransition.skipAnimations = true;
 		/**
-		* TODO: Prefer to remove this, but currently we have motion components with
-		* display: contents in Framer.
+		* If the value is already at the defined target, skip the animation.
+		* We still re-assert the value via frame.update to take precedence
+		* over any stale transitionEnd callbacks from previous animations.
 		*/
-		const { visualElement } = node.options;
-		if (visualElement && visualElement.props.style && visualElement.props.style.display === "contents") continue;
-		if (isSharedTransition && node.options.layoutScroll && node.scroll && node !== node.root) {
-			translateAxis(box.x, -node.scroll.offset.x);
-			translateAxis(box.y, -node.scroll.offset.y);
+		const currentValue = value.get();
+		if (currentValue !== void 0 && !value.isAnimating() && !Array.isArray(valueTarget) && valueTarget === currentValue && !valueTransition.velocity) {
+			frame.update(() => value.set(valueTarget));
+			continue;
 		}
-		if (delta) {
-			treeScale.x *= delta.x.scale;
-			treeScale.y *= delta.y.scale;
-			applyBoxDelta(box, delta);
+		/**
+		* If this is the first time a value is being animated, check
+		* to see if we're handling off from an existing animation.
+		*/
+		let isHandoff = false;
+		if (window.MotionHandoffAnimation) {
+			const appearId = getOptimisedAppearId(visualElement);
+			if (appearId) {
+				const startTime = window.MotionHandoffAnimation(appearId, key, frame);
+				if (startTime !== null) {
+					valueTransition.startTime = startTime;
+					isHandoff = true;
+				}
+			}
 		}
-		if (isSharedTransition && hasTransform(node.latestValues)) transformBox(box, node.latestValues, node.layout?.layoutBox);
+		addValueToWillChange(visualElement, key);
+		const shouldReduceMotion = reduceMotion ?? visualElement.shouldReduceMotion;
+		value.start(animateMotionValue(key, value, valueTarget, shouldReduceMotion && positionalKeys.has(key) ? { type: false } : valueTransition, visualElement, isHandoff));
+		const animation = value.animation;
+		if (animation) animations.push(animation);
 	}
+	if (transitionEnd) {
+		const applyTransitionEnd = () => frame.update(() => {
+			transitionEnd && setTarget(visualElement, transitionEnd);
+		});
+		if (animations.length) Promise.all(animations).then(applyTransitionEnd);
+		else applyTransitionEnd();
+	}
+	return animations;
+}
+//#endregion
+//#region node_modules/motion-dom/dist/es/animation/interfaces/visual-element-variant.mjs
+function animateVariant(visualElement, variant, options = {}) {
+	const resolved = resolveVariant(visualElement, variant, options.type === "exit" ? visualElement.presenceContext?.custom : void 0);
+	let { transition = visualElement.getDefaultTransition() || {} } = resolved || {};
+	if (options.transitionOverride) transition = options.transitionOverride;
 	/**
-	* Snap tree scale back to 1 if it's within a non-perceivable threshold.
-	* This will help reduce useless scales getting rendered.
+	* If we have a variant, create a callback that runs it as an animation.
+	* Otherwise, we resolve a Promise immediately for a composable no-op.
 	*/
-	if (treeScale.x < TREE_SCALE_SNAP_MAX && treeScale.x > TREE_SCALE_SNAP_MIN) treeScale.x = 1;
-	if (treeScale.y < TREE_SCALE_SNAP_MAX && treeScale.y > TREE_SCALE_SNAP_MIN) treeScale.y = 1;
+	const getAnimation = resolved ? () => Promise.all(animateTarget(visualElement, resolved, options)) : () => Promise.resolve();
+	/**
+	* If we have children, create a callback that runs all their animations.
+	* Otherwise, we resolve a Promise immediately for a composable no-op.
+	*/
+	const getChildAnimations = visualElement.variantChildren && visualElement.variantChildren.size ? (forwardDelay = 0) => {
+		const { delayChildren = 0, staggerChildren, staggerDirection } = transition;
+		return animateChildren(visualElement, variant, forwardDelay, delayChildren, staggerChildren, staggerDirection, options);
+	} : () => Promise.resolve();
+	/**
+	* If the transition explicitly defines a "when" option, we need to resolve either
+	* this animation or all children animations before playing the other.
+	*/
+	const { when } = transition;
+	if (when) {
+		const [first, last] = when === "beforeChildren" ? [getAnimation, getChildAnimations] : [getChildAnimations, getAnimation];
+		return first().then(() => last());
+	} else return Promise.all([getAnimation(), getChildAnimations(options.delay)]);
 }
-function translateAxis(axis, distance) {
-	axis.min += distance;
-	axis.max += distance;
-}
-/**
-* Apply a transform to an axis from the latest resolved motion values.
-* This function basically acts as a bridge between a flat motion value map
-* and applyAxisDelta
-*/
-function transformAxis(axis, axisTranslate, axisScale, boxScale, axisOrigin = .5) {
-	applyAxisDelta(axis, axisTranslate, axisScale, mixNumber$1(axis.min, axis.max, axisOrigin), boxScale);
-}
-function resolveAxisTranslate(value, axis) {
-	if (typeof value === "string") return parseFloat(value) / 100 * (axis.max - axis.min);
-	return value;
-}
-/**
-* Apply a transform to a box from the latest resolved motion values.
-*/
-function transformBox(box, transform, sourceBox) {
-	const resolveBox = sourceBox ?? box;
-	transformAxis(box.x, resolveAxisTranslate(transform.x, resolveBox.x), transform.scaleX, transform.scale, transform.originX);
-	transformAxis(box.y, resolveAxisTranslate(transform.y, resolveBox.y), transform.scaleY, transform.scale, transform.originY);
-}
-//#endregion
-//#region node_modules/motion-dom/dist/es/projection/utils/measure.mjs
-function measureViewportBox(instance, transformPoint) {
-	return convertBoundingBoxToBox(transformBoxPoints(instance.getBoundingClientRect(), transformPoint));
-}
-function measurePageBox(element, rootProjectionNode, transformPagePoint) {
-	const viewportBox = measureViewportBox(element, transformPagePoint);
-	const { scroll } = rootProjectionNode;
-	if (scroll) {
-		translateAxis(viewportBox.x, scroll.offset.x);
-		translateAxis(viewportBox.y, scroll.offset.y);
+function animateChildren(visualElement, variant, delay = 0, delayChildren = 0, staggerChildren = 0, staggerDirection = 1, options) {
+	const animations = [];
+	for (const child of visualElement.variantChildren) {
+		child.notify("AnimationStart", variant);
+		animations.push(animateVariant(child, variant, {
+			...options,
+			delay: delay + (typeof delayChildren === "function" ? 0 : delayChildren) + calcChildStagger(visualElement.variantChildren, child, delayChildren, staggerChildren, staggerDirection)
+		}).then(() => child.notify("AnimationComplete", variant)));
 	}
-	return viewportBox;
+	return Promise.all(animations);
 }
 //#endregion
-//#region node_modules/motion-dom/dist/es/render/utils/keys-position.mjs
-var positionalKeys = /* @__PURE__ */ new Set([
-	"width",
-	"height",
-	"top",
-	"left",
-	"right",
-	"bottom",
-	...transformPropOrder
-]);
+//#region node_modules/motion-dom/dist/es/animation/interfaces/visual-element.mjs
+function animateVisualElement(visualElement, definition, options = {}) {
+	visualElement.notify("AnimationStart", definition);
+	let animation;
+	if (Array.isArray(definition)) {
+		const animations = definition.map((variant) => animateVariant(visualElement, variant, options));
+		animation = Promise.all(animations);
+	} else if (typeof definition === "string") animation = animateVariant(visualElement, definition, options);
+	else {
+		const resolvedDefinition = typeof definition === "function" ? resolveVariant(visualElement, definition, options.custom) : definition;
+		animation = Promise.all(animateTarget(visualElement, resolvedDefinition, options));
+	}
+	return animation.then(() => {
+		visualElement.notify("AnimationComplete", definition);
+	});
+}
 //#endregion
 //#region node_modules/motion-dom/dist/es/value/types/auto.mjs
 /**
@@ -3297,35 +3250,6 @@ var dimensionValueTypes = [
 * Tests a dimensional value against the list of dimension ValueTypes
 */
 var findDimensionValueType = (v) => dimensionValueTypes.find(testValueType(v));
-//#endregion
-//#region node_modules/motion-dom/dist/es/animation/utils/css-variables-conversion.mjs
-/**
-* Parse Framer's special CSS variable format into a CSS token and a fallback.
-*
-* ```
-* `var(--foo, #fff)` => [`--foo`, '#fff']
-* ```
-*
-* @param current
-*/
-var splitCSSVariableRegex = /^var\(--(?:([\w-]+)|([\w-]+), ?([a-zA-Z\d ()%#.,-]+))\)/u;
-function parseCSSVariable(current) {
-	const match = splitCSSVariableRegex.exec(current);
-	if (!match) return [,];
-	const [, token1, token2, fallback] = match;
-	return [`--${token1 ?? token2}`, fallback];
-}
-function getVariableValue(current, element, depth = 1) {
-	`${current}`;
-	const [token, fallback] = parseCSSVariable(current);
-	if (!token) return;
-	const resolved = window.getComputedStyle(element).getPropertyValue(token);
-	if (resolved) {
-		const trimmed = resolved.trim();
-		return isNumericalString(trimmed) ? parseFloat(trimmed) : trimmed;
-	}
-	return isCSSVariableToken(fallback) ? getVariableValue(fallback, element, depth + 1) : fallback;
-}
 //#endregion
 //#region node_modules/motion-dom/dist/es/animation/keyframes/utils/is-none.mjs
 function isNone(value) {
@@ -3618,6 +3542,458 @@ var DOMKeyframesResolver = class extends KeyframeResolver {
 	}
 };
 //#endregion
+//#region node_modules/motion-dom/dist/es/utils/border-radius.mjs
+/**
+* The four corner-radius longhands. Shared so the projection mixer, scale
+* corrector, WAAPI px-value set and view-transition crop pass don't each carry
+* their own copy. Order is irrelevant - every consumer mixes/corrects/animates
+* each corner independently.
+*/
+var cornerRadiusProps = [
+	"borderTopLeftRadius",
+	"borderTopRightRadius",
+	"borderBottomRightRadius",
+	"borderBottomLeftRadius"
+];
+//#endregion
+//#region node_modules/motion-dom/dist/es/utils/resolve-elements.mjs
+function resolveElements(elementOrSelector, scope, selectorCache) {
+	if (elementOrSelector == null) return [];
+	if (elementOrSelector instanceof EventTarget) return [elementOrSelector];
+	else if (typeof elementOrSelector === "string") {
+		let root = document;
+		if (scope) root = scope.current;
+		const elements = selectorCache?.[elementOrSelector] ?? root.querySelectorAll(elementOrSelector);
+		return elements ? Array.from(elements) : [];
+	}
+	return Array.from(elementOrSelector).filter((element) => element != null);
+}
+//#endregion
+//#region node_modules/motion-dom/dist/es/value/types/utils/get-as-type.mjs
+/**
+* Provided a value and a ValueType, returns the value as that value type.
+*/
+var getValueAsType = (value, type) => {
+	return type && typeof value === "number" ? type.transform(value) : value;
+};
+//#endregion
+//#region node_modules/motion-dom/dist/es/utils/is-html-element.mjs
+/**
+* Checks if an element is an HTML element in a way
+* that works across iframes
+*/
+function isHTMLElement(element) {
+	return isObject(element) && "offsetHeight" in element && !("ownerSVGElement" in element);
+}
+//#endregion
+//#region node_modules/motion-dom/dist/es/frameloop/microtask.mjs
+var { schedule: microtask, cancel: cancelMicrotask } = /* @__PURE__ */ createRenderBatcher(queueMicrotask, false);
+//#endregion
+//#region node_modules/motion-dom/dist/es/gestures/drag/state/is-active.mjs
+var isDragging = {
+	x: false,
+	y: false
+};
+function isDragActive() {
+	return isDragging.x || isDragging.y;
+}
+//#endregion
+//#region node_modules/motion-dom/dist/es/gestures/drag/state/set-active.mjs
+function setDragLock(axis) {
+	if (axis === "x" || axis === "y") if (isDragging[axis]) return null;
+	else {
+		isDragging[axis] = true;
+		return () => {
+			isDragging[axis] = false;
+		};
+	}
+	else if (isDragging.x || isDragging.y) return null;
+	else {
+		isDragging.x = isDragging.y = true;
+		return () => {
+			isDragging.x = isDragging.y = false;
+		};
+	}
+}
+//#endregion
+//#region node_modules/motion-dom/dist/es/gestures/utils/setup.mjs
+function setupGesture(elementOrSelector, options) {
+	const elements = resolveElements(elementOrSelector);
+	const gestureAbortController = new AbortController();
+	const eventOptions = {
+		passive: true,
+		...options,
+		signal: gestureAbortController.signal
+	};
+	const cancel = () => gestureAbortController.abort();
+	return [
+		elements,
+		eventOptions,
+		cancel
+	];
+}
+//#endregion
+//#region node_modules/motion-dom/dist/es/gestures/hover.mjs
+function isValidHover(event) {
+	return !(event.pointerType === "touch" || isDragActive());
+}
+/**
+* Create a hover gesture. hover() is different to .addEventListener("pointerenter")
+* in that it has an easier syntax, filters out polyfilled touch events, interoperates
+* with drag gestures, and automatically removes the "pointerennd" event listener when the hover ends.
+*
+* @public
+*/
+function hover(elementOrSelector, onHoverStart, options = {}) {
+	const [elements, eventOptions, cancel] = setupGesture(elementOrSelector, options);
+	elements.forEach((element) => {
+		let isPressed = false;
+		let deferredHoverEnd = false;
+		let hoverEndCallback;
+		const removePointerLeave = () => {
+			element.removeEventListener("pointerleave", onPointerLeave);
+		};
+		const endHover = (event) => {
+			if (hoverEndCallback) {
+				hoverEndCallback(event);
+				hoverEndCallback = void 0;
+			}
+			removePointerLeave();
+		};
+		const onPointerUp = (event) => {
+			isPressed = false;
+			window.removeEventListener("pointerup", onPointerUp);
+			window.removeEventListener("pointercancel", onPointerUp);
+			if (deferredHoverEnd) {
+				deferredHoverEnd = false;
+				endHover(event);
+			}
+		};
+		const onPointerDown = () => {
+			isPressed = true;
+			window.addEventListener("pointerup", onPointerUp, eventOptions);
+			window.addEventListener("pointercancel", onPointerUp, eventOptions);
+		};
+		const onPointerLeave = (leaveEvent) => {
+			if (leaveEvent.pointerType === "touch") return;
+			if (isPressed) {
+				deferredHoverEnd = true;
+				return;
+			}
+			endHover(leaveEvent);
+		};
+		const onPointerEnter = (enterEvent) => {
+			if (!isValidHover(enterEvent)) return;
+			deferredHoverEnd = false;
+			const onHoverEnd = onHoverStart(element, enterEvent);
+			if (typeof onHoverEnd !== "function") return;
+			hoverEndCallback = onHoverEnd;
+			element.addEventListener("pointerleave", onPointerLeave, eventOptions);
+		};
+		element.addEventListener("pointerenter", onPointerEnter, eventOptions);
+		element.addEventListener("pointerdown", onPointerDown, eventOptions);
+	});
+	return cancel;
+}
+//#endregion
+//#region node_modules/motion-dom/dist/es/gestures/utils/is-node-or-child.mjs
+/**
+* Recursively traverse up the tree to check whether the provided child node
+* is the parent or a descendant of it.
+*
+* @param parent - Element to find
+* @param child - Element to test against parent
+*/
+var isNodeOrChild = (parent, child) => {
+	if (!child) return false;
+	else if (parent === child) return true;
+	else return isNodeOrChild(parent, child.parentElement);
+};
+//#endregion
+//#region node_modules/motion-dom/dist/es/gestures/utils/is-primary-pointer.mjs
+var isPrimaryPointer = (event) => {
+	if (event.pointerType === "mouse") return typeof event.button !== "number" || event.button <= 0;
+	else
+ /**
+	* isPrimary is true for all mice buttons, whereas every touch point
+	* is regarded as its own input. So subsequent concurrent touch points
+	* will be false.
+	*
+	* Specifically match against false here as incomplete versions of
+	* PointerEvents in very old browser might have it set as undefined.
+	*/
+	return event.isPrimary !== false;
+};
+//#endregion
+//#region node_modules/motion-dom/dist/es/gestures/press/utils/is-keyboard-accessible.mjs
+var keyboardAccessibleElements = /* @__PURE__ */ new Set([
+	"BUTTON",
+	"INPUT",
+	"SELECT",
+	"TEXTAREA",
+	"A"
+]);
+/**
+* Checks if an element is natively keyboard accessible (focusable).
+* Used by the press gesture to determine if we need to add tabIndex.
+*/
+function isElementKeyboardAccessible(element) {
+	return keyboardAccessibleElements.has(element.tagName) || element.isContentEditable === true;
+}
+var textInputElements = /* @__PURE__ */ new Set([
+	"INPUT",
+	"SELECT",
+	"TEXTAREA"
+]);
+/**
+* Checks if an element has text selection or direct interaction behavior
+* that should block drag gestures from starting.
+*
+* This specifically targets form controls where the user might want to select
+* text or interact with the control (e.g., sliders, dropdowns).
+*
+* Buttons and links are NOT included because they don't have click-and-move
+* actions of their own - they only respond to click events, so dragging
+* should still work when initiated from these elements.
+*/
+function isElementTextInput(element) {
+	return textInputElements.has(element.tagName) || element.isContentEditable === true;
+}
+//#endregion
+//#region node_modules/motion-dom/dist/es/gestures/press/utils/state.mjs
+var isPressing = /* @__PURE__ */ new WeakSet();
+//#endregion
+//#region node_modules/motion-dom/dist/es/gestures/press/utils/keyboard.mjs
+/**
+* Filter out events that are not "Enter" keys.
+*/
+function filterEvents(callback) {
+	return (event) => {
+		if (event.key !== "Enter") return;
+		callback(event);
+	};
+}
+function firePointerEvent(target, type) {
+	target.dispatchEvent(new PointerEvent("pointer" + type, {
+		isPrimary: true,
+		bubbles: true
+	}));
+}
+var enableKeyboardPress = (focusEvent, eventOptions) => {
+	const element = focusEvent.currentTarget;
+	if (!element) return;
+	const handleKeydown = filterEvents(() => {
+		if (isPressing.has(element)) return;
+		firePointerEvent(element, "down");
+		const handleKeyup = filterEvents(() => {
+			firePointerEvent(element, "up");
+		});
+		const handleBlur = () => firePointerEvent(element, "cancel");
+		element.addEventListener("keyup", handleKeyup, eventOptions);
+		element.addEventListener("blur", handleBlur, eventOptions);
+	});
+	element.addEventListener("keydown", handleKeydown, eventOptions);
+	/**
+	* Add an event listener that fires on blur to remove the keydown events.
+	*/
+	element.addEventListener("blur", () => element.removeEventListener("keydown", handleKeydown), eventOptions);
+};
+//#endregion
+//#region node_modules/motion-dom/dist/es/gestures/press/index.mjs
+/**
+* Filter out events that are not primary pointer events, or are triggering
+* while a Motion gesture is active.
+*/
+function isValidPressEvent(event) {
+	return isPrimaryPointer(event) && !isDragActive();
+}
+var claimedPointerDownEvents = /* @__PURE__ */ new WeakSet();
+/**
+* Create a press gesture.
+*
+* Press is different to `"pointerdown"`, `"pointerup"` in that it
+* automatically filters out secondary pointer events like right
+* click and multitouch.
+*
+* It also adds accessibility support for keyboards, where
+* an element with a press gesture will receive focus and
+*  trigger on Enter `"keydown"` and `"keyup"` events.
+*
+* This is different to a browser's `"click"` event, which does
+* respond to keyboards but only for the `"click"` itself, rather
+* than the press start and end/cancel. The element also needs
+* to be focusable for this to work, whereas a press gesture will
+* make an element focusable by default.
+*
+* @public
+*/
+function press(targetOrSelector, onPressStart, options = {}) {
+	const [targets, eventOptions, cancelEvents] = setupGesture(targetOrSelector, options);
+	const startPress = (startEvent) => {
+		const target = startEvent.currentTarget;
+		if (!isValidPressEvent(startEvent)) return;
+		if (claimedPointerDownEvents.has(startEvent)) return;
+		isPressing.add(target);
+		if (options.stopPropagation) claimedPointerDownEvents.add(startEvent);
+		const onPressEnd = onPressStart(target, startEvent);
+		/**
+		* End listeners run in the capture phase so a descendant calling
+		* stopPropagation() in its own pointerup handler can't prevent the
+		* press gesture from ending. This also keeps the gesture-end
+		* ordering consistent with the drag gesture. See #2794.
+		*/
+		const endEventOptions = {
+			...eventOptions,
+			capture: true
+		};
+		const onPointerEnd = (endEvent, success) => {
+			window.removeEventListener("pointerup", onPointerUp, endEventOptions);
+			window.removeEventListener("pointercancel", onPointerCancel, endEventOptions);
+			if (isPressing.has(target)) isPressing.delete(target);
+			if (!isValidPressEvent(endEvent)) return;
+			if (typeof onPressEnd === "function") onPressEnd(endEvent, { success });
+		};
+		const onPointerUp = (upEvent) => {
+			onPointerEnd(upEvent, target === window || target === document || options.useGlobalTarget || isNodeOrChild(target, upEvent.target));
+		};
+		const onPointerCancel = (cancelEvent) => {
+			onPointerEnd(cancelEvent, false);
+		};
+		window.addEventListener("pointerup", onPointerUp, endEventOptions);
+		window.addEventListener("pointercancel", onPointerCancel, endEventOptions);
+	};
+	targets.forEach((target) => {
+		(options.useGlobalTarget ? window : target).addEventListener("pointerdown", startPress, eventOptions);
+		if (isHTMLElement(target)) {
+			target.addEventListener("focus", (event) => enableKeyboardPress(event, eventOptions));
+			if (!isElementKeyboardAccessible(target) && !target.hasAttribute("tabindex")) target.tabIndex = 0;
+		}
+	});
+	return cancelEvents;
+}
+//#endregion
+//#region node_modules/motion-dom/dist/es/utils/is-svg-element.mjs
+/**
+* Checks if an element is an SVG element in a way
+* that works across iframes
+*/
+function isSVGElement(element) {
+	return isObject(element) && "ownerSVGElement" in element;
+}
+//#endregion
+//#region node_modules/motion-dom/dist/es/resize/handle-element.mjs
+var resizeHandlers = /* @__PURE__ */ new WeakMap();
+var observer;
+var getSize = (borderBoxAxis, svgAxis, htmlAxis) => (target, borderBoxSize) => {
+	if (borderBoxSize && borderBoxSize[0]) return borderBoxSize[0][borderBoxAxis + "Size"];
+	else if (isSVGElement(target) && "getBBox" in target) return target.getBBox()[svgAxis];
+	else return target[htmlAxis];
+};
+var getWidth = /*@__PURE__*/ getSize("inline", "width", "offsetWidth");
+var getHeight = /*@__PURE__*/ getSize("block", "height", "offsetHeight");
+function notifyTarget({ target, borderBoxSize }) {
+	resizeHandlers.get(target)?.forEach((handler) => {
+		handler(target, {
+			get width() {
+				return getWidth(target, borderBoxSize);
+			},
+			get height() {
+				return getHeight(target, borderBoxSize);
+			}
+		});
+	});
+}
+function notifyAll(entries) {
+	entries.forEach(notifyTarget);
+}
+function createResizeObserver() {
+	if (typeof ResizeObserver === "undefined") return;
+	observer = new ResizeObserver(notifyAll);
+}
+function resizeElement(target, handler) {
+	if (!observer) createResizeObserver();
+	const elements = resolveElements(target);
+	elements.forEach((element) => {
+		let elementHandlers = resizeHandlers.get(element);
+		if (!elementHandlers) {
+			elementHandlers = /* @__PURE__ */ new Set();
+			resizeHandlers.set(element, elementHandlers);
+		}
+		elementHandlers.add(handler);
+		observer?.observe(element);
+	});
+	return () => {
+		elements.forEach((element) => {
+			const elementHandlers = resizeHandlers.get(element);
+			elementHandlers?.delete(handler);
+			if (!elementHandlers?.size) observer?.unobserve(element);
+		});
+	};
+}
+//#endregion
+//#region node_modules/motion-dom/dist/es/resize/handle-window.mjs
+var windowCallbacks = /* @__PURE__ */ new Set();
+var windowResizeHandler;
+function createWindowResizeHandler() {
+	windowResizeHandler = () => {
+		const info = {
+			get width() {
+				return window.innerWidth;
+			},
+			get height() {
+				return window.innerHeight;
+			}
+		};
+		windowCallbacks.forEach((callback) => callback(info));
+	};
+	window.addEventListener("resize", windowResizeHandler);
+}
+function resizeWindow(callback) {
+	windowCallbacks.add(callback);
+	if (!windowResizeHandler) createWindowResizeHandler();
+	return () => {
+		windowCallbacks.delete(callback);
+		if (!windowCallbacks.size && typeof windowResizeHandler === "function") {
+			window.removeEventListener("resize", windowResizeHandler);
+			windowResizeHandler = void 0;
+		}
+	};
+}
+//#endregion
+//#region node_modules/motion-dom/dist/es/resize/index.mjs
+function resize(a, b) {
+	return typeof a === "function" ? resizeWindow(a) : resizeElement(a, b);
+}
+//#endregion
+//#region node_modules/motion-dom/dist/es/stats/buffer.mjs
+var statsBuffer = {
+	value: null,
+	addProjectionMetrics: null
+};
+//#endregion
+//#region node_modules/motion-dom/dist/es/utils/is-svg-svg-element.mjs
+/**
+* Checks if an element is specifically an SVGSVGElement (the root SVG element)
+* in a way that works across iframes
+*/
+function isSVGSVGElement(element) {
+	return isSVGElement(element) && element.tagName === "svg";
+}
+//#endregion
+//#region node_modules/motion-dom/dist/es/value/types/utils/find.mjs
+/**
+* A list of all ValueTypes
+*/
+var valueTypes = [
+	...dimensionValueTypes,
+	color,
+	complex
+];
+/**
+* Tests a value against the list of ValueTypes
+*/
+var findValueType = (v) => valueTypes.find(testValueType(v));
+//#endregion
 //#region node_modules/motion-dom/dist/es/projection/geometry/models.mjs
 var createAxisDelta = () => ({
 	translate: 0,
@@ -3637,292 +4013,6 @@ var createBox = () => ({
 	x: createAxis(),
 	y: createAxis()
 });
-//#endregion
-//#region node_modules/motion-dom/dist/es/value/index.mjs
-/**
-* Maximum time between the value of two frames, beyond which we
-* assume the velocity has since been 0.
-*/
-var MAX_VELOCITY_DELTA = 30;
-var isFloat = (value) => {
-	return !isNaN(parseFloat(value));
-};
-var collectMotionValues = { current: void 0 };
-/**
-* `MotionValue` is used to track the state and velocity of motion values.
-*
-* @public
-*/
-var MotionValue = class {
-	/**
-	* @param init - The initiating value
-	* @param config - Optional configuration options
-	*
-	* -  `transformer`: A function to transform incoming values with.
-	*/
-	constructor(init, options = {}) {
-		/**
-		* Tracks whether this value can output a velocity. Currently this is only true
-		* if the value is numerical, but we might be able to widen the scope here and support
-		* other value types.
-		*
-		* @internal
-		*/
-		this.canTrackVelocity = null;
-		/**
-		* An object containing a SubscriptionManager for each active event.
-		*/
-		this.events = {};
-		this.updateAndNotify = (v) => {
-			const currentTime = time.now();
-			/**
-			* If we're updating the value during another frame or eventloop
-			* than the previous frame, then the we set the previous frame value
-			* to current.
-			*/
-			if (this.updatedAt !== currentTime) this.setPrevFrameValue();
-			this.prev = this.current;
-			this.setCurrent(v);
-			if (this.current !== this.prev) {
-				this.events.change?.notify(this.current);
-				if (this.dependents) for (const dependent of this.dependents) dependent.dirty();
-			}
-		};
-		this.hasAnimated = false;
-		this.setCurrent(init);
-		this.owner = options.owner;
-	}
-	setCurrent(current) {
-		this.current = current;
-		this.updatedAt = time.now();
-		if (this.canTrackVelocity === null && current !== void 0) this.canTrackVelocity = isFloat(this.current);
-	}
-	setPrevFrameValue(prevFrameValue = this.current) {
-		this.prevFrameValue = prevFrameValue;
-		this.prevUpdatedAt = this.updatedAt;
-	}
-	/**
-	* Adds a function that will be notified when the `MotionValue` is updated.
-	*
-	* It returns a function that, when called, will cancel the subscription.
-	*
-	* When calling `onChange` inside a React component, it should be wrapped with the
-	* `useEffect` hook. As it returns an unsubscribe function, this should be returned
-	* from the `useEffect` function to ensure you don't add duplicate subscribers..
-	*
-	* ```jsx
-	* export const MyComponent = () => {
-	*   const x = useMotionValue(0)
-	*   const y = useMotionValue(0)
-	*   const opacity = useMotionValue(1)
-	*
-	*   useEffect(() => {
-	*     function updateOpacity() {
-	*       const maxXY = Math.max(x.get(), y.get())
-	*       const newOpacity = transform(maxXY, [0, 100], [1, 0])
-	*       opacity.set(newOpacity)
-	*     }
-	*
-	*     const unsubscribeX = x.on("change", updateOpacity)
-	*     const unsubscribeY = y.on("change", updateOpacity)
-	*
-	*     return () => {
-	*       unsubscribeX()
-	*       unsubscribeY()
-	*     }
-	*   }, [])
-	*
-	*   return <motion.div style={{ x }} />
-	* }
-	* ```
-	*
-	* @param subscriber - A function that receives the latest value.
-	* @returns A function that, when called, will cancel this subscription.
-	*
-	* @deprecated
-	*/
-	onChange(subscription) {
-		return this.on("change", subscription);
-	}
-	on(eventName, callback) {
-		if (!this.events[eventName]) this.events[eventName] = new SubscriptionManager();
-		const unsubscribe = this.events[eventName].add(callback);
-		if (eventName === "change") return () => {
-			unsubscribe();
-			/**
-			* If we have no more change listeners by the start
-			* of the next frame, stop active animations.
-			*/
-			frame.read(() => {
-				if (!this.events.change.getSize()) this.stop();
-			});
-		};
-		return unsubscribe;
-	}
-	clearListeners() {
-		for (const eventManagers in this.events) this.events[eventManagers].clear();
-	}
-	/**
-	* Attaches a passive effect to the `MotionValue`.
-	*/
-	attach(passiveEffect, stopPassiveEffect) {
-		this.passiveEffect = passiveEffect;
-		this.stopPassiveEffect = stopPassiveEffect;
-	}
-	/**
-	* Sets the state of the `MotionValue`.
-	*
-	* @remarks
-	*
-	* ```jsx
-	* const x = useMotionValue(0)
-	* x.set(10)
-	* ```
-	*
-	* @param latest - Latest value to set.
-	* @param render - Whether to notify render subscribers. Defaults to `true`
-	*
-	* @public
-	*/
-	set(v) {
-		if (!this.passiveEffect) this.updateAndNotify(v);
-		else this.passiveEffect(v, this.updateAndNotify);
-	}
-	setWithVelocity(prev, current, delta) {
-		this.set(current);
-		this.prev = void 0;
-		this.prevFrameValue = prev;
-		this.prevUpdatedAt = this.updatedAt - delta;
-	}
-	/**
-	* Set the state of the `MotionValue`, stopping any active animations,
-	* effects, and resets velocity to `0`.
-	*/
-	jump(v, endAnimation = true) {
-		this.updateAndNotify(v);
-		this.prev = v;
-		this.prevUpdatedAt = this.prevFrameValue = void 0;
-		endAnimation && this.stop();
-		if (this.stopPassiveEffect) this.stopPassiveEffect();
-	}
-	dirty() {
-		this.events.change?.notify(this.current);
-	}
-	addDependent(dependent) {
-		if (!this.dependents) this.dependents = /* @__PURE__ */ new Set();
-		this.dependents.add(dependent);
-	}
-	removeDependent(dependent) {
-		if (this.dependents) this.dependents.delete(dependent);
-	}
-	/**
-	* Returns the latest state of `MotionValue`
-	*
-	* @returns - The latest state of `MotionValue`
-	*
-	* @public
-	*/
-	get() {
-		if (collectMotionValues.current) collectMotionValues.current.push(this);
-		return this.current;
-	}
-	/**
-	* @public
-	*/
-	getPrevious() {
-		return this.prev;
-	}
-	/**
-	* Returns the latest velocity of `MotionValue`
-	*
-	* @returns - The latest velocity of `MotionValue`. Returns `0` if the state is non-numerical.
-	*
-	* @public
-	*/
-	getVelocity() {
-		const currentTime = time.now();
-		if (!this.canTrackVelocity || this.prevFrameValue === void 0 || currentTime - this.updatedAt > MAX_VELOCITY_DELTA) return 0;
-		const delta = Math.min(this.updatedAt - this.prevUpdatedAt, MAX_VELOCITY_DELTA);
-		return /* @__PURE__ */ velocityPerSecond(parseFloat(this.current) - parseFloat(this.prevFrameValue), delta);
-	}
-	/**
-	* Registers a new animation to control this `MotionValue`. Only one
-	* animation can drive a `MotionValue` at one time.
-	*
-	* ```jsx
-	* value.start()
-	* ```
-	*
-	* @param animation - A function that starts the provided animation
-	*/
-	start(startAnimation) {
-		this.stop();
-		return new Promise((resolve) => {
-			this.hasAnimated = true;
-			this.animation = startAnimation(resolve);
-			if (this.events.animationStart) this.events.animationStart.notify();
-		}).then(() => {
-			if (this.events.animationComplete) this.events.animationComplete.notify();
-			this.clearAnimation();
-		});
-	}
-	/**
-	* Stop the currently active animation.
-	*
-	* @public
-	*/
-	stop() {
-		if (this.animation) {
-			this.animation.stop();
-			if (this.events.animationCancel) this.events.animationCancel.notify();
-		}
-		this.clearAnimation();
-	}
-	/**
-	* Returns `true` if this value is currently animating.
-	*
-	* @public
-	*/
-	isAnimating() {
-		return !!this.animation;
-	}
-	clearAnimation() {
-		delete this.animation;
-	}
-	/**
-	* Destroy and clean up subscribers to this `MotionValue`.
-	*
-	* The `MotionValue` hooks like `useMotionValue` and `useTransform` automatically
-	* handle the lifecycle of the returned `MotionValue`, so this method is only necessary if you've manually
-	* created a `MotionValue` via the `motionValue` function.
-	*
-	* @public
-	*/
-	destroy() {
-		this.dependents?.clear();
-		this.events.destroy?.notify();
-		this.clearListeners();
-		this.stop();
-		if (this.stopPassiveEffect) this.stopPassiveEffect();
-	}
-};
-function motionValue(init, options) {
-	return new MotionValue(init, options);
-}
-//#endregion
-//#region node_modules/motion-dom/dist/es/value/types/utils/find.mjs
-/**
-* A list of all ValueTypes
-*/
-var valueTypes = [
-	...dimensionValueTypes,
-	color,
-	complex
-];
-/**
-* Tests a value against the list of ValueTypes
-*/
-var findValueType = (v) => valueTypes.find(testValueType(v));
 //#endregion
 //#region node_modules/motion-dom/dist/es/render/store.mjs
 var visualElementStore = /* @__PURE__ */ new WeakMap();
@@ -4005,50 +4095,16 @@ var prefersReducedMotion = { current: null };
 var hasReducedMotionListener = { current: false };
 //#endregion
 //#region node_modules/motion-dom/dist/es/render/utils/reduced-motion/index.mjs
-var isBrowser$1 = typeof window !== "undefined";
+var isBrowser = typeof window !== "undefined";
 function initPrefersReducedMotion() {
 	hasReducedMotionListener.current = true;
-	if (!isBrowser$1) return;
+	if (!isBrowser) return;
 	if (window.matchMedia) {
 		const motionMediaQuery = window.matchMedia("(prefers-reduced-motion)");
 		const setReducedMotionPreferences = () => prefersReducedMotion.current = motionMediaQuery.matches;
 		motionMediaQuery.addEventListener("change", setReducedMotionPreferences);
 		setReducedMotionPreferences();
 	} else prefersReducedMotion.current = false;
-}
-//#endregion
-//#region node_modules/motion-dom/dist/es/render/utils/resolve-variants.mjs
-function getValueState(visualElement) {
-	const state = [{}, {}];
-	visualElement?.values.forEach((value, key) => {
-		state[0][key] = value.get();
-		state[1][key] = value.getVelocity();
-	});
-	return state;
-}
-function resolveVariantFromProps(props, definition, custom, visualElement) {
-	/**
-	* If the variant definition is a function, resolve.
-	*/
-	if (typeof definition === "function") {
-		const [current, velocity] = getValueState(visualElement);
-		definition = definition(custom !== void 0 ? custom : props.custom, current, velocity);
-	}
-	/**
-	* If the variant definition is a variant label, or
-	* the function returned a variant label, resolve.
-	*/
-	if (typeof definition === "string") definition = props.variants && props.variants[definition];
-	/**
-	* At this point we've resolved both functions and variant labels,
-	* but the resolved variant label might itself have been a function.
-	* If so, resolve. This can only have returned a valid target object.
-	*/
-	if (typeof definition === "function") {
-		const [current, velocity] = getValueState(visualElement);
-		definition = definition(custom !== void 0 ? custom : props.custom, current, velocity);
-	}
-	return definition;
 }
 //#endregion
 //#region node_modules/motion-dom/dist/es/render/VisualElement.mjs
@@ -4537,13 +4593,193 @@ var DOMVisualElement = class extends VisualElement {
 	}
 };
 //#endregion
-//#region node_modules/motion-dom/dist/es/value/types/utils/get-as-type.mjs
+//#region node_modules/motion-dom/dist/es/render/Feature.mjs
 /**
-* Provided a value and a ValueType, returns the value as that value type.
+* Feature base class for extending VisualElement functionality.
+* Features are plugins that can be mounted/unmounted to add behavior
+* like gestures, animations, or layout tracking.
 */
-var getValueAsType = (value, type) => {
-	return type && typeof value === "number" ? type.transform(value) : value;
+var Feature = class {
+	constructor(node) {
+		this.isMounted = false;
+		this.node = node;
+	}
+	update() {}
 };
+//#endregion
+//#region node_modules/motion-dom/dist/es/projection/geometry/conversion.mjs
+/**
+* Bounding boxes tend to be defined as top, left, right, bottom. For various operations
+* it's easier to consider each axis individually. This function returns a bounding box
+* as a map of single-axis min/max values.
+*/
+function convertBoundingBoxToBox({ top, left, right, bottom }) {
+	return {
+		x: {
+			min: left,
+			max: right
+		},
+		y: {
+			min: top,
+			max: bottom
+		}
+	};
+}
+function convertBoxToBoundingBox({ x, y }) {
+	return {
+		top: y.min,
+		right: x.max,
+		bottom: y.max,
+		left: x.min
+	};
+}
+/**
+* Applies a TransformPoint function to a bounding box. TransformPoint is usually a function
+* provided by Framer to allow measured points to be corrected for device scaling. This is used
+* when measuring DOM elements and DOM event points.
+*/
+function transformBoxPoints(point, transformPoint) {
+	if (!transformPoint) return point;
+	const topLeft = transformPoint({
+		x: point.left,
+		y: point.top
+	});
+	const bottomRight = transformPoint({
+		x: point.right,
+		y: point.bottom
+	});
+	return {
+		top: topLeft.y,
+		left: topLeft.x,
+		bottom: bottomRight.y,
+		right: bottomRight.x
+	};
+}
+//#endregion
+//#region node_modules/motion-dom/dist/es/projection/utils/has-transform.mjs
+function isIdentityScale(scale) {
+	return scale === void 0 || scale === 1;
+}
+function hasScale({ scale, scaleX, scaleY }) {
+	return !isIdentityScale(scale) || !isIdentityScale(scaleX) || !isIdentityScale(scaleY);
+}
+function hasTransform(values) {
+	return hasScale(values) || has2DTranslate(values) || values.z || values.rotate || values.rotateX || values.rotateY || values.skewX || values.skewY;
+}
+function has2DTranslate(values) {
+	return is2DTranslate(values.x) || is2DTranslate(values.y);
+}
+function is2DTranslate(value) {
+	return value && value !== "0%";
+}
+//#endregion
+//#region node_modules/motion-dom/dist/es/projection/geometry/delta-apply.mjs
+/**
+* Scales a point based on a factor and an originPoint
+*/
+function scalePoint(point, scale, originPoint) {
+	return originPoint + scale * (point - originPoint);
+}
+/**
+* Applies a translate/scale delta to a point
+*/
+function applyPointDelta(point, translate, scale, originPoint, boxScale) {
+	if (boxScale !== void 0) point = scalePoint(point, boxScale, originPoint);
+	return scalePoint(point, scale, originPoint) + translate;
+}
+/**
+* Applies a translate/scale delta to an axis
+*/
+function applyAxisDelta(axis, translate = 0, scale = 1, originPoint, boxScale) {
+	axis.min = applyPointDelta(axis.min, translate, scale, originPoint, boxScale);
+	axis.max = applyPointDelta(axis.max, translate, scale, originPoint, boxScale);
+}
+/**
+* Applies a translate/scale delta to a box
+*/
+function applyBoxDelta(box, { x, y }) {
+	applyAxisDelta(box.x, x.translate, x.scale, x.originPoint);
+	applyAxisDelta(box.y, y.translate, y.scale, y.originPoint);
+}
+var TREE_SCALE_SNAP_MIN = .999999999999;
+var TREE_SCALE_SNAP_MAX = 1.0000000000001;
+/**
+* Apply a tree of deltas to a box. We do this to calculate the effect of all the transforms
+* in a tree upon our box before then calculating how to project it into our desired viewport-relative box
+*
+* This is the final nested loop within updateLayoutDelta for future refactoring
+*/
+function applyTreeDeltas(box, treeScale, treePath, isSharedTransition = false) {
+	const treeLength = treePath.length;
+	if (!treeLength) return;
+	treeScale.x = treeScale.y = 1;
+	let node;
+	let delta;
+	for (let i = 0; i < treeLength; i++) {
+		node = treePath[i];
+		delta = node.projectionDelta;
+		/**
+		* TODO: Prefer to remove this, but currently we have motion components with
+		* display: contents in Framer.
+		*/
+		const { visualElement } = node.options;
+		if (visualElement && visualElement.props.style && visualElement.props.style.display === "contents") continue;
+		if (isSharedTransition && node.options.layoutScroll && node.scroll && node !== node.root) {
+			translateAxis(box.x, -node.scroll.offset.x);
+			translateAxis(box.y, -node.scroll.offset.y);
+		}
+		if (delta) {
+			treeScale.x *= delta.x.scale;
+			treeScale.y *= delta.y.scale;
+			applyBoxDelta(box, delta);
+		}
+		if (isSharedTransition && hasTransform(node.latestValues)) transformBox(box, node.latestValues, node.layout?.layoutBox);
+	}
+	/**
+	* Snap tree scale back to 1 if it's within a non-perceivable threshold.
+	* This will help reduce useless scales getting rendered.
+	*/
+	if (treeScale.x < TREE_SCALE_SNAP_MAX && treeScale.x > TREE_SCALE_SNAP_MIN) treeScale.x = 1;
+	if (treeScale.y < TREE_SCALE_SNAP_MAX && treeScale.y > TREE_SCALE_SNAP_MIN) treeScale.y = 1;
+}
+function translateAxis(axis, distance) {
+	axis.min += distance;
+	axis.max += distance;
+}
+/**
+* Apply a transform to an axis from the latest resolved motion values.
+* This function basically acts as a bridge between a flat motion value map
+* and applyAxisDelta
+*/
+function transformAxis(axis, axisTranslate, axisScale, boxScale, axisOrigin = .5) {
+	applyAxisDelta(axis, axisTranslate, axisScale, mixNumber$1(axis.min, axis.max, axisOrigin), boxScale);
+}
+function resolveAxisTranslate(value, axis) {
+	if (typeof value === "string") return parseFloat(value) / 100 * (axis.max - axis.min);
+	return value;
+}
+/**
+* Apply a transform to a box from the latest resolved motion values.
+*/
+function transformBox(box, transform, sourceBox) {
+	const resolveBox = sourceBox ?? box;
+	transformAxis(box.x, resolveAxisTranslate(transform.x, resolveBox.x), transform.scaleX, transform.scale, transform.originX);
+	transformAxis(box.y, resolveAxisTranslate(transform.y, resolveBox.y), transform.scaleY, transform.scale, transform.originY);
+}
+//#endregion
+//#region node_modules/motion-dom/dist/es/projection/utils/measure.mjs
+function measureViewportBox(instance, transformPoint) {
+	return convertBoundingBoxToBox(transformBoxPoints(instance.getBoundingClientRect(), transformPoint));
+}
+function measurePageBox(element, rootProjectionNode, transformPagePoint) {
+	const viewportBox = measureViewportBox(element, transformPagePoint);
+	const { scroll } = rootProjectionNode;
+	if (scroll) {
+		translateAxis(viewportBox.x, scroll.offset.x);
+		translateAxis(viewportBox.y, scroll.offset.y);
+	}
+	return viewportBox;
+}
 //#endregion
 //#region node_modules/motion-dom/dist/es/render/html/utils/build-transform.mjs
 var translateAlias = {
@@ -4652,20 +4888,6 @@ function renderHTML(element, { style, vars }, styleProp, projection) {
 	for (key in vars) elementStyle.setProperty(key, vars[key]);
 }
 //#endregion
-//#region node_modules/motion-dom/dist/es/utils/border-radius.mjs
-/**
-* The four corner-radius longhands. Shared so the projection mixer, scale
-* corrector, WAAPI px-value set and view-transition crop pass don't each carry
-* their own copy. Order is irrelevant - every consumer mixes/corrects/animates
-* each corner independently.
-*/
-var cornerRadiusProps = [
-	"borderTopLeftRadius",
-	"borderTopRightRadius",
-	"borderBottomRightRadius",
-	"borderBottomLeftRadius"
-];
-//#endregion
 //#region node_modules/motion-dom/dist/es/projection/styles/scale-border-radius.mjs
 function pixelsToPercent(pixels, axis) {
 	if (axis.max === axis.min) return 0;
@@ -4749,6 +4971,15 @@ var HTMLVisualElement = class extends DOMVisualElement {
 		super(...arguments);
 		this.type = "html";
 		this.renderInstance = renderHTML;
+	}
+	mount(instance) {
+		/**
+		* If a custom component forwards its ref to something other than a
+		* HTML/SVG element (a class instance, an imperative handle) there's
+		* nothing for Motion to style, measure or attach gestures to. #2777
+		*/
+		Boolean(instance.style);
+		super.mount(instance);
 	}
 	readValueFromInstance(instance, key) {
 		if (transformProps.has(key)) return this.projection?.isProjecting ? defaultTransformValue(key) : readTransformValue(instance, key);
@@ -4933,181 +5164,6 @@ var SVGVisualElement = class extends DOMVisualElement {
 		super.mount(instance);
 	}
 };
-//#endregion
-//#region node_modules/motion-dom/dist/es/render/utils/resolve-dynamic-variants.mjs
-function resolveVariant(visualElement, definition, custom) {
-	const props = visualElement.getProps();
-	return resolveVariantFromProps(props, definition, custom !== void 0 ? custom : props.custom, visualElement);
-}
-//#endregion
-//#region node_modules/motion-dom/dist/es/render/utils/is-keyframes-target.mjs
-var isKeyframesTarget = (v) => {
-	return Array.isArray(v);
-};
-//#endregion
-//#region node_modules/motion-dom/dist/es/render/utils/setters.mjs
-/**
-* Set VisualElement's MotionValue, creating a new MotionValue for it if
-* it doesn't exist.
-*/
-function setMotionValue(visualElement, key, value) {
-	if (visualElement.hasValue(key)) visualElement.getValue(key).set(value);
-	else visualElement.addValue(key, motionValue(value));
-}
-function resolveFinalValueInKeyframes(v) {
-	return isKeyframesTarget(v) ? v[v.length - 1] || 0 : v;
-}
-function setTarget(visualElement, definition) {
-	let { transitionEnd = {}, transition = {}, ...target } = resolveVariant(visualElement, definition) || {};
-	target = {
-		...target,
-		...transitionEnd
-	};
-	for (const key in target) setMotionValue(visualElement, key, resolveFinalValueInKeyframes(target[key]));
-}
-//#endregion
-//#region node_modules/motion-dom/dist/es/animation/optimized-appear/get-appear-id.mjs
-function getOptimisedAppearId(visualElement) {
-	return visualElement.props[optimizedAppearDataAttribute];
-}
-//#endregion
-//#region node_modules/motion-dom/dist/es/animation/interfaces/visual-element-target.mjs
-/**
-* Decide whether we should block this animation. Previously, we achieved this
-* just by checking whether the key was listed in protectedKeys, but this
-* posed problems if an animation was triggered by afterChildren and protectedKeys
-* had been set to true in the meantime.
-*/
-function shouldBlockAnimation({ protectedKeys, needsAnimating }, key) {
-	const shouldBlock = protectedKeys.hasOwnProperty(key) && needsAnimating[key] !== true;
-	needsAnimating[key] = false;
-	return shouldBlock;
-}
-function animateTarget(visualElement, targetAndTransition, { delay = 0, transitionOverride, type } = {}) {
-	let { transition, transitionEnd, ...target } = targetAndTransition;
-	const defaultTransition = visualElement.getDefaultTransition();
-	transition = transition ? resolveTransition(transition, defaultTransition) : defaultTransition;
-	const reduceMotion = transition?.reduceMotion;
-	const skipAnimations = transition?.skipAnimations;
-	if (transitionOverride) transition = transitionOverride;
-	const animations = [];
-	const animationTypeState = type && visualElement.animationState && visualElement.animationState.getState()[type];
-	const path = transition?.path;
-	if (path) path.animateVisualElement(visualElement, target, transition, delay, animations);
-	for (const key in target) {
-		const value = visualElement.getValue(key, visualElement.latestValues[key] ?? null);
-		const valueTarget = target[key];
-		if (valueTarget === void 0 || animationTypeState && shouldBlockAnimation(animationTypeState, key)) continue;
-		const valueTransition = {
-			delay,
-			...getValueTransition(transition || {}, key)
-		};
-		if (skipAnimations) valueTransition.skipAnimations = true;
-		/**
-		* If the value is already at the defined target, skip the animation.
-		* We still re-assert the value via frame.update to take precedence
-		* over any stale transitionEnd callbacks from previous animations.
-		*/
-		const currentValue = value.get();
-		if (currentValue !== void 0 && !value.isAnimating() && !Array.isArray(valueTarget) && valueTarget === currentValue && !valueTransition.velocity) {
-			frame.update(() => value.set(valueTarget));
-			continue;
-		}
-		/**
-		* If this is the first time a value is being animated, check
-		* to see if we're handling off from an existing animation.
-		*/
-		let isHandoff = false;
-		if (window.MotionHandoffAnimation) {
-			const appearId = getOptimisedAppearId(visualElement);
-			if (appearId) {
-				const startTime = window.MotionHandoffAnimation(appearId, key, frame);
-				if (startTime !== null) {
-					valueTransition.startTime = startTime;
-					isHandoff = true;
-				}
-			}
-		}
-		addValueToWillChange(visualElement, key);
-		const shouldReduceMotion = reduceMotion ?? visualElement.shouldReduceMotion;
-		value.start(animateMotionValue(key, value, valueTarget, shouldReduceMotion && positionalKeys.has(key) ? { type: false } : valueTransition, visualElement, isHandoff));
-		const animation = value.animation;
-		if (animation) animations.push(animation);
-	}
-	if (transitionEnd) {
-		const applyTransitionEnd = () => frame.update(() => {
-			transitionEnd && setTarget(visualElement, transitionEnd);
-		});
-		if (animations.length) Promise.all(animations).then(applyTransitionEnd);
-		else applyTransitionEnd();
-	}
-	return animations;
-}
-//#endregion
-//#region node_modules/motion-dom/dist/es/animation/utils/calc-child-stagger.mjs
-function calcChildStagger(children, child, delayChildren, staggerChildren = 0, staggerDirection = 1) {
-	const index = Array.from(children).sort((a, b) => a.sortNodePosition(b)).indexOf(child);
-	const numChildren = children.size;
-	const maxStaggerDuration = (numChildren - 1) * staggerChildren;
-	return typeof delayChildren === "function" ? delayChildren(index, numChildren) : staggerDirection === 1 ? index * staggerChildren : maxStaggerDuration - index * staggerChildren;
-}
-//#endregion
-//#region node_modules/motion-dom/dist/es/animation/interfaces/visual-element-variant.mjs
-function animateVariant(visualElement, variant, options = {}) {
-	const resolved = resolveVariant(visualElement, variant, options.type === "exit" ? visualElement.presenceContext?.custom : void 0);
-	let { transition = visualElement.getDefaultTransition() || {} } = resolved || {};
-	if (options.transitionOverride) transition = options.transitionOverride;
-	/**
-	* If we have a variant, create a callback that runs it as an animation.
-	* Otherwise, we resolve a Promise immediately for a composable no-op.
-	*/
-	const getAnimation = resolved ? () => Promise.all(animateTarget(visualElement, resolved, options)) : () => Promise.resolve();
-	/**
-	* If we have children, create a callback that runs all their animations.
-	* Otherwise, we resolve a Promise immediately for a composable no-op.
-	*/
-	const getChildAnimations = visualElement.variantChildren && visualElement.variantChildren.size ? (forwardDelay = 0) => {
-		const { delayChildren = 0, staggerChildren, staggerDirection } = transition;
-		return animateChildren(visualElement, variant, forwardDelay, delayChildren, staggerChildren, staggerDirection, options);
-	} : () => Promise.resolve();
-	/**
-	* If the transition explicitly defines a "when" option, we need to resolve either
-	* this animation or all children animations before playing the other.
-	*/
-	const { when } = transition;
-	if (when) {
-		const [first, last] = when === "beforeChildren" ? [getAnimation, getChildAnimations] : [getChildAnimations, getAnimation];
-		return first().then(() => last());
-	} else return Promise.all([getAnimation(), getChildAnimations(options.delay)]);
-}
-function animateChildren(visualElement, variant, delay = 0, delayChildren = 0, staggerChildren = 0, staggerDirection = 1, options) {
-	const animations = [];
-	for (const child of visualElement.variantChildren) {
-		child.notify("AnimationStart", variant);
-		animations.push(animateVariant(child, variant, {
-			...options,
-			delay: delay + (typeof delayChildren === "function" ? 0 : delayChildren) + calcChildStagger(visualElement.variantChildren, child, delayChildren, staggerChildren, staggerDirection)
-		}).then(() => child.notify("AnimationComplete", variant)));
-	}
-	return Promise.all(animations);
-}
-//#endregion
-//#region node_modules/motion-dom/dist/es/animation/interfaces/visual-element.mjs
-function animateVisualElement(visualElement, definition, options = {}) {
-	visualElement.notify("AnimationStart", definition);
-	let animation;
-	if (Array.isArray(definition)) {
-		const animations = definition.map((variant) => animateVariant(visualElement, variant, options));
-		animation = Promise.all(animations);
-	} else if (typeof definition === "string") animation = animateVariant(visualElement, definition, options);
-	else {
-		const resolvedDefinition = typeof definition === "function" ? resolveVariant(visualElement, definition, options.custom) : definition;
-		animation = Promise.all(animateTarget(visualElement, resolvedDefinition, options));
-	}
-	return animation.then(() => {
-		visualElement.notify("AnimationComplete", definition);
-	});
-}
 //#endregion
 //#region node_modules/motion-dom/dist/es/render/utils/get-variant-context.mjs
 var numVariantProps = variantProps.length;
@@ -5443,6 +5499,37 @@ function createState() {
 	};
 }
 //#endregion
+//#region node_modules/motion-dom/dist/es/projection/geometry/copy.mjs
+/**
+* Reset an axis to the provided origin box.
+*
+* This is a mutative operation.
+*/
+function copyAxisInto(axis, originAxis) {
+	axis.min = originAxis.min;
+	axis.max = originAxis.max;
+}
+/**
+* Reset a box to the provided origin box.
+*
+* This is a mutative operation.
+*/
+function copyBoxInto(box, originBox) {
+	copyAxisInto(box.x, originBox.x);
+	copyAxisInto(box.y, originBox.y);
+}
+/**
+* Reset a delta to the provided origin box.
+*
+* This is a mutative operation.
+*/
+function copyAxisDeltaInto(delta, originDelta) {
+	delta.translate = originDelta.translate;
+	delta.scale = originDelta.scale;
+	delta.originPoint = originDelta.originPoint;
+	delta.origin = originDelta.origin;
+}
+//#endregion
 //#region node_modules/motion-dom/dist/es/projection/geometry/delta-calc.mjs
 var SCALE_MIN = .9999;
 var SCALE_MAX = 1.0001;
@@ -5482,137 +5569,6 @@ function calcRelativeAxisPosition(target, layout, parent, anchor = 0) {
 function calcRelativePosition(target, layout, parent, anchor) {
 	calcRelativeAxisPosition(target.x, layout.x, parent.x, anchor?.x);
 	calcRelativeAxisPosition(target.y, layout.y, parent.y, anchor?.y);
-}
-//#endregion
-//#region node_modules/motion-dom/dist/es/projection/utils/each-axis.mjs
-function eachAxis(callback) {
-	return [callback("x"), callback("y")];
-}
-//#endregion
-//#region node_modules/motion-dom/dist/es/events/add-dom-event.mjs
-function addDomEvent(target, eventName, handler, options = { passive: true }) {
-	target.addEventListener(eventName, handler, options);
-	return () => target.removeEventListener(eventName, handler, options);
-}
-//#endregion
-//#region node_modules/motion-dom/dist/es/value/utils/resolve-motion-value.mjs
-/**
-* If the provided value is a MotionValue, this returns the actual value, otherwise just the value itself
-*/
-function resolveMotionValue(value) {
-	return isMotionValue(value) ? value.get() : value;
-}
-//#endregion
-//#region node_modules/motion-dom/dist/es/animation/animate/single-value.mjs
-function animateSingleValue(value, keyframes, options) {
-	const motionValue$1 = isMotionValue(value) ? value : motionValue(value);
-	motionValue$1.start(animateMotionValue("", motionValue$1, keyframes, options));
-	return motionValue$1.animation;
-}
-//#endregion
-//#region node_modules/motion-dom/dist/es/stats/buffer.mjs
-var statsBuffer = {
-	value: null,
-	addProjectionMetrics: null
-};
-//#endregion
-//#region node_modules/motion-dom/dist/es/utils/delay.mjs
-/**
-* Timeout defined in ms
-*/
-function delay(callback, timeout) {
-	const start = time.now();
-	const checkElapsed = ({ timestamp }) => {
-		const elapsed = timestamp - start;
-		if (elapsed >= timeout) {
-			cancelFrame(checkElapsed);
-			callback(elapsed - timeout);
-		}
-	};
-	frame.setup(checkElapsed, true);
-	return () => cancelFrame(checkElapsed);
-}
-//#endregion
-//#region node_modules/motion-dom/dist/es/utils/is-svg-svg-element.mjs
-/**
-* Checks if an element is specifically an SVGSVGElement (the root SVG element)
-* in a way that works across iframes
-*/
-function isSVGSVGElement(element) {
-	return isSVGElement(element) && element.tagName === "svg";
-}
-//#endregion
-//#region node_modules/motion-dom/dist/es/projection/animation/mix-values.mjs
-var numBorders = cornerRadiusProps.length;
-var asNumber = (value) => typeof value === "string" ? parseFloat(value) : value;
-var isPx = (value) => typeof value === "number" || px.test(value);
-function mixValues(target, follow, lead, progress, shouldCrossfadeOpacity, isOnlyMember) {
-	if (shouldCrossfadeOpacity) {
-		target.opacity = mixNumber$1(0, lead.opacity ?? 1, easeCrossfadeIn(progress));
-		target.opacityExit = mixNumber$1(follow.opacity ?? 1, 0, easeCrossfadeOut(progress));
-	} else if (isOnlyMember) target.opacity = mixNumber$1(follow.opacity ?? 1, lead.opacity ?? 1, progress);
-	/**
-	* Mix border radius
-	*/
-	for (let i = 0; i < numBorders; i++) {
-		const borderLabel = cornerRadiusProps[i];
-		let followRadius = getRadius(follow, borderLabel);
-		let leadRadius = getRadius(lead, borderLabel);
-		if (followRadius === void 0 && leadRadius === void 0) continue;
-		followRadius || (followRadius = 0);
-		leadRadius || (leadRadius = 0);
-		if (followRadius === 0 || leadRadius === 0 || isPx(followRadius) === isPx(leadRadius)) {
-			target[borderLabel] = Math.max(mixNumber$1(asNumber(followRadius), asNumber(leadRadius), progress), 0);
-			if (percent.test(leadRadius) || percent.test(followRadius)) target[borderLabel] += "%";
-		} else target[borderLabel] = leadRadius;
-	}
-	/**
-	* Mix rotation
-	*/
-	if (follow.rotate || lead.rotate) target.rotate = mixNumber$1(follow.rotate || 0, lead.rotate || 0, progress);
-}
-function getRadius(values, radiusName) {
-	return values[radiusName] !== void 0 ? values[radiusName] : values.borderRadius;
-}
-var easeCrossfadeIn = /*@__PURE__*/ compress(0, .5, circOut);
-var easeCrossfadeOut = /*@__PURE__*/ compress(.5, .95, noop);
-function compress(min, max, easing) {
-	return (p) => {
-		if (p < min) return 0;
-		if (p > max) return 1;
-		return easing(/* @__PURE__ */ progress(min, max, p));
-	};
-}
-//#endregion
-//#region node_modules/motion-dom/dist/es/projection/geometry/copy.mjs
-/**
-* Reset an axis to the provided origin box.
-*
-* This is a mutative operation.
-*/
-function copyAxisInto(axis, originAxis) {
-	axis.min = originAxis.min;
-	axis.max = originAxis.max;
-}
-/**
-* Reset a box to the provided origin box.
-*
-* This is a mutative operation.
-*/
-function copyBoxInto(box, originBox) {
-	copyAxisInto(box.x, originBox.x);
-	copyAxisInto(box.y, originBox.y);
-}
-/**
-* Reset a delta to the provided origin box.
-*
-* This is a mutative operation.
-*/
-function copyAxisDeltaInto(delta, originDelta) {
-	delta.translate = originDelta.translate;
-	delta.scale = originDelta.scale;
-	delta.originPoint = originDelta.originPoint;
-	delta.origin = originDelta.origin;
 }
 //#endregion
 //#region node_modules/motion-dom/dist/es/projection/geometry/delta-remove.mjs
@@ -5694,6 +5650,153 @@ function axisDeltaEquals(a, b) {
 	return a.translate === b.translate && a.scale === b.scale && a.originPoint === b.originPoint;
 }
 //#endregion
+//#region node_modules/motion-dom/dist/es/projection/utils/each-axis.mjs
+function eachAxis(callback) {
+	return [callback("x"), callback("y")];
+}
+//#endregion
+//#region node_modules/motion-dom/dist/es/projection/styles/transform.mjs
+function buildProjectionTransform(delta, treeScale, latestTransform) {
+	let transform = "";
+	/**
+	* The translations we use to calculate are always relative to the viewport coordinate space.
+	* But when we apply scales, we also scale the coordinate space of an element and its children.
+	* For instance if we have a treeScale (the culmination of all parent scales) of 0.5 and we need
+	* to move an element 100 pixels, we actually need to move it 200 in within that scaled space.
+	*/
+	const xTranslate = delta.x.translate / treeScale.x;
+	const yTranslate = delta.y.translate / treeScale.y;
+	const zTranslate = latestTransform?.z || 0;
+	if (xTranslate || yTranslate || zTranslate) transform = `translate3d(${xTranslate}px, ${yTranslate}px, ${zTranslate}px) `;
+	/**
+	* Apply scale correction for the tree transform.
+	* This will apply scale to the screen-orientated axes.
+	*/
+	if (treeScale.x !== 1 || treeScale.y !== 1) transform += `scale(${1 / treeScale.x}, ${1 / treeScale.y}) `;
+	if (latestTransform) {
+		const { transformPerspective, rotate, pathRotation, rotateX, rotateY, skewX, skewY } = latestTransform;
+		if (transformPerspective) transform = `perspective(${transformPerspective}px) ${transform}`;
+		if (rotate) transform += `rotate(${rotate}deg) `;
+		if (pathRotation) transform += `rotate(${pathRotation}deg) `;
+		if (rotateX) transform += `rotateX(${rotateX}deg) `;
+		if (rotateY) transform += `rotateY(${rotateY}deg) `;
+		if (skewX) transform += `skewX(${skewX}deg) `;
+		if (skewY) transform += `skewY(${skewY}deg) `;
+	}
+	/**
+	* Apply scale to match the size of the element to the size we want it.
+	* This will apply scale to the element-orientated axes.
+	*/
+	const elementScaleX = delta.x.scale * treeScale.x;
+	const elementScaleY = delta.y.scale * treeScale.y;
+	if (elementScaleX !== 1 || elementScaleY !== 1) transform += `scale(${elementScaleX}, ${elementScaleY})`;
+	return transform || "none";
+}
+//#endregion
+//#region node_modules/motion-dom/dist/es/projection/animation/mix-values.mjs
+var numBorders = cornerRadiusProps.length;
+var asNumber = (value) => typeof value === "string" ? parseFloat(value) : value;
+var isPx = (value) => typeof value === "number" || px.test(value);
+function mixValues(target, follow, lead, progress, shouldCrossfadeOpacity, isOnlyMember) {
+	if (shouldCrossfadeOpacity) {
+		target.opacity = mixNumber$1(0, lead.opacity ?? 1, easeCrossfadeIn(progress));
+		target.opacityExit = mixNumber$1(follow.opacity ?? 1, 0, easeCrossfadeOut(progress));
+	} else if (isOnlyMember) target.opacity = mixNumber$1(follow.opacity ?? 1, lead.opacity ?? 1, progress);
+	/**
+	* Mix border radius
+	*/
+	for (let i = 0; i < numBorders; i++) {
+		const borderLabel = cornerRadiusProps[i];
+		let followRadius = getRadius(follow, borderLabel);
+		let leadRadius = getRadius(lead, borderLabel);
+		if (followRadius === void 0 && leadRadius === void 0) continue;
+		followRadius || (followRadius = 0);
+		leadRadius || (leadRadius = 0);
+		if (followRadius === 0 || leadRadius === 0 || isPx(followRadius) === isPx(leadRadius)) {
+			target[borderLabel] = Math.max(mixNumber$1(asNumber(followRadius), asNumber(leadRadius), progress), 0);
+			if (percent.test(leadRadius) || percent.test(followRadius)) target[borderLabel] += "%";
+		} else target[borderLabel] = leadRadius;
+	}
+	/**
+	* Mix rotation
+	*/
+	if (follow.rotate || lead.rotate) target.rotate = mixNumber$1(follow.rotate || 0, lead.rotate || 0, progress);
+}
+function getRadius(values, radiusName) {
+	return values[radiusName] !== void 0 ? values[radiusName] : values.borderRadius;
+}
+var easeCrossfadeIn = /*@__PURE__*/ compress(0, .5, circOut);
+var easeCrossfadeOut = /*@__PURE__*/ compress(.5, .95, noop);
+function compress(min, max, easing) {
+	return (p) => {
+		if (p < min) return 0;
+		if (p > max) return 1;
+		return easing(/* @__PURE__ */ progress(min, max, p));
+	};
+}
+//#endregion
+//#region node_modules/motion-dom/dist/es/animation/animate/single-value.mjs
+function animateSingleValue(value, keyframes, options) {
+	const motionValue$1 = isMotionValue(value) ? value : motionValue(value);
+	motionValue$1.start(animateMotionValue("", motionValue$1, keyframes, options));
+	return motionValue$1.animation;
+}
+//#endregion
+//#region node_modules/motion-dom/dist/es/events/add-dom-event.mjs
+function addDomEvent(target, eventName, handler, options = { passive: true }) {
+	target.addEventListener(eventName, handler, options);
+	return () => target.removeEventListener(eventName, handler, options);
+}
+//#endregion
+//#region node_modules/motion-dom/dist/es/projection/utils/compare-by-depth.mjs
+var compareByDepth = (a, b) => a.depth - b.depth;
+//#endregion
+//#region node_modules/motion-dom/dist/es/projection/utils/flat-tree.mjs
+var FlatTree = class {
+	constructor() {
+		this.children = [];
+		this.isDirty = false;
+	}
+	add(child) {
+		addUniqueItem(this.children, child);
+		this.isDirty = true;
+	}
+	remove(child) {
+		removeItem(this.children, child);
+		this.isDirty = true;
+	}
+	forEach(callback) {
+		this.isDirty && this.children.sort(compareByDepth);
+		this.isDirty = false;
+		this.children.forEach(callback);
+	}
+};
+//#endregion
+//#region node_modules/motion-dom/dist/es/utils/delay.mjs
+/**
+* Timeout defined in ms
+*/
+function delay(callback, timeout) {
+	const start = time.now();
+	const checkElapsed = ({ timestamp }) => {
+		const elapsed = timestamp - start;
+		if (elapsed >= timeout) {
+			cancelFrame(checkElapsed);
+			callback(elapsed - timeout);
+		}
+	};
+	frame.setup(checkElapsed, true);
+	return () => cancelFrame(checkElapsed);
+}
+//#endregion
+//#region node_modules/motion-dom/dist/es/value/utils/resolve-motion-value.mjs
+/**
+* If the provided value is a MotionValue, this returns the actual value, otherwise just the value itself
+*/
+function resolveMotionValue(value) {
+	return isMotionValue(value) ? value.get() : value;
+}
+//#endregion
 //#region node_modules/motion-dom/dist/es/projection/shared/stack.mjs
 var NodeStack = class {
 	constructor() {
@@ -5764,68 +5867,6 @@ var NodeStack = class {
 	}
 	removeLeadSnapshot() {
 		if (this.lead?.snapshot) this.lead.snapshot = void 0;
-	}
-};
-//#endregion
-//#region node_modules/motion-dom/dist/es/projection/styles/transform.mjs
-function buildProjectionTransform(delta, treeScale, latestTransform) {
-	let transform = "";
-	/**
-	* The translations we use to calculate are always relative to the viewport coordinate space.
-	* But when we apply scales, we also scale the coordinate space of an element and its children.
-	* For instance if we have a treeScale (the culmination of all parent scales) of 0.5 and we need
-	* to move an element 100 pixels, we actually need to move it 200 in within that scaled space.
-	*/
-	const xTranslate = delta.x.translate / treeScale.x;
-	const yTranslate = delta.y.translate / treeScale.y;
-	const zTranslate = latestTransform?.z || 0;
-	if (xTranslate || yTranslate || zTranslate) transform = `translate3d(${xTranslate}px, ${yTranslate}px, ${zTranslate}px) `;
-	/**
-	* Apply scale correction for the tree transform.
-	* This will apply scale to the screen-orientated axes.
-	*/
-	if (treeScale.x !== 1 || treeScale.y !== 1) transform += `scale(${1 / treeScale.x}, ${1 / treeScale.y}) `;
-	if (latestTransform) {
-		const { transformPerspective, rotate, pathRotation, rotateX, rotateY, skewX, skewY } = latestTransform;
-		if (transformPerspective) transform = `perspective(${transformPerspective}px) ${transform}`;
-		if (rotate) transform += `rotate(${rotate}deg) `;
-		if (pathRotation) transform += `rotate(${pathRotation}deg) `;
-		if (rotateX) transform += `rotateX(${rotateX}deg) `;
-		if (rotateY) transform += `rotateY(${rotateY}deg) `;
-		if (skewX) transform += `skewX(${skewX}deg) `;
-		if (skewY) transform += `skewY(${skewY}deg) `;
-	}
-	/**
-	* Apply scale to match the size of the element to the size we want it.
-	* This will apply scale to the element-orientated axes.
-	*/
-	const elementScaleX = delta.x.scale * treeScale.x;
-	const elementScaleY = delta.y.scale * treeScale.y;
-	if (elementScaleX !== 1 || elementScaleY !== 1) transform += `scale(${elementScaleX}, ${elementScaleY})`;
-	return transform || "none";
-}
-//#endregion
-//#region node_modules/motion-dom/dist/es/projection/utils/compare-by-depth.mjs
-var compareByDepth = (a, b) => a.depth - b.depth;
-//#endregion
-//#region node_modules/motion-dom/dist/es/projection/utils/flat-tree.mjs
-var FlatTree = class {
-	constructor() {
-		this.children = [];
-		this.isDirty = false;
-	}
-	add(child) {
-		addUniqueItem(this.children, child);
-		this.isDirty = true;
-	}
-	remove(child) {
-		removeItem(this.children, child);
-		this.isDirty = true;
-	}
-	forEach(callback) {
-		this.isDirty && this.children.sort(compareByDepth);
-		this.isDirty = false;
-		this.children.forEach(callback);
 	}
 };
 //#endregion
@@ -7175,59 +7216,6 @@ var HTMLProjectionNode = createProjectionNode$1({
 	checkIsScrollRoot: (instance) => Boolean(window.getComputedStyle(instance).position === "fixed")
 });
 //#endregion
-//#region node_modules/framer-motion/dist/es/render/svg/lowercase-elements.mjs
-var import_react = /* @__PURE__ */ __toESM(require_react(), 1);
-/**
-* We keep these listed separately as we use the lowercase tag names as part
-* of the runtime bundle to detect SVG components
-*/
-var lowercaseSVGElements = [
-	"animate",
-	"circle",
-	"defs",
-	"desc",
-	"ellipse",
-	"g",
-	"image",
-	"line",
-	"filter",
-	"marker",
-	"mask",
-	"metadata",
-	"path",
-	"pattern",
-	"polygon",
-	"polyline",
-	"rect",
-	"stop",
-	"switch",
-	"symbol",
-	"svg",
-	"text",
-	"tspan",
-	"use",
-	"view"
-];
-//#endregion
-//#region node_modules/framer-motion/dist/es/render/dom/utils/is-svg-component.mjs
-function isSVGComponent(Component) {
-	if (typeof Component !== "string" || Component.includes("-")) return false;
-	else if (lowercaseSVGElements.indexOf(Component) > -1 || /[A-Z]/u.test(Component)) return true;
-	return false;
-}
-//#endregion
-//#region node_modules/framer-motion/dist/es/render/dom/create-visual-element.mjs
-var createDomVisualElement = (Component, options) => {
-	return options.isSVG ?? isSVGComponent(Component) ? new SVGVisualElement(options) : new HTMLVisualElement(options, { allowProjection: Component !== import_react.Fragment });
-};
-//#endregion
-//#region node_modules/framer-motion/dist/es/context/LayoutGroupContext.mjs
-var import_jsx_runtime = require_jsx_runtime();
-var LayoutGroupContext = (0, import_react.createContext)({});
-//#endregion
-//#region node_modules/framer-motion/dist/es/context/LazyContext.mjs
-var LazyContext = (0, import_react.createContext)({ strict: false });
-//#endregion
 //#region node_modules/framer-motion/dist/es/context/MotionConfigContext.mjs
 /**
 * @public
@@ -7238,100 +7226,116 @@ var MotionConfigContext = (0, import_react.createContext)({
 	reducedMotion: "never"
 });
 //#endregion
-//#region node_modules/framer-motion/dist/es/context/MotionContext/index.mjs
-var MotionContext = /* @__PURE__ */ (0, import_react.createContext)({});
-//#endregion
-//#region node_modules/framer-motion/dist/es/context/MotionContext/utils.mjs
-function getCurrentTreeVariants(props, context) {
-	if (isControllingVariants(props)) {
-		const { initial, animate } = props;
-		return {
-			initial: initial === false || isVariantLabel(initial) ? initial : void 0,
-			animate: isVariantLabel(animate) ? animate : void 0
-		};
-	}
-	return props.inherit !== false ? context : {};
+//#region node_modules/framer-motion/dist/es/components/AnimatePresence/use-presence.mjs
+/**
+* When a component is the child of `AnimatePresence`, it can use `usePresence`
+* to access information about whether it's still present in the React tree.
+*
+* ```jsx
+* import { usePresence } from "framer-motion"
+*
+* export const Component = () => {
+*   const [isPresent, safeToRemove] = usePresence()
+*
+*   useEffect(() => {
+*     !isPresent && setTimeout(safeToRemove, 1000)
+*   }, [isPresent])
+*
+*   return <div />
+* }
+* ```
+*
+* If `isPresent` is `false`, it means that a component has been removed from the tree,
+* but `AnimatePresence` won't really remove it until `safeToRemove` has been called.
+*
+* @public
+*/
+function usePresence(subscribe = true) {
+	const context = (0, import_react.useContext)(PresenceContext);
+	if (context === null) return [true, null];
+	const { isPresent, onExitComplete, register } = context;
+	const id = (0, import_react.useId)();
+	(0, import_react.useEffect)(() => {
+		if (subscribe) return register(id);
+	}, [subscribe]);
+	const safeToRemove = (0, import_react.useCallback)(() => subscribe && onExitComplete && onExitComplete(id), [
+		id,
+		onExitComplete,
+		subscribe
+	]);
+	return !isPresent && onExitComplete ? [false, safeToRemove] : [true];
 }
 //#endregion
-//#region node_modules/framer-motion/dist/es/context/MotionContext/create.mjs
-function useCreateMotionContext(props) {
-	const { initial, animate } = getCurrentTreeVariants(props, (0, import_react.useContext)(MotionContext));
-	return (0, import_react.useMemo)(() => ({
-		initial,
-		animate
-	}), [variantLabelsAsDependency(initial), variantLabelsAsDependency(animate)]);
+//#region node_modules/framer-motion/dist/es/context/LazyContext.mjs
+var LazyContext = (0, import_react.createContext)({ strict: false });
+//#endregion
+//#region node_modules/framer-motion/dist/es/motion/features/definitions.mjs
+var featureProps = {
+	animation: [
+		"animate",
+		"variants",
+		"whileHover",
+		"whileTap",
+		"exit",
+		"whileInView",
+		"whileFocus",
+		"whileDrag"
+	],
+	exit: ["exit"],
+	drag: ["drag", "dragControls"],
+	focus: ["whileFocus"],
+	hover: [
+		"whileHover",
+		"onHoverStart",
+		"onHoverEnd"
+	],
+	tap: [
+		"whileTap",
+		"onTap",
+		"onTapStart",
+		"onTapCancel"
+	],
+	pan: [
+		"onPan",
+		"onPanStart",
+		"onPanSessionStart",
+		"onPanEnd"
+	],
+	inView: [
+		"whileInView",
+		"onViewportEnter",
+		"onViewportLeave"
+	],
+	layout: ["layout", "layoutId"]
+};
+var isInitialized = false;
+/**
+* Initialize feature definitions with isEnabled checks.
+* This must be called before any motion components are rendered.
+*/
+function initFeatureDefinitions() {
+	if (isInitialized) return;
+	const initialFeatureDefinitions = {};
+	for (const key in featureProps) initialFeatureDefinitions[key] = { isEnabled: (props) => featureProps[key].some((name) => !!props[name]) };
+	setFeatureDefinitions(initialFeatureDefinitions);
+	isInitialized = true;
 }
-function variantLabelsAsDependency(prop) {
-	return Array.isArray(prop) ? prop.join(" ") : prop;
+/**
+* Get the current feature definitions, initializing if needed.
+*/
+function getInitializedFeatureDefinitions() {
+	initFeatureDefinitions();
+	return getFeatureDefinitions();
 }
 //#endregion
-//#region node_modules/framer-motion/dist/es/render/html/utils/create-render-state.mjs
-var createHtmlRenderState = () => ({
-	style: {},
-	transform: {},
-	transformOrigin: {},
-	vars: {}
-});
-//#endregion
-//#region node_modules/framer-motion/dist/es/render/html/use-props.mjs
-function copyRawValuesOnly(target, source, props) {
-	for (const key in source) if (!isMotionValue(source[key]) && !isForcedMotionValue(key, props)) target[key] = source[key];
-}
-function useInitialMotionValues({ transformTemplate }, visualState) {
-	return (0, import_react.useMemo)(() => {
-		const state = createHtmlRenderState();
-		buildHTMLStyles(state, visualState, transformTemplate);
-		return Object.assign({}, state.vars, state.style);
-	}, [visualState]);
-}
-function useStyle(props, visualState) {
-	const styleProp = props.style || {};
-	const style = {};
-	/**
-	* Copy non-Motion Values straight into style
-	*/
-	copyRawValuesOnly(style, styleProp, props);
-	Object.assign(style, useInitialMotionValues(props, visualState));
-	return style;
-}
-function useHTMLProps(props, visualState) {
-	const htmlProps = {};
-	const style = useStyle(props, visualState);
-	if (props.drag && props.dragListener !== false) {
-		htmlProps.draggable = false;
-		style.userSelect = style.WebkitUserSelect = style.WebkitTouchCallout = "none";
-		style.touchAction = props.drag === true ? "none" : `pan-${props.drag === "x" ? "y" : "x"}`;
-	}
-	if (props.tabIndex === void 0 && (props.onTap || props.onTapStart || props.whileTap)) htmlProps.tabIndex = 0;
-	htmlProps.style = style;
-	return htmlProps;
-}
-//#endregion
-//#region node_modules/framer-motion/dist/es/render/svg/utils/create-render-state.mjs
-var createSvgRenderState = () => ({
-	...createHtmlRenderState(),
-	attrs: {}
-});
-//#endregion
-//#region node_modules/framer-motion/dist/es/render/svg/use-props.mjs
-function useSVGProps(props, visualState, _isStatic, Component) {
-	const visualProps = (0, import_react.useMemo)(() => {
-		const state = createSvgRenderState();
-		buildSVGAttrs(state, visualState, isSVGTag(Component), props.transformTemplate, props.style);
-		return {
-			...state.attrs,
-			style: { ...state.style }
-		};
-	}, [visualState]);
-	if (props.style) {
-		const rawStyles = {};
-		copyRawValuesOnly(rawStyles, props.style, props);
-		visualProps.style = {
-			...rawStyles,
-			...visualProps.style
-		};
-	}
-	return visualProps;
+//#region node_modules/framer-motion/dist/es/motion/features/load-features.mjs
+function loadFeatures(features) {
+	const featureDefinitions = getInitializedFeatureDefinitions();
+	for (const key in features) featureDefinitions[key] = {
+		...featureDefinitions[key],
+		...features[key]
+	};
+	setFeatureDefinitions(featureDefinitions);
 }
 //#endregion
 //#region node_modules/framer-motion/dist/es/motion/utils/valid-prop.mjs
@@ -7433,6 +7437,142 @@ function filterProps(props, isDom, forwardMotionProps) {
 	return filteredProps;
 }
 //#endregion
+//#region node_modules/framer-motion/dist/es/context/MotionContext/index.mjs
+var MotionContext = /* @__PURE__ */ (0, import_react.createContext)({});
+//#endregion
+//#region node_modules/framer-motion/dist/es/context/MotionContext/utils.mjs
+function getCurrentTreeVariants(props, context) {
+	if (isControllingVariants(props)) {
+		const { initial, animate } = props;
+		return {
+			initial: initial === false || isVariantLabel(initial) ? initial : void 0,
+			animate: isVariantLabel(animate) ? animate : void 0
+		};
+	}
+	return props.inherit !== false ? context : {};
+}
+//#endregion
+//#region node_modules/framer-motion/dist/es/context/MotionContext/create.mjs
+function useCreateMotionContext(props) {
+	const { initial, animate } = getCurrentTreeVariants(props, (0, import_react.useContext)(MotionContext));
+	return (0, import_react.useMemo)(() => ({
+		initial,
+		animate
+	}), [variantLabelsAsDependency(initial), variantLabelsAsDependency(animate)]);
+}
+function variantLabelsAsDependency(prop) {
+	return Array.isArray(prop) ? prop.join(" ") : prop;
+}
+//#endregion
+//#region node_modules/framer-motion/dist/es/render/html/utils/create-render-state.mjs
+var createHtmlRenderState = () => ({
+	style: {},
+	transform: {},
+	transformOrigin: {},
+	vars: {}
+});
+//#endregion
+//#region node_modules/framer-motion/dist/es/render/html/use-props.mjs
+function copyRawValuesOnly(target, source, props) {
+	for (const key in source) if (!isMotionValue(source[key]) && !isForcedMotionValue(key, props)) target[key] = source[key];
+}
+function useInitialMotionValues({ transformTemplate }, visualState) {
+	return (0, import_react.useMemo)(() => {
+		const state = createHtmlRenderState();
+		buildHTMLStyles(state, visualState, transformTemplate);
+		return Object.assign({}, state.vars, state.style);
+	}, [visualState]);
+}
+function useStyle(props, visualState) {
+	const styleProp = props.style || {};
+	const style = {};
+	/**
+	* Copy non-Motion Values straight into style
+	*/
+	copyRawValuesOnly(style, styleProp, props);
+	Object.assign(style, useInitialMotionValues(props, visualState));
+	return style;
+}
+function useHTMLProps(props, visualState) {
+	const htmlProps = {};
+	const style = useStyle(props, visualState);
+	if (props.drag && props.dragListener !== false) {
+		htmlProps.draggable = false;
+		style.userSelect = style.WebkitUserSelect = style.WebkitTouchCallout = "none";
+		style.touchAction = props.drag === true ? "none" : `pan-${props.drag === "x" ? "y" : "x"}`;
+	}
+	if (props.tabIndex === void 0 && (props.onTap || props.onTapStart || props.whileTap)) htmlProps.tabIndex = 0;
+	htmlProps.style = style;
+	return htmlProps;
+}
+//#endregion
+//#region node_modules/framer-motion/dist/es/render/svg/utils/create-render-state.mjs
+var createSvgRenderState = () => ({
+	...createHtmlRenderState(),
+	attrs: {}
+});
+//#endregion
+//#region node_modules/framer-motion/dist/es/render/svg/use-props.mjs
+function useSVGProps(props, visualState, _isStatic, Component) {
+	const visualProps = (0, import_react.useMemo)(() => {
+		const state = createSvgRenderState();
+		buildSVGAttrs(state, visualState, isSVGTag(Component), props.transformTemplate, props.style);
+		return {
+			...state.attrs,
+			style: { ...state.style }
+		};
+	}, [visualState]);
+	if (props.style) {
+		const rawStyles = {};
+		copyRawValuesOnly(rawStyles, props.style, props);
+		visualProps.style = {
+			...rawStyles,
+			...visualProps.style
+		};
+	}
+	return visualProps;
+}
+//#endregion
+//#region node_modules/framer-motion/dist/es/render/svg/lowercase-elements.mjs
+/**
+* We keep these listed separately as we use the lowercase tag names as part
+* of the runtime bundle to detect SVG components
+*/
+var lowercaseSVGElements = [
+	"animate",
+	"circle",
+	"defs",
+	"desc",
+	"ellipse",
+	"g",
+	"image",
+	"line",
+	"filter",
+	"marker",
+	"mask",
+	"metadata",
+	"path",
+	"pattern",
+	"polygon",
+	"polyline",
+	"rect",
+	"stop",
+	"switch",
+	"symbol",
+	"svg",
+	"text",
+	"tspan",
+	"use",
+	"view"
+];
+//#endregion
+//#region node_modules/framer-motion/dist/es/render/dom/utils/is-svg-component.mjs
+function isSVGComponent(Component) {
+	if (typeof Component !== "string" || Component.includes("-")) return false;
+	else if (lowercaseSVGElements.indexOf(Component) > -1 || /[A-Z]/u.test(Component)) return true;
+	return false;
+}
+//#endregion
 //#region node_modules/framer-motion/dist/es/render/dom/use-render.mjs
 function useRender(Component, props, ref, { latestValues }, isStatic, forwardMotionProps = false, isSVG) {
 	const visualProps = (isSVG ?? isSVGComponent(Component) ? useSVGProps : useHTMLProps)(props, latestValues, isStatic, Component);
@@ -7453,26 +7593,6 @@ function useRender(Component, props, ref, { latestValues }, isStatic, forwardMot
 		...elementProps,
 		children: renderedChildren
 	});
-}
-//#endregion
-//#region node_modules/framer-motion/dist/es/context/PresenceContext.mjs
-/**
-* @public
-*/
-var PresenceContext = /* @__PURE__ */ (0, import_react.createContext)(null);
-//#endregion
-//#region node_modules/framer-motion/dist/es/utils/use-constant.mjs
-/**
-* Creates a constant value over the lifecycle of a component.
-*
-* Even if `useMemo` is provided an empty array as its final argument, it doesn't offer
-* a guarantee that it won't re-run for performance reasons later on. By using `useConstant`
-* you can ensure that initialisers don't execute twice or more.
-*/
-function useConstant(init) {
-	const ref = (0, import_react.useRef)(null);
-	if (ref.current === null) ref.current = init();
-	return ref.current;
 }
 //#endregion
 //#region node_modules/framer-motion/dist/es/motion/utils/use-visual-state.mjs
@@ -7539,75 +7659,6 @@ var useSVGVisualState = /*@__PURE__*/ makeUseVisualState({
 	createRenderState: createSvgRenderState
 });
 //#endregion
-//#region node_modules/framer-motion/dist/es/motion/features/definitions.mjs
-var featureProps = {
-	animation: [
-		"animate",
-		"variants",
-		"whileHover",
-		"whileTap",
-		"exit",
-		"whileInView",
-		"whileFocus",
-		"whileDrag"
-	],
-	exit: ["exit"],
-	drag: ["drag", "dragControls"],
-	focus: ["whileFocus"],
-	hover: [
-		"whileHover",
-		"onHoverStart",
-		"onHoverEnd"
-	],
-	tap: [
-		"whileTap",
-		"onTap",
-		"onTapStart",
-		"onTapCancel"
-	],
-	pan: [
-		"onPan",
-		"onPanStart",
-		"onPanSessionStart",
-		"onPanEnd"
-	],
-	inView: [
-		"whileInView",
-		"onViewportEnter",
-		"onViewportLeave"
-	],
-	layout: ["layout", "layoutId"]
-};
-var isInitialized = false;
-/**
-* Initialize feature definitions with isEnabled checks.
-* This must be called before any motion components are rendered.
-*/
-function initFeatureDefinitions() {
-	if (isInitialized) return;
-	const initialFeatureDefinitions = {};
-	for (const key in featureProps) initialFeatureDefinitions[key] = { isEnabled: (props) => featureProps[key].some((name) => !!props[name]) };
-	setFeatureDefinitions(initialFeatureDefinitions);
-	isInitialized = true;
-}
-/**
-* Get the current feature definitions, initializing if needed.
-*/
-function getInitializedFeatureDefinitions() {
-	initFeatureDefinitions();
-	return getFeatureDefinitions();
-}
-//#endregion
-//#region node_modules/framer-motion/dist/es/motion/features/load-features.mjs
-function loadFeatures(features) {
-	const featureDefinitions = getInitializedFeatureDefinitions();
-	for (const key in features) featureDefinitions[key] = {
-		...featureDefinitions[key],
-		...features[key]
-	};
-	setFeatureDefinitions(featureDefinitions);
-}
-//#endregion
 //#region node_modules/framer-motion/dist/es/motion/utils/symbol.mjs
 var motionComponentSymbol = Symbol.for("motionComponentSymbol");
 //#endregion
@@ -7654,9 +7705,6 @@ var SwitchLayoutGroupContext = (0, import_react.createContext)({});
 function isRefObject(ref) {
 	return ref && typeof ref === "object" && Object.prototype.hasOwnProperty.call(ref, "current");
 }
-//#endregion
-//#region node_modules/framer-motion/dist/es/utils/use-isomorphic-effect.mjs
-var useIsomorphicLayoutEffect = typeof window !== "undefined" ? import_react.useLayoutEffect : import_react.useEffect;
 //#endregion
 //#region node_modules/framer-motion/dist/es/motion/utils/use-visual-element.mjs
 function useVisualElement(Component, visualState, props, createVisualElement, ProjectionNodeConstructor, isSVG) {
@@ -7898,6 +7946,11 @@ get: (_target, key) => {
 		return componentCache.get(key);
 	} });
 }
+//#endregion
+//#region node_modules/framer-motion/dist/es/render/dom/create-visual-element.mjs
+var createDomVisualElement = (Component, options) => {
+	return options.isSVG ?? isSVGComponent(Component) ? new SVGVisualElement(options) : new HTMLVisualElement(options, { allowProjection: Component !== import_react.Fragment });
+};
 //#endregion
 //#region node_modules/framer-motion/dist/es/motion/features/animation/index.mjs
 var AnimationFeature = class extends Feature {
@@ -8911,46 +8964,6 @@ var PanGesture = class extends Feature {
 		this.session && this.session.end();
 	}
 };
-//#endregion
-//#region node_modules/framer-motion/dist/es/components/AnimatePresence/use-presence.mjs
-/**
-* When a component is the child of `AnimatePresence`, it can use `usePresence`
-* to access information about whether it's still present in the React tree.
-*
-* ```jsx
-* import { usePresence } from "framer-motion"
-*
-* export const Component = () => {
-*   const [isPresent, safeToRemove] = usePresence()
-*
-*   useEffect(() => {
-*     !isPresent && setTimeout(safeToRemove, 1000)
-*   }, [isPresent])
-*
-*   return <div />
-* }
-* ```
-*
-* If `isPresent` is `false`, it means that a component has been removed from the tree,
-* but `AnimatePresence` won't really remove it until `safeToRemove` has been called.
-*
-* @public
-*/
-function usePresence(subscribe = true) {
-	const context = (0, import_react.useContext)(PresenceContext);
-	if (context === null) return [true, null];
-	const { isPresent, onExitComplete, register } = context;
-	const id = (0, import_react.useId)();
-	(0, import_react.useEffect)(() => {
-		if (subscribe) return register(id);
-	}, [subscribe]);
-	const safeToRemove = (0, import_react.useCallback)(() => subscribe && onExitComplete && onExitComplete(id), [
-		id,
-		onExitComplete,
-		subscribe
-	]);
-	return !isPresent && onExitComplete ? [false, safeToRemove] : [true];
-}
 //#endregion
 //#region node_modules/framer-motion/dist/es/motion/features/layout/MeasureLayout.mjs
 /**

@@ -1,0 +1,1 @@
+import{f as e}from"./index-CkuJWVDD.js";var t=e({type:`function`});export{t};
