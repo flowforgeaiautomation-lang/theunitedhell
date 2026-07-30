@@ -235,19 +235,22 @@ async function fetchQuote(cfg: MarketSymbolConfig): Promise<MarketQuote> {
   return unavailable;
 }
 
-export const getMarketQuotes = createServerFn({ method: "GET" }).handler(async () => {
-  const BATCH_SIZE = 6;
-  const results: MarketQuote[] = [];
-  for (let i = 0; i < MARKET_SYMBOLS.length; i += BATCH_SIZE) {
-    const batch = MARKET_SYMBOLS.slice(i, i + BATCH_SIZE);
-    const batchResults = await Promise.all(batch.map(fetchQuote));
-    results.push(...batchResults);
-  }
-  return results;
-});
+export const getMarketQuotes = createServerFn({ method: "GET" })(
+  async () => {
+    // Process in batches of 6 to avoid rate limits and speed up loading
+    const BATCH_SIZE = 6;
+    const results: MarketQuote[] = [];
+    for (let i = 0; i < MARKET_SYMBOLS.length; i += BATCH_SIZE) {
+      const batch = MARKET_SYMBOLS.slice(i, i + BATCH_SIZE);
+      const batchResults = await Promise.all(batch.map(fetchQuote));
+      results.push(...batchResults);
+    }
+    return results;
+  },
+);
 
 export const getMarketQuotesByCategory = createServerFn({ method: "GET" })
-  .inputValidator((d: unknown) => z.string().optional().parse(d))
+  .validator(z.string().optional())
   .handler(async ({ data }) => {
     const filter = data;
     const symbols = filter ? MARKET_SYMBOLS.filter((m) => m.category === filter) : MARKET_SYMBOLS;
@@ -255,7 +258,7 @@ export const getMarketQuotesByCategory = createServerFn({ method: "GET" })
   });
 
 export const searchMarkets = createServerFn({ method: "GET" })
-  .inputValidator((d: unknown) => z.string().min(1).parse(d))
+  .validator(z.string())
   .handler(async ({ data }) => {
     const q = data.toLowerCase().trim();
     if (!q) return [];
