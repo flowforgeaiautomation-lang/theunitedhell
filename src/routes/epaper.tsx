@@ -1,5 +1,5 @@
 import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
-import { useSuspenseQuery, queryOptions } from "@tanstack/react-query";
+import { useQuery, queryOptions } from "@tanstack/react-query";
 import { useEffect, useState, useRef, useCallback } from "react";
 import {
   Newspaper, Clock, TrendingUp, TrendingDown, Sun, Moon, Type,
@@ -36,7 +36,9 @@ export const Route = createFileRoute("/epaper")({
     links: [{ rel: "canonical", href: canonicalUrl("/epaper") }],
   }),
   loader: async ({ context }) => {
-    await context.queryClient.prefetchQuery(epaperQ());
+    try {
+      await context.queryClient.prefetchQuery(epaperQ());
+    } catch {}
   },
   component: EpaperPage,
   errorComponent: ({ error }) => (
@@ -48,7 +50,7 @@ export const Route = createFileRoute("/epaper")({
 });
 
 function EpaperPage() {
-  const { data: epaper } = useSuspenseQuery(epaperQ());
+  const { data: epaper, isLoading } = useQuery(epaperQ());
   const [currentPage, setCurrentPage] = useState(0);
   const [fontSize, setFontSize] = useState(1);
   const [darkMode, setDarkMode] = useState(false);
@@ -63,9 +65,21 @@ function EpaperPage() {
     else root.classList.remove("dark");
   }, [darkMode]);
 
-  const pages = epaper.pages;
+  const pages = epaper?.pages ?? [];
   const page = pages[currentPage];
   const totalPages = pages.length;
+
+  if (isLoading || !epaper) {
+    return (
+      <div className="bg-background text-foreground min-h-screen epaper-root">
+        <div className="max-w-7xl mx-auto px-4 py-20 text-center">
+          <Newspaper className="h-12 w-12 text-muted-foreground mx-auto mb-4 animate-pulse" />
+          <p className="font-serif text-2xl mb-2">The Daily Discovery Edition</p>
+          <p className="text-sm text-muted-foreground animate-pulse">Loading today's edition...</p>
+        </div>
+      </div>
+    );
+  }
 
   const goToPage = useCallback((idx: number) => {
     if (idx < 0 || idx >= totalPages || idx === currentPage) return;
