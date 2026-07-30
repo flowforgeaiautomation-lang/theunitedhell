@@ -36,9 +36,7 @@ export const Route = createFileRoute("/epaper")({
     links: [{ rel: "canonical", href: canonicalUrl("/epaper") }],
   }),
   loader: async ({ context }) => {
-    try {
-      await context.queryClient.prefetchQuery(epaperQ());
-    } catch {}
+    await context.queryClient.prefetchQuery(epaperQ());
   },
   component: EpaperPage,
   errorComponent: ({ error }) => (

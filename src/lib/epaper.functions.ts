@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@/integrations/supabase/types";
+import { z } from "zod";
+import type { Database } from "@integrations/supabase/types";
 import type { ArticleSummary } from "./types";
 
 function publicClient() {
@@ -300,9 +301,11 @@ function buildPages(
   return pages;
 }
 
-export const getEpaperData = createServerFn({ method: "GET" }).validator(
-  (input: { date?: string } | undefined) => input ?? {},
-).handler(async ({ data }) => {
+export const getEpaperData = createServerFn({ method: "GET" })
+  .inputValidator((d: unknown) =>
+    z.object({ date: z.string().optional() }).parse(d ?? {}),
+  )
+  .handler(async ({ data }) => {
   const inputDate = data?.date;
   const today = new Date();
   const dateStr = inputDate || today.toISOString().slice(0, 10);
@@ -412,7 +415,7 @@ export const getEpaperData = createServerFn({ method: "GET" }).validator(
     weather,
     wordOfDay,
   } as EpaperData;
-});
+  });
 
 export const getArchiveList = createServerFn({ method: "GET" }).handler(async () => {
   try {
