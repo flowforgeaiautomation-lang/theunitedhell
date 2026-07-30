@@ -1,85 +1,27 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { TrendingUp, TrendingDown, Activity } from "lucide-react";
+import {
+  fetchMarketPrices,
+  formatPrice,
+  formatChange,
+  formatTime,
+  type MarketPrice,
+  type Currency,
+} from "@/lib/market-utils";
 
-type MarketPrice = {
-  symbol: string;
-  name: string;
-  category: string;
-  region: string | null;
-  price: number | null;
-  change: number | null;
-  change_percent: number | null;
-  source: string | null;
-  available: boolean;
-  updated_at: string;
-};
-
-// Hardcoded fallback — always visible, never disappears
 const FALLBACK: MarketPrice[] = [
-  { symbol: "SENSEX", name: "Sensex", category: "indices", region: "India", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "" },
-  { symbol: "NIFTY50", name: "NIFTY 50", category: "indices", region: "India", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "" },
-  { symbol: "BANKNIFTY", name: "Bank NIFTY", category: "indices", region: "India", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "" },
-  { symbol: "NIFTYIT", name: "NIFTY IT", category: "indices", region: "India", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "" },
-  { symbol: "IXIC", name: "NASDAQ", category: "indices", region: "US", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "" },
-  { symbol: "SPX", name: "S&P 500", category: "indices", region: "US", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "" },
-  { symbol: "DJI", name: "Dow Jones", category: "indices", region: "US", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "" },
-  { symbol: "FTSE100", name: "FTSE 100", category: "indices", region: "Europe", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "" },
-  { symbol: "DAX", name: "DAX", category: "indices", region: "Europe", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "" },
-  { symbol: "CAC40", name: "CAC 40", category: "indices", region: "Europe", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "" },
-  { symbol: "N225", name: "Nikkei 225", category: "indices", region: "Asia", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "" },
-  { symbol: "HSI", name: "Hang Seng", category: "indices", region: "Asia", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "" },
-  { symbol: "SSEC", name: "Shanghai", category: "indices", region: "Asia", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "" },
-  { symbol: "GOLD", name: "Gold", category: "commodities", region: "Global", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "" },
-  { symbol: "SILVER", name: "Silver", category: "commodities", region: "Global", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "" },
-  { symbol: "BRENT", name: "Brent Crude", category: "commodities", region: "Global", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "" },
-  { symbol: "WTI", name: "WTI Crude", category: "commodities", region: "Global", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "" },
-  { symbol: "NATGAS", name: "Natural Gas", category: "commodities", region: "Global", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "" },
-  { symbol: "USDINR", name: "USD/INR", category: "forex", region: "Global", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "" },
-  { symbol: "EURUSD", name: "EUR/USD", category: "forex", region: "Global", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "" },
-  { symbol: "GBPUSD", name: "GBP/USD", category: "forex", region: "Global", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "" },
-  { symbol: "USDJPY", name: "USD/JPY", category: "forex", region: "Global", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "" },
-  { symbol: "BTC", name: "Bitcoin", category: "crypto", region: "Global", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "" },
-  { symbol: "ETH", name: "Ethereum", category: "crypto", region: "Global", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "" },
+  { symbol: "SENSEX", name: "Sensex", category: "indices", region: "India", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "", currency: "INR", exchange: "BSE" },
+  { symbol: "NIFTY50", name: "NIFTY 50", category: "indices", region: "India", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "", currency: "INR", exchange: "NSE" },
+  { symbol: "BANKNIFTY", name: "Bank NIFTY", category: "indices", region: "India", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "", currency: "INR", exchange: "NSE" },
+  { symbol: "DJI", name: "Dow Jones", category: "indices", region: "US", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "", currency: "USD", exchange: "NYSE" },
+  { symbol: "SPX", name: "S&P 500", category: "indices", region: "US", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "", currency: "USD", exchange: "NYSE" },
+  { symbol: "IXIC", name: "NASDAQ", category: "indices", region: "US", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "", currency: "USD", exchange: "NASDAQ" },
+  { symbol: "GOLD", name: "Gold", category: "commodities", region: "Global", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "", currency: "USD", unit: "/oz", exchange: "COMEX" },
+  { symbol: "BRENT", name: "Brent Crude", category: "commodities", region: "Global", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "", currency: "USD", unit: "/bbl", exchange: "ICE" },
+  { symbol: "BTC", name: "Bitcoin", category: "crypto", region: "Global", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "", currency: "USD", exchange: "CoinGecko" },
+  { symbol: "ETH", name: "Ethereum", category: "crypto", region: "Global", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "", currency: "USD", exchange: "CoinGecko" },
 ];
-
-const SUPABASE_URL = "https://myrteqlcfwckgdokzzhg.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im15cnRlcWxjZndja2dkb2t6emhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3MjE4OTgsImV4cCI6MjA5ODI5Nzg5OH0.lGAyAxmYrJAag1yONChoqV4-A1QQAkdWKxZp5IMJyII";
-
-// Direct fetch to Supabase REST API — works in both SSR and client, no client singleton
-async function fetchPrices(): Promise<MarketPrice[] | null> {
-  try {
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/market_prices?select=symbol,name,category,region,price,change,change_percent,source,available,updated_at&order=symbol.asc`,
-      {
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        },
-      }
-    );
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (!Array.isArray(data) || data.length === 0) return null;
-    return data as MarketPrice[];
-  } catch {
-    return null;
-  }
-}
-
-function formatPrice(price: number | null): string {
-  if (price === null) return "—";
-  if (price >= 1000) return price.toLocaleString("en-US", { maximumFractionDigits: 0 });
-  if (price >= 1) return price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  return price.toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 6 });
-}
-
-function formatTime(ts: string): string {
-  if (!ts) return "";
-  const d = new Date(ts);
-  if (isNaN(d.getTime())) return "";
-  return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
-}
 
 function Sparkline({ positive, seed }: { positive: boolean; seed: number }) {
   const color = positive ? "#22c55e" : "#ef4444";
@@ -100,46 +42,35 @@ function Sparkline({ positive, seed }: { positive: boolean; seed: number }) {
   );
 }
 
-function MarketCard({ quote, index }: { quote: MarketPrice; index: number }) {
+function MarketCard({ quote, index, currency }: { quote: MarketPrice; index: number; currency: Currency }) {
   const navigate = useNavigate();
-  const positive = (quote.change ?? 0) >= 0;
+  const positive = (quote.change_percent ?? 0) >= 0;
   const colorClass = quote.available
     ? positive ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
     : "text-muted-foreground";
-  const changeText = quote.available && quote.change !== null && quote.change_percent !== null
-    ? `${quote.change >= 0 ? "+" : ""}${quote.change.toFixed(2)} (${quote.change >= 0 ? "+" : ""}${quote.change_percent.toFixed(2)}%)`
-    : null;
+  const { text: changeText } = formatChange(quote.change, quote.change_percent, currency, quote.currency);
+  const priceText = quote.available ? formatPrice(quote.price, currency, quote.currency, quote.unit) : "Unavailable";
 
   function handleClick() {
     navigate({ to: "/markets", search: { asset: quote.symbol } });
   }
 
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      handleClick();
-    }
-  }
-
   return (
     <button
       onClick={handleClick}
-      onKeyDown={handleKeyDown}
-      className="flex items-center gap-3 px-4 py-2 border-r rule shrink-0 whitespace-nowrap hover:bg-foreground/[0.03] transition-colors text-left min-w-[220px] focus:outline-none focus:ring-2 focus:ring-foreground/40"
-      aria-label={`${quote.name}, ${quote.available ? `price ${formatPrice(quote.price)}, ${changeText ?? "no change data"}` : "data temporarily unavailable"}. Click to view ${quote.name} market news.`}
+      className="flex items-center gap-3 px-4 py-2 border-r rule shrink-0 whitespace-nowrap hover:bg-foreground/[0.03] transition-colors text-left min-w-[240px] focus:outline-none focus:ring-2 focus:ring-foreground/40"
+      aria-label={`${quote.name}, ${quote.available ? `${priceText}, ${changeText}` : "data temporarily unavailable"}. Click to view ${quote.name} market news.`}
       tabIndex={0}
     >
       <div className="flex flex-col min-w-0">
         <span className="text-xs font-semibold uppercase tracking-wide truncate">{quote.name}</span>
-        <span className="text-[0.55rem] text-muted-foreground uppercase tracking-wider">{quote.region ?? quote.category}</span>
+        <span className="text-[0.55rem] text-muted-foreground uppercase tracking-wider">{quote.exchange ?? quote.region ?? quote.category}</span>
       </div>
       <div className="flex flex-col items-end ml-auto">
-        <span className="text-sm font-medium tabular-nums">
-          {quote.available ? formatPrice(quote.price) : "Unavailable"}
-        </span>
+        <span className="text-sm font-medium tabular-nums">{priceText}</span>
         <span className={`text-xs tabular-nums ${colorClass} flex items-center gap-1`}>
           {quote.available && (positive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />)}
-          {quote.available && changeText ? changeText : "Data temporarily unavailable"}
+          {quote.available ? changeText : "Data temporarily unavailable"}
         </span>
         {quote.available && quote.updated_at && (
           <span className="text-[0.5rem] text-muted-foreground/50 tabular-nums">{formatTime(quote.updated_at)}</span>
@@ -152,7 +83,7 @@ function MarketCard({ quote, index }: { quote: MarketPrice; index: number }) {
 
 function SkeletonCard() {
   return (
-    <div className="flex items-center gap-3 px-4 py-2 border-r rule shrink-0 min-w-[220px] animate-pulse">
+    <div className="flex items-center gap-3 px-4 py-2 border-r rule shrink-0 min-w-[240px] animate-pulse">
       <div className="h-3 w-16 bg-foreground/10 rounded" />
       <div className="h-3 w-20 bg-foreground/10 rounded ml-auto" />
     </div>
@@ -160,19 +91,20 @@ function SkeletonCard() {
 }
 
 export function MarketTicker() {
-  // Start with fallback immediately — ticker is ALWAYS visible, no blank state
   const [quotes, setQuotes] = useState<MarketPrice[]>(FALLBACK);
   const [loaded, setLoaded] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [paused, setPaused] = useState(false);
   const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const currency: Currency = "USD";
+
   useEffect(() => {
     let mounted = true;
 
     async function load() {
-      const data = await fetchPrices();
-      if (mounted && data && data.length > 0) {
+      const data = await fetchMarketPrices();
+      if (mounted && data.length > 0) {
         setQuotes(data);
         setLoaded(true);
       } else if (mounted) {
@@ -181,7 +113,7 @@ export function MarketTicker() {
     }
 
     load();
-    const interval = setInterval(load, 30_000);
+    const interval = setInterval(load, 15_000);
 
     return () => {
       mounted = false;
@@ -189,20 +121,17 @@ export function MarketTicker() {
     };
   }, []);
 
-  // Auto-rotation every 6 seconds
   useEffect(() => {
     if (paused || quotes.length === 0) return;
     const id = setInterval(() => {
       const el = scrollRef.current;
       if (!el) return;
-      const cardWidth = 220;
+      const cardWidth = 240;
       const visibleCards = Math.max(1, Math.floor(el.clientWidth / cardWidth));
       const maxScroll = el.scrollWidth - el.clientWidth;
       if (maxScroll <= 0) return;
       const currentPos = el.scrollLeft;
-      const nextPos = currentPos + visibleCards * cardWidth >= maxScroll - 10
-        ? 0
-        : currentPos + visibleCards * cardWidth;
+      const nextPos = currentPos + visibleCards * cardWidth >= maxScroll - 10 ? 0 : currentPos + visibleCards * cardWidth;
       el.scrollTo({ left: nextPos, behavior: "smooth" });
     }, 6000);
     return () => clearInterval(id);
@@ -246,7 +175,7 @@ export function MarketTicker() {
           >
             {!loaded
               ? Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)
-              : quotes.map((q, i) => <MarketCard key={q.symbol} quote={q} index={i} />)}
+              : quotes.map((q, i) => <MarketCard key={q.symbol} quote={q} index={i} currency={currency} />)}
           </div>
         </div>
       </div>

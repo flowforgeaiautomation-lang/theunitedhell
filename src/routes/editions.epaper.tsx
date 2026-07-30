@@ -13,6 +13,7 @@ import { canonicalUrl, SITE_NAME, SITE_LOGO } from "@/lib/seo";
 import { fallbackCoverUrl } from "@/lib/article-images";
 import { SmartImage } from "@/components/SmartImage";
 import type { ArticleSummary } from "@/lib/types";
+import { formatPrice, formatChange, CURRENCY_SYMBOLS, type Currency } from "@/lib/market-utils";
 
 const epaperQ = queryOptions({ queryKey: ["epaper"], queryFn: () => getEpaperData() });
 
@@ -293,15 +294,17 @@ function DailyWidgets({ epaper }: { epaper: EpaperData }) {
                 <p className="text-xs text-muted-foreground">Loading live prices...</p>
               ) : marketData.map((m) => (
                 <div key={m.symbol} className="flex items-center justify-between text-xs">
-                  <span className="font-medium truncate">{m.name}</span>
+                  <div className="flex flex-col min-w-0">
+                    <span className="font-medium truncate">{m.name}</span>
+                    <span className="text-[0.5rem] text-muted-foreground/60 uppercase tracking-wider">{m.exchange ?? m.region ?? ""}</span>
+                  </div>
                   <span className="flex items-center gap-1.5 tabular-nums">
                     {m.available && m.price !== null ? (
                       <>
-                        <span>{m.price.toLocaleString("en-US", { maximumFractionDigits: 2 })}</span>
+                        <span>{formatPrice(m.price, "USD", m.currency, m.unit)}</span>
                         <span className={m.change !== null && m.change >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
-                          {m.change !== null && m.change_percent !== null ? `${m.change >= 0 ? "+" : ""}${m.change_percent.toFixed(2)}%` : ""}
+                          {m.change !== null && m.change_percent !== null ? `${m.change >= 0 ? "▲+" : "▼"}${m.change_percent.toFixed(2)}%` : ""}
                         </span>
-                        {m.change !== null && m.change >= 0 ? <TrendingUp className="h-3 w-3 text-green-600 dark:text-green-400" /> : <TrendingDown className="h-3 w-3 text-red-600 dark:text-red-400" />}
                       </>
                     ) : (
                       <span className="text-muted-foreground">—</span>

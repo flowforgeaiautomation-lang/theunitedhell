@@ -50,6 +50,12 @@ type MarketSnap = {
   change: number | null;
   change_percent: number | null;
   available: boolean;
+  currency: string | null;
+  exchange: string | null;
+  unit: string | null;
+  market_timezone: string | null;
+  source: string | null;
+  updated_at: string | null;
 };
 
 const SECTION_MAP: { id: string; label: string; kicker: string; cats: string[] }[] = [
@@ -70,7 +76,7 @@ const SECTION_MAP: { id: string; label: string; kicker: string; cats: string[] }
 async function fetchMarketSnapshot(): Promise<MarketSnap[]> {
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/market_prices?select=symbol,name,category,region,price,change,change_percent,available&order=symbol.asc`,
+      `${SUPABASE_URL}/rest/v1/market_prices?select=symbol,name,category,region,price,change,change_percent,available,currency,exchange,unit,market_timezone,source,updated_at&order=symbol.asc`,
       { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
     );
     if (!res.ok) return [];

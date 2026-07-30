@@ -1,7 +1,7 @@
 import { createFileRoute, useSearch, useNavigate } from "@tanstack/react-router";
 import { useQuery, queryOptions } from "@tanstack/react-query";
 import { useEffect, useState, useRef, useCallback } from "react";
-import { Loader2, TrendingUp, TrendingDown, Activity, X } from "lucide-react";
+import { Loader2, TrendingUp, TrendingDown, Activity, X, Info } from "lucide-react";
 import { motion } from "framer-motion";
 import { MARKET_GROUPS, MARKET_SYMBOLS } from "@/lib/markets.functions";
 import { listArticles } from "@/lib/articles.functions";
@@ -10,6 +10,18 @@ import { ArticleCardSkeletonGrid } from "@/components/ArticleCardSkeleton";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { canonicalUrl, SITE_NAME, SITE_LOGO } from "@/lib/seo";
 import type { ArticleSummary } from "@/lib/types";
+import {
+  useMarketPrices,
+  formatPrice,
+  formatChange,
+  formatTime,
+  getMarketStatus,
+  formatVolume,
+  formatMarketCap,
+  CURRENCY_SYMBOLS,
+  type MarketPrice,
+  type Currency,
+} from "@/lib/market-utils";
 
 const PAGE_SIZE = 24;
 
@@ -25,7 +37,7 @@ const ASSET_TO_CATEGORY: Record<string, string[]> = {
   WTI: ["markets", "economics"], NATGAS: ["markets", "economics"],
   USDINR: ["markets", "economics"], EURUSD: ["markets", "economics"],
   GBPUSD: ["markets", "economics"], USDJPY: ["markets", "economics"],
-  BTC: ["markets", "technology", "artificial-intelligence"], ETH: ["markets", "technology"],
+  BTC: ["markets", "technology"], ETH: ["markets", "technology"],
 };
 
 const ASSET_TO_LABEL: Record<string, string> = {
@@ -38,47 +50,21 @@ const ASSET_TO_LABEL: Record<string, string> = {
   BTC: "Crypto", ETH: "Crypto",
 };
 
-const NEWS_GROUPS = [
-  { label: "Global Markets", categories: ["markets", "economics"] },
-  { label: "India", categories: ["india", "indian-startups", "indian-innovation"] },
-  { label: "US", categories: ["technology", "artificial-intelligence", "innovation"] },
-  { label: "Europe", categories: ["world", "politics", "government"] },
-  { label: "Asia", categories: ["world", "geopolitics"] },
-  { label: "Commodities", categories: ["investing", "economics"] },
-  { label: "Crypto", categories: ["technology", "artificial-intelligence"] },
-  { label: "Economy", categories: ["economics", "personal-finance"] },
-  { label: "Companies", categories: ["startups", "entrepreneurs", "business-leaders"] },
+const CURRENCY_OPTIONS: { code: Currency; label: string; symbol: string }[] = [
+  { code: "USD", label: "USD ($)", symbol: "$" },
+  { code: "INR", label: "INR (₹)", symbol: "₹" },
+  { code: "EUR", label: "EUR (€)", symbol: "€" },
+  { code: "GBP", label: "GBP (£)", symbol: "£" },
+  { code: "JPY", label: "JPY (¥)", symbol: "¥" },
 ];
 
-function formatPrice(price: number | null): string {
-  if (price === null) return "—";
-  if (price >= 1000) return price.toLocaleString("en-US", { maximumFractionDigits: 0 });
-  if (price >= 1) return price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  return price.toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 6 });
-}
-
-function formatTime(ts: string | null): string {
-  if (!ts) return "";
-  const d = new Date(ts);
-  if (isNaN(d.getTime())) return "";
-  return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
-}
-
-function Sparkline({ positive, seed }: { positive: boolean; seed: number }) {
-  const color = positive ? "#22c55e" : "#ef4444";
-  const points: string[] = [];
-  let y = positive ? 24 : 8;
-  for (let i = 0; i <= 60; i += 12) {
-    const variance = ((Math.sin(i * 0.5 + seed) + 1) / 2) * 6;
-    y = positive ? 24 - variance - (i / 60) * 12 : 8 + variance + (i / 60) * 12;
-    points.push(`${i},${Math.max(4, Math.min(28, y))}`);
-  }
-  return (
-    <svg width="60" height="32" viewBox="0 0 60 32" className="shrink-0" aria-hidden="true">
-      <polyline points={points.join(" ")} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
+const MARKET_STATUS_CONFIG = {
+  open: { label: "Market Open", color: "bg-green-500", text: "text-green-700 dark:text-green-400", dot: "bg-green-500" },
+  closed: { label: "Market Closed", color: "bg-red-500", text: "text-red-700 dark:text-red-400", dot: "bg-red-500" },
+  pre: { label: "Pre-Market", color: "bg-yellow-500", text: "text-yellow-700 dark:text-yellow-400", dot: "bg-yellow-500" },
+  after: { label: "After Hours", color: "bg-orange-500", text: "text-orange-700 dark:text-orange-400", dot: "bg-orange-500" },
+  always: { label: "Live 24/7", color: "bg-green-500", text: "text-green-700 dark:text-green-400", dot: "bg-green-500" },
+} as const;
 
 export const Route = createFileRoute("/markets")({
   validateSearch: (s: Record<string, unknown>) => ({
@@ -103,42 +89,144 @@ export const Route = createFileRoute("/markets")({
   component: MarketsPage,
 });
 
-const SUPABASE_URL = "https://myrteqlcfwckgdokzzhg.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im15cnRlcWxjZndja2dkb2t6emhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3MjE4OTgsImV4cCI6MjA5ODI5Nzg5OH0.lGAyAxmYrJAag1yONChoqV4-A1QQAkdWKxZp5IMJyII";
+function MarketCard({
+  quote,
+  currency,
+  isActive,
+  onClick,
+}: {
+  quote: MarketPrice;
+  currency: Currency;
+  isActive: boolean;
+  onClick: () => void;
+}) {
+  const [showTooltip, setShowTooltip] = useState(false);
+  const status = getMarketStatus(quote.market_timezone ?? null, quote.category);
+  const statusConfig = MARKET_STATUS_CONFIG[status];
+  const { text: changeText, isPositive, isNeutral } = formatChange(
+    quote.change, quote.change_percent, currency, quote.currency,
+  );
+  const changeColor = isNeutral
+    ? "text-muted-foreground"
+    : isPositive
+      ? "text-green-600 dark:text-green-400"
+      : "text-red-600 dark:text-red-400";
 
-async function fetchMarketPrices(): Promise<any[]> {
-  try {
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/market_prices?select=symbol,name,category,region,price,change,change_percent,source,available,updated_at&order=symbol.asc`,
-      { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
-    );
-    if (!res.ok) return [];
-    const data = await res.json();
-    return Array.isArray(data) ? data : [];
-  } catch {
-    return [];
-  }
+  return (
+    <div
+      className={`group relative border rule p-5 cursor-pointer transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-foreground/40 ${
+        isActive ? "ring-1 ring-foreground bg-muted/30" : ""
+      }`}
+      onClick={onClick}
+      onMouseEnter={() => setShowTooltip(true)}
+      onMouseLeave={() => setShowTooltip(false)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }}
+      aria-label={`${quote.name}, ${quote.available ? formatPrice(quote.price, currency, quote.currency, quote.unit) : "data unavailable"}`}
+    >
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <h3 className="text-base font-semibold tracking-tight">{quote.name}</h3>
+          <span className="text-[0.6rem] uppercase tracking-widest text-muted-foreground">
+            {quote.category === "forex" ? "Foreign Exchange" : quote.category.charAt(0).toUpperCase() + quote.category.slice(1)}
+          </span>
+        </div>
+        <div className={`flex items-center gap-1.5 text-[0.55rem] font-semibold uppercase tracking-wider ${statusConfig.text}`}>
+          <span className={`inline-block w-2 h-2 rounded-full ${statusConfig.dot} animate-pulse`} />
+          {statusConfig.label}
+        </div>
+      </div>
+
+      <div className="mb-2">
+        <div className="text-2xl font-serif font-medium tabular-nums">
+          {quote.available
+            ? formatPrice(quote.price, currency, quote.currency, quote.unit)
+            : "—"}
+        </div>
+      </div>
+
+      {quote.available ? (
+        <div className={`text-sm tabular-nums font-medium ${changeColor}`}>
+          {changeText}
+        </div>
+      ) : (
+        <div className="text-xs text-muted-foreground mt-1">Data temporarily unavailable</div>
+      )}
+
+      <div className="flex items-center justify-between mt-3 pt-3 border-t rule">
+        <span className="text-[0.55rem] uppercase tracking-wider text-muted-foreground">
+          {quote.exchange ?? "—"}
+        </span>
+        {quote.available && quote.updated_at ? (
+          <span className="text-[0.55rem] text-muted-foreground/70 tabular-nums">
+            {formatTime(quote.updated_at, quote.market_timezone)}
+          </span>
+        ) : null}
+      </div>
+
+      <div className="text-[0.5rem] uppercase tracking-wider text-muted-foreground/40 mt-1">
+        via {quote.source ?? "—"}
+      </div>
+
+      {showTooltip && quote.available && (
+        <div className="absolute z-50 left-0 right-0 top-full mt-1 mx-2 bg-background border rule shadow-lg p-4 text-xs space-y-2 animate-in fade-in duration-150">
+          <div className="flex justify-between"><span className="text-muted-foreground">Current Price</span><span className="font-medium tabular-nums">{formatPrice(quote.price, currency, quote.currency, quote.unit)}</span></div>
+          {quote.open_price !== null && quote.open_price !== undefined && (
+            <div className="flex justify-between"><span className="text-muted-foreground">Open</span><span className="font-medium tabular-nums">{formatPrice(quote.open_price, currency, quote.currency, quote.unit)}</span></div>
+          )}
+          {quote.day_high !== null && quote.day_high !== undefined && (
+            <div className="flex justify-between"><span className="text-muted-foreground">Day High</span><span className="font-medium tabular-nums text-green-600 dark:text-green-400">{formatPrice(quote.day_high, currency, quote.currency, quote.unit)}</span></div>
+          )}
+          {quote.day_low !== null && quote.day_low !== undefined && (
+            <div className="flex justify-between"><span className="text-muted-foreground">Day Low</span><span className="font-medium tabular-nums text-red-600 dark:text-red-400">{formatPrice(quote.day_low, currency, quote.currency, quote.unit)}</span></div>
+          )}
+          {quote.prev_close !== null && quote.prev_close !== undefined && (
+            <div className="flex justify-between"><span className="text-muted-foreground">Previous Close</span><span className="font-medium tabular-nums">{formatPrice(quote.prev_close, currency, quote.currency, quote.unit)}</span></div>
+          )}
+          {quote.volume !== null && quote.volume !== undefined && quote.volume > 0 && (
+            <div className="flex justify-between"><span className="text-muted-foreground">Volume</span><span className="font-medium tabular-nums">{formatVolume(quote.volume)}</span></div>
+          )}
+          {quote.market_cap !== null && quote.market_cap !== undefined && quote.market_cap > 0 && (
+            <div className="flex justify-between"><span className="text-muted-foreground">Market Cap</span><span className="font-medium tabular-nums">{formatMarketCap(quote.market_cap, currency)}</span></div>
+          )}
+          <div className="flex justify-between"><span className="text-muted-foreground">Currency</span><span className="font-medium">{quote.currency ?? "USD"}</span></div>
+          <div className="flex justify-between"><span className="text-muted-foreground">Exchange</span><span className="font-medium">{quote.exchange ?? "—"}</span></div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SkeletonCard() {
+  return (
+    <div className="border rule p-5 animate-pulse">
+      <div className="h-4 w-24 bg-foreground/10 rounded mb-3" />
+      <div className="h-8 w-32 bg-foreground/10 rounded mb-2" />
+      <div className="h-4 w-28 bg-foreground/10 rounded" />
+      <div className="h-3 w-20 bg-foreground/10 rounded mt-3" />
+    </div>
+  );
 }
 
 function MarketsPage() {
   const search = useSearch({ from: "/markets" });
   const navigate = useNavigate();
-  const [quotes, setQuotes] = useState<any[]>(MARKET_SYMBOLS.map((m) => ({
-    symbol: m.symbol, name: m.name, category: m.category, region: m.region,
-    price: null, change: null, change_percent: null, source: null, available: false, updated_at: "",
-  })));
-
-  // Fetch prices from database REST API — instant, no external API calls
-  useEffect(() => {
-    let mounted = true;
-    async function load() {
-      const data = await fetchMarketPrices();
-      if (mounted && data.length > 0) setQuotes(data);
+  const [currency, setCurrency] = useState<Currency>(() => {
+    try {
+      const saved = localStorage.getItem("market-currency");
+      return (saved as Currency) || "USD";
+    } catch {
+      return "USD";
     }
-    load();
-    const interval = setInterval(load, 30_000);
-    return () => { mounted = false; clearInterval(interval); };
-  }, []);
+  });
+
+  useEffect(() => {
+    try { localStorage.setItem("market-currency", currency); } catch { /* ignore */ }
+  }, [currency]);
+
+  const { prices, loading, lastUpdate } = useMarketPrices(15_000);
+  const activeAsset = search.asset;
 
   const [articles, setArticles] = useState<ArticleSummary[]>([]);
   const [hasMore, setHasMore] = useState(true);
@@ -146,7 +234,6 @@ function MarketsPage() {
   const offsetRef = useRef(0);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const isFetchingRef = useRef(false);
-  const activeAsset = search.asset;
 
   const newsCategories = activeAsset && ASSET_TO_CATEGORY[activeAsset]
     ? ASSET_TO_CATEGORY[activeAsset]
@@ -174,9 +261,7 @@ function MarketsPage() {
     isFetchingRef.current = true;
     setLoadingMore(true);
     try {
-      const result = await listArticles({
-        data: { limit: PAGE_SIZE, offset: offsetRef.current, category: newsCategories[0] },
-      });
+      const result = await listArticles({ data: { limit: PAGE_SIZE, offset: offsetRef.current, category: newsCategories[0] } });
       const newItems = (result as any).items ?? [];
       if (newItems.length > 0) {
         setArticles((prev) => {
@@ -221,8 +306,38 @@ function MarketsPage() {
     <div className="container-edit py-8 md:py-12">
       <header className="border-b rule pb-6 mb-8">
         <div className="kicker">Live Global Markets</div>
-        <h1 className="display-1 mt-3">Markets</h1>
-        <p className="dek mt-3 max-w-2xl">Real-time data from major global indices, commodities, forex, and crypto — with financial news from around the world.</p>
+        <div className="flex flex-wrap items-end justify-between gap-4 mt-3">
+          <div>
+            <h1 className="display-1">Markets</h1>
+            <p className="dek mt-3 max-w-2xl">Real-time data from major global indices, commodities, forex, and crypto — with financial news from around the world.</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="text-xs uppercase tracking-widest text-muted-foreground font-semibold">Display Currency</label>
+            <div className="relative">
+              <select
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value as Currency)}
+                className="appearance-none border rule bg-background px-4 py-2.5 pr-10 text-sm font-medium cursor-pointer hover:bg-muted/30 transition focus:outline-none focus:ring-2 focus:ring-foreground/40"
+                aria-label="Select display currency"
+              >
+                {CURRENCY_OPTIONS.map((c) => (
+                  <option key={c.code} value={c.code}>{c.label}</option>
+                ))}
+              </select>
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none text-xs">▼</span>
+            </div>
+          </div>
+        </div>
+        {lastUpdate && (
+          <div className="flex items-center gap-2 mt-4 text-xs text-muted-foreground">
+            <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            <span className="font-medium">Live</span>
+            <span>·</span>
+            <span>Updated {lastUpdate.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true })}</span>
+            <span>·</span>
+            <span>Auto-refreshes every 15 seconds</span>
+          </div>
+        )}
       </header>
 
       {activeAsset && (
@@ -240,62 +355,46 @@ function MarketsPage() {
         </div>
       )}
 
-      {/* Live price cards by group */}
       <div className="space-y-8 mb-12">
         {MARKET_GROUPS.map((group) => {
-          const groupQuotes = quotes.filter((q) => group.items.some((m) => m.symbol === q.symbol));
-          if (groupQuotes.length === 0) return null;
+          const groupQuotes = prices.filter((q) => group.items.some((m) => m.symbol === q.symbol));
+          if (groupQuotes.length === 0 && !loading) return null;
           return (
             <div key={group.label}>
               <div className="flex items-baseline justify-between border-b rule pb-2 mb-4">
                 <h2 className="display-3">{group.label}</h2>
-                <span className="kicker">{groupQuotes.length} instruments</span>
+                <span className="kicker">{groupQuotes.length || group.items.length} instruments</span>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {groupQuotes.map((q, qi) => {
-                  const positive = (q.change ?? 0) >= 0;
-                  return (
-                    <button
-                      key={q.symbol}
-                      onClick={() => selectAsset(q.symbol)}
-                      className={`border rule p-4 text-left hover:bg-foreground/[0.03] transition ${activeAsset === q.symbol ? "ring-1 ring-foreground" : ""} focus:outline-none focus:ring-2 focus:ring-foreground/40`}
-                      aria-label={`${q.name}, ${q.available ? `price ${formatPrice(q.price)}` : "data unavailable"}. Click to filter news.`}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-semibold uppercase tracking-wide">{q.name}</span>
-                        {q.available && (positive ? <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" /> : <TrendingDown className="h-4 w-4 text-red-600 dark:text-red-400" />)}
-                      </div>
-                      <div className="flex items-end justify-between">
-                        <div>
-                          <div className="text-2xl font-serif font-medium tabular-nums">
-                            {q.available ? formatPrice(q.price) : "—"}
-                          </div>
-                          {q.available ? (
-                            <div className={`text-sm tabular-nums mt-1 ${positive ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
-                              {q.change !== null ? `${q.change >= 0 ? "+" : ""}${q.change.toFixed(2)}` : "—"}
-                              {" "}
-                              ({q.change_percent !== null ? `${q.change_percent >= 0 ? "+" : ""}${q.change_percent.toFixed(2)}%` : "—"})
-                            </div>
-                          ) : (
-                            <div className="text-xs text-muted-foreground mt-1">Data temporarily unavailable</div>
-                          )}
-                          {q.available && q.updated_at && (
-                            <div className="text-[0.55rem] text-muted-foreground/50 mt-1">Updated {formatTime(q.updated_at)}</div>
-                          )}
-                        </div>
-                        {q.available && <Sparkline positive={positive} seed={qi} />}
-                      </div>
-                      {q.source && <div className="text-[0.55rem] uppercase tracking-wider text-muted-foreground/50 mt-2">via {q.source}</div>}
-                    </button>
-                  );
-                })}
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {loading
+                  ? Array.from({ length: group.items.length }).map((_, i) => <SkeletonCard key={i} />)
+                  : groupQuotes.map((q) => (
+                      <MarketCard
+                        key={q.symbol}
+                        quote={q}
+                        currency={currency}
+                        isActive={activeAsset === q.symbol}
+                        onClick={() => selectAsset(q.symbol)}
+                      />
+                    ))}
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* News section */}
+      {!loading && prices.length === 0 && (
+        <div className="text-center py-16 border rule mb-12">
+          <Activity className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
+          <p className="dek">Market data is being updated. Please check back shortly.</p>
+        </div>
+      )}
+
+      <div className="flex items-center gap-2 mb-6 text-xs text-muted-foreground">
+        <Info className="h-3.5 w-3.5" />
+        <span>Hover over any card for detailed price information. Data shown in {CURRENCY_SYMBOLS[currency]} ({currency}). Forex rates are approximate for display purposes.</span>
+      </div>
+
       <div className="border-t rule pt-8">
         <div className="flex items-baseline justify-between border-b rule pb-3 mb-8">
           <h2 className="display-3">Market News</h2>
