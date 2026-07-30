@@ -17,9 +17,9 @@ function publicClient() {
   });
 }
 
-// EXACT same column list as articles.functions.ts — no extra columns that may not exist
+// EXACT same column list as articles.functions.ts — includes cover_video_url + trending_score
 const SUMMARY_COLS =
-  "id,slug,title,dek,category,subcategory,cover_image_url,cover_video_url,read_time_minutes,country_code,featured_slot,published_at,created_at,view_count,like_count,bookmark_count,comment_count";
+  "id,slug,title,dek,category,subcategory,cover_image_url,cover_video_url,read_time_minutes,country_code,featured_slot,published_at,created_at,view_count,like_count,bookmark_count,comment_count,trending_score";
 
 export type MarketSnap = {
   symbol: string;
@@ -165,45 +165,6 @@ const WORD_FALLBACK: WordOfDay = {
   synonyms: ["inquisitiveness", "interest", "eagerness", "wonder"],
   antonyms: ["indifference", "apathy", "boredom"],
 };
-
-const NAMED_ENTITIES: Record<string, string> = {
-  amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ",
-  ldquo: "\u201C", rdquo: "\u201D", lsquo: "\u2018", rsquo: "\u2019",
-  hellip: "\u2026", mdash: "\u2014", ndash: "\u2013", trade: "\u2122",
-  copy: "\u00A9", reg: "\u00AE", deg: "\u00B0", middot: "\u00B7",
-};
-
-function decodeEntities(input: unknown): string {
-  if (typeof input !== "string" || !input) return (input as string) ?? "";
-  return input
-    .replace(/&#(\d+);/g, (_, n) => { const c = parseInt(n, 10); return Number.isFinite(c) ? String.fromCodePoint(c) : ""; })
-    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => { const c = parseInt(h, 16); return Number.isFinite(c) ? String.fromCodePoint(c) : ""; })
-    .replace(/&([a-zA-Z]+);/g, (m, name) => NAMED_ENTITIES[name] ?? m);
-}
-
-function decodeSummary<T extends { title?: string | null; dek?: string | null }>(row: T): T {
-  return {
-    ...row,
-    title: row.title ? decodeEntities(row.title) : row.title,
-    dek: row.dek ? decodeEntities(row.dek) : row.dek,
-  };
-}
-
-// Deterministic date formatting — no locale APIs that differ between Node.js and browser
-const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-const DAYS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-function formatLongDate(dateStr: string): string {
-  const d = new Date(dateStr + "T00:00:00Z");
-  return `${DAYS[d.getUTCDay()]}, ${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
-}
-
-function formatShortDate(dateStr: string): string {
-  const d = new Date(dateStr + "T00:00:00Z");
-  return `${MONTHS_SHORT[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
-}
 
 function pickDaily<T>(arr: T[], dateKey: string): T {
   const seed = dateKey.split("-").reduce((a, b) => a + parseInt(b, 10), 0);
@@ -372,52 +333,65 @@ export const getEpaperData = createServerFn({ method: "GET" })
     const inputDate = data?.date;
     const today = new Date();
     const dateStr = inputDate || today.toISOString().slice(0, 10);
-    const dateDisplay = formatLongDate(dateStr);
+    const dateDisplay = new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
     const editionNumber = dateToNumber(dateStr);
 
-    // Single query — fast, one round trip. Supabase supports up to 1000 rows.
+    // Paginate through ALL published articles — no hardcoded cap.
+    // Supabase returns max 1000 per request, so we loop until exhausted.
     const supabase = publicClient();
-    let query = supabase
+    let baseQuery = supabase
       .from("articles")
       .select(SUMMARY_COLS)
       .eq("is_published", true)
       .order("published_at", { ascending: false })
-      .order("id", { ascending: false })
-      .limit(1000);
+      .order("id", { ascending: false });
 
     if (inputDate) {
       const startDate = new Date(dateStr + "T00:00:00").toISOString();
       const endDate = new Date(dateStr + "T23:59:59").toISOString();
-      query = query.gte("published_at", startDate).lte("published_at", endDate);
+      baseQuery = baseQuery.gte("published_at", startDate).lte("published_at", endDate);
     }
 
-    const { data: rows, error } = await query;
-    if (error) throw new Error(`Epaper article query failed: ${error.message}`);
-
-    // Deduplicate by ID and decode HTML entities (same as homepage pipeline)
+    const allRows: ArticleSummary[] = [];
     const seen = new Set<string>();
-    const articles: ArticleSummary[] = ((rows ?? []) as unknown as ArticleSummary[])
-      .map((r) => decodeSummary(r))
-      .filter((a) => {
-        if (!a.id || seen.has(a.id)) return false;
-        seen.add(a.id);
-        return true;
-      });
+    let offset = 0;
+    const pageSize = 1000;
+    for (;;) {
+      const { data: batch, error } = await baseQuery.range(offset, offset + pageSize - 1);
+      if (error) throw new Error(`Epaper article query failed: ${error.message}`);
+      if (!batch || batch.length === 0) break;
+      for (const row of batch as unknown as ArticleSummary[]) {
+        if (!row.id || seen.has(row.id)) continue;
+        seen.add(row.id);
+        allRows.push(row);
+      }
+      if (batch.length < pageSize) break;
+      offset += pageSize;
+    }
+    const articles = allRows;
 
-    // Sort by views and recency (trending_score may not exist in all environments)
+    // Sort by trending_score (falls back to composite engagement score)
+    const compositeScore = (a: ArticleSummary) =>
+      (a.trending_score ?? 0) * 10 +
+      (a.view_count ?? 0) +
+      (a.like_count ?? 0) * 5 +
+      (a.bookmark_count ?? 0) * 4 +
+      (a.comment_count ?? 0) * 3;
+
     const topStories = [...articles]
-      .sort((a, b) => (b.view_count ?? 0) - (a.view_count ?? 0))
+      .sort((a, b) => compositeScore(b) - compositeScore(a))
       .slice(0, 10);
     const editorsPicks = [...articles]
-      .sort((a, b) => (b.view_count ?? 0) - (a.view_count ?? 0))
+      .sort((a, b) => compositeScore(b) - compositeScore(a))
       .slice(0, 5);
     const breakingNews = articles.filter((a) => a.category === "breaking-news").slice(0, 5);
     const trendingStories = [...articles]
-      .sort((a, b) => {
-        const scoreA = (a.view_count ?? 0) + (a.like_count ?? 0) * 5 + (a.bookmark_count ?? 0) * 4 + (a.comment_count ?? 0) * 3;
-        const scoreB = (b.view_count ?? 0) + (b.like_count ?? 0) * 5 + (b.bookmark_count ?? 0) * 4 + (b.comment_count ?? 0) * 3;
-        return scoreB - scoreA;
-      })
+      .sort((a, b) => compositeScore(b) - compositeScore(a))
       .slice(0, 8);
 
     const pages = buildPages(articles, topStories, editorsPicks, breakingNews, trendingStories);
@@ -511,8 +485,12 @@ export const getArchiveList = createServerFn({ method: "GET" }).handler(async ()
 
   const entries: ArchiveEntry[] = [];
   for (const [date, info] of byDate) {
-    const d = new Date(date + "T00:00:00Z");
-    const dateDisplay = `${DAYS_SHORT[d.getUTCDay()]}, ${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
+    const dateDisplay = new Date(date + "T00:00:00").toLocaleDateString("en-US", {
+      weekday: "short",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
     const totalPages = Math.max(2, Math.ceil(info.articles.length / 8) + 2);
     entries.push({
       date,

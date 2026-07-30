@@ -65,7 +65,23 @@ function EpaperPage() {
   const [flipDirection, setFlipDirection] = useState<"next" | "prev">("next");
   const [isFlipping, setIsFlipping] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const touchStartX = useRef(0);
+
+  // Hydration-safe: only apply dark mode after mount
+  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    if (!mounted) return;
+    const root = document.documentElement;
+    if (darkMode) root.classList.add("dark");
+    else root.classList.remove("dark");
+  }, [darkMode, mounted]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (darkMode) root.classList.add("dark");
+    else root.classList.remove("dark");
+  }, [darkMode]);
 
   // Never hang forever on "Loading..." — after 15s, show retry option
   useEffect(() => {
@@ -75,12 +91,6 @@ function EpaperPage() {
     }
     setTimedOut(false);
   }, [isLoading]);
-
-  useEffect(() => {
-    const root = document.documentElement;
-    if (darkMode) root.classList.add("dark");
-    else root.classList.remove("dark");
-  }, [darkMode]);
 
   const pages = epaper?.pages ?? [];
   const page = pages[currentPage];
@@ -589,7 +599,7 @@ function DailyWidgets({ epaper }: { epaper: EpaperData }) {
                 <span className="flex items-center gap-1.5 tabular-nums shrink-0">
                   {m.available && m.price !== null ? (
                     <>
-                      <span>{typeof m.price === "number" ? m.price.toFixed(2) : "—"}</span>
+                      <span>{m.price.toLocaleString("en-US", { maximumFractionDigits: 2 })}</span>
                       <span className={m.change !== null && m.change >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
                         {m.change_percent !== null ? `${m.change >= 0 ? "+" : ""}${m.change_percent.toFixed(2)}%` : ""}
                       </span>
@@ -663,14 +673,14 @@ function categoryToDesk(category: string): string {
     movies: "Entertainment Desk", football: "Sports Desk", cricket: "Sports Desk",
     books: "Books Desk", psychology: "Psychology Desk", physics: "Science Desk",
     "electric-vehicles": "Auto Desk", sustainability: "Climate Desk", robotics: "AI Desk",
-    sport: "Sports Desk",
+    sport: "Sports Desk", business: "Business Desk",
   };
   return deskMap[category] || "Editorial Desk";
 }
 
 function NewspaperArticleCard({ article, variant = "standard" }: { article: ArticleSummary; variant?: "hero" | "compact" | "standard" }) {
   const cover = article.cover_image_url || fallbackCoverUrl(article);
-  const hasVideo = !!article.cover_video_url;
+  const hasVideo = !!(article as any).cover_video_url;
   const pubDate = formatDate(article.published_at || article.created_at);
   const desk = categoryToDesk(article.category);
 
@@ -680,7 +690,7 @@ function NewspaperArticleCard({ article, variant = "standard" }: { article: Arti
         {hasVideo ? (
           <div className="relative aspect-[16/10] w-full rounded-sm mb-4 overflow-hidden bg-black">
             <video
-              src={article.cover_video_url!}
+              src={(article as any).cover_video_url!}
               poster={cover}
               controls
               playsInline
@@ -738,7 +748,7 @@ function NewspaperArticleCard({ article, variant = "standard" }: { article: Arti
       {hasVideo ? (
         <div className="relative aspect-[16/10] w-full rounded-sm mb-3 overflow-hidden bg-black">
           <video
-            src={article.cover_video_url!}
+            src={(article as any).cover_video_url!}
             poster={cover}
             controls
             playsInline
