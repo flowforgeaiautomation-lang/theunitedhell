@@ -398,9 +398,12 @@ export const getEpaperData = createServerFn({ method: "GET" })
         marketSnapshot = (marketResult.data as any[]).slice(0, 8).map((r) => ({
           symbol: r.symbol ?? "",
           name: r.name ?? r.symbol ?? "",
-          price: r.price ?? 0,
-          change_percent: r.change_percent ?? 0,
           category: r.category ?? "",
+          region: r.region ?? null,
+          price: r.price ?? null,
+          change: r.change ?? null,
+          change_percent: r.change_percent ?? null,
+          available: r.available ?? true,
         }));
       }
     } catch (err) {

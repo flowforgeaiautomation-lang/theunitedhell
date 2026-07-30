@@ -1,7 +1,7 @@
 import { createFileRoute, useSearch, useNavigate } from "@tanstack/react-router";
 import { useQuery, queryOptions } from "@tanstack/react-query";
 import { useEffect, useState, useRef, useCallback } from "react";
-import { Loader2, TrendingUp, TrendingDown, Activity, X, ChevronDown, ChevronUp, Info } from "lucide-react";
+import { Loader2, TrendingUp, TrendingDown, Activity, X, ChevronDown, ChevronUp, Info, BarChart3 } from "lucide-react";
 import { motion } from "framer-motion";
 import { listArticles } from "@/lib/articles.functions";
 import { ArticleCard } from "@/components/article-card";
