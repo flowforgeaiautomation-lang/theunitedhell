@@ -19,7 +19,7 @@ function publicClient() {
 
 // EXACT same column list as articles.functions.ts — no extra columns that may not exist
 const SUMMARY_COLS =
-  "id,slug,title,dek,category,subcategory,cover_image_url,read_time_minutes,country_code,featured_slot,published_at,created_at,view_count,like_count,bookmark_count,comment_count";
+  "id,slug,title,dek,category,subcategory,cover_image_url,cover_video_url,read_time_minutes,country_code,featured_slot,published_at,created_at,view_count,like_count,bookmark_count,comment_count";
 
 export type MarketSnap = {
   symbol: string;
@@ -165,6 +165,45 @@ const WORD_FALLBACK: WordOfDay = {
   synonyms: ["inquisitiveness", "interest", "eagerness", "wonder"],
   antonyms: ["indifference", "apathy", "boredom"],
 };
+
+const NAMED_ENTITIES: Record<string, string> = {
+  amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ",
+  ldquo: "\u201C", rdquo: "\u201D", lsquo: "\u2018", rsquo: "\u2019",
+  hellip: "\u2026", mdash: "\u2014", ndash: "\u2013", trade: "\u2122",
+  copy: "\u00A9", reg: "\u00AE", deg: "\u00B0", middot: "\u00B7",
+};
+
+function decodeEntities(input: unknown): string {
+  if (typeof input !== "string" || !input) return (input as string) ?? "";
+  return input
+    .replace(/&#(\d+);/g, (_, n) => { const c = parseInt(n, 10); return Number.isFinite(c) ? String.fromCodePoint(c) : ""; })
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => { const c = parseInt(h, 16); return Number.isFinite(c) ? String.fromCodePoint(c) : ""; })
+    .replace(/&([a-zA-Z]+);/g, (m, name) => NAMED_ENTITIES[name] ?? m);
+}
+
+function decodeSummary<T extends { title?: string | null; dek?: string | null }>(row: T): T {
+  return {
+    ...row,
+    title: row.title ? decodeEntities(row.title) : row.title,
+    dek: row.dek ? decodeEntities(row.dek) : row.dek,
+  };
+}
+
+// Deterministic date formatting — no locale APIs that differ between Node.js and browser
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const DAYS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+function formatLongDate(dateStr: string): string {
+  const d = new Date(dateStr + "T00:00:00Z");
+  return `${DAYS[d.getUTCDay()]}, ${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
+}
+
+function formatShortDate(dateStr: string): string {
+  const d = new Date(dateStr + "T00:00:00Z");
+  return `${MONTHS_SHORT[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
+}
 
 function pickDaily<T>(arr: T[], dateKey: string): T {
   const seed = dateKey.split("-").reduce((a, b) => a + parseInt(b, 10), 0);
@@ -333,12 +372,7 @@ export const getEpaperData = createServerFn({ method: "GET" })
     const inputDate = data?.date;
     const today = new Date();
     const dateStr = inputDate || today.toISOString().slice(0, 10);
-    const dateDisplay = new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    const dateDisplay = formatLongDate(dateStr);
     const editionNumber = dateToNumber(dateStr);
 
     // Single query — fast, one round trip. Supabase supports up to 1000 rows.
@@ -360,13 +394,15 @@ export const getEpaperData = createServerFn({ method: "GET" })
     const { data: rows, error } = await query;
     if (error) throw new Error(`Epaper article query failed: ${error.message}`);
 
-    // Deduplicate by ID
+    // Deduplicate by ID and decode HTML entities (same as homepage pipeline)
     const seen = new Set<string>();
-    const articles: ArticleSummary[] = ((rows ?? []) as unknown as ArticleSummary[]).filter((a) => {
-      if (!a.id || seen.has(a.id)) return false;
-      seen.add(a.id);
-      return true;
-    });
+    const articles: ArticleSummary[] = ((rows ?? []) as unknown as ArticleSummary[])
+      .map((r) => decodeSummary(r))
+      .filter((a) => {
+        if (!a.id || seen.has(a.id)) return false;
+        seen.add(a.id);
+        return true;
+      });
 
     // Sort by views and recency (trending_score may not exist in all environments)
     const topStories = [...articles]
@@ -475,12 +511,8 @@ export const getArchiveList = createServerFn({ method: "GET" }).handler(async ()
 
   const entries: ArchiveEntry[] = [];
   for (const [date, info] of byDate) {
-    const dateDisplay = new Date(date + "T00:00:00").toLocaleDateString("en-US", {
-      weekday: "short",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    const d = new Date(date + "T00:00:00Z");
+    const dateDisplay = `${DAYS_SHORT[d.getUTCDay()]}, ${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
     const totalPages = Math.max(2, Math.ceil(info.articles.length / 8) + 2);
     entries.push({
       date,

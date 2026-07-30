@@ -589,7 +589,7 @@ function DailyWidgets({ epaper }: { epaper: EpaperData }) {
                 <span className="flex items-center gap-1.5 tabular-nums shrink-0">
                   {m.available && m.price !== null ? (
                     <>
-                      <span>{m.price.toLocaleString("en-US", { maximumFractionDigits: 2 })}</span>
+                      <span>{typeof m.price === "number" ? m.price.toFixed(2) : "—"}</span>
                       <span className={m.change !== null && m.change >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
                         {m.change_percent !== null ? `${m.change >= 0 ? "+" : ""}${m.change_percent.toFixed(2)}%` : ""}
                       </span>
@@ -646,7 +646,9 @@ function DailyWidgets({ epaper }: { epaper: EpaperData }) {
 /* ────────── Newspaper Article Card ────────── */
 function formatDate(dateStr: string): string {
   try {
-    return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    const d = new Date(dateStr);
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    return `${months[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
   } catch { return dateStr; }
 }
 
@@ -668,7 +670,7 @@ function categoryToDesk(category: string): string {
 
 function NewspaperArticleCard({ article, variant = "standard" }: { article: ArticleSummary; variant?: "hero" | "compact" | "standard" }) {
   const cover = article.cover_image_url || fallbackCoverUrl(article);
-  const hasVideo = !!(article as any).cover_video_url;
+  const hasVideo = !!article.cover_video_url;
   const pubDate = formatDate(article.published_at || article.created_at);
   const desk = categoryToDesk(article.category);
 
@@ -678,7 +680,7 @@ function NewspaperArticleCard({ article, variant = "standard" }: { article: Arti
         {hasVideo ? (
           <div className="relative aspect-[16/10] w-full rounded-sm mb-4 overflow-hidden bg-black">
             <video
-              src={(article as any).cover_video_url!}
+              src={article.cover_video_url!}
               poster={cover}
               controls
               playsInline
