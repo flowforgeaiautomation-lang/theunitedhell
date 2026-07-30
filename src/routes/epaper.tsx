@@ -5,9 +5,9 @@ import {
   Newspaper, Clock, TrendingUp, TrendingDown, Sun, Moon, Type,
   ArrowRight, ArrowLeft, ArrowRight as ArrowNext, Quote, CalendarDays,
   Camera, BarChart3, Globe, Sparkles, ChevronLeft, ChevronRight,
-  List, X, Home, Bookmark, Share2, Volume2,
+  List, X, Home, Bookmark, Share2, Volume2, BookOpen, Play, Headphones,
 } from "lucide-react";
-import { getEpaperData, type EpaperData, type EpaperPage } from "@/lib/epaper.functions";
+import { getEpaperData, type EpaperData, type EpaperPage, type WordOfDay } from "@/lib/epaper.functions";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { canonicalUrl, SITE_NAME, SITE_LOGO } from "@/lib/seo";
 import { fallbackCoverUrl } from "@/lib/article-images";
@@ -303,7 +303,7 @@ function Masthead({ epaper }: { epaper: EpaperData }) {
 function PageContent({ page, epaper }: { page: EpaperPage; epaper: EpaperData }) {
   if (page.isFrontPage) return <FrontPage page={page} epaper={epaper} />;
   if (page.isBackPage) return <BackPage page={page} epaper={epaper} />;
-  return <SectionPageContent page={page} />;
+  return <SectionPageContent page={page} epaper={epaper} />;
 }
 
 /* ────────── Front Page ────────── */
@@ -390,12 +390,15 @@ function FrontPage({ page, epaper }: { page: EpaperPage; epaper: EpaperData }) {
 
       {/* Daily Widgets on Front Page */}
       <DailyWidgets epaper={epaper} />
+
+      {/* Word of the Day on Front Page */}
+      <WordOfDaySection word={epaper.wordOfDay} />
     </div>
   );
 }
 
 /* ────────── Section Page ────────── */
-function SectionPageContent({ page }: { page: EpaperPage }) {
+function SectionPageContent({ page, epaper }: { page: EpaperPage; epaper: EpaperData }) {
   const [hero, ...rest] = page.articles;
   if (!hero) return <EmptyPage />;
 
@@ -441,6 +444,9 @@ function SectionPageContent({ page }: { page: EpaperPage }) {
           More from {page.sectionLabel} <ArrowRight className="h-3.5 w-3.5" />
         </Link>
       </div>
+
+      {/* Word of the Day */}
+      <WordOfDaySection word={epaper.wordOfDay} />
     </div>
   );
 }
@@ -472,6 +478,9 @@ function BackPage({ page, epaper }: { page: EpaperPage; epaper: EpaperData }) {
         </blockquote>
         <p className="text-sm text-muted-foreground">— {epaper.quoteOfDay.author}</p>
       </div>
+
+      {/* Word of the Day on Back Page */}
+      <WordOfDaySection word={epaper.wordOfDay} />
 
       <div className="text-center pt-4">
         <p className="text-xs text-muted-foreground uppercase tracking-wider">
@@ -576,11 +585,28 @@ function DailyWidgets({ epaper }: { epaper: EpaperData }) {
 /* ────────── Newspaper Article Card ────────── */
 function NewspaperArticleCard({ article, variant = "standard" }: { article: ArticleSummary; variant?: "hero" | "compact" | "standard" }) {
   const cover = article.cover_image_url || fallbackCoverUrl(article);
+  const hasVideo = !!article.cover_video_url;
 
   if (variant === "hero") {
     return (
       <Link to="/article/$slug" params={{ slug: article.slug }} preload="intent" className="group block">
-        <SmartImage src={cover} alt={article.title} width={700} height={440} loading="eager" aspectClass="aspect-[16/10] w-full" className="rounded-sm mb-4" />
+        {hasVideo ? (
+          <div className="relative aspect-[16/10] w-full rounded-sm mb-4 overflow-hidden bg-black">
+            <video
+              src={article.cover_video_url!}
+              poster={cover}
+              controls
+              playsInline
+              preload="metadata"
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+            <span className="absolute top-3 left-3 bg-black/70 text-white text-xs font-medium px-2 py-1 rounded flex items-center gap-1">
+              <Play className="h-3 w-3" /> Video
+            </span>
+          </div>
+        ) : (
+          <SmartImage src={cover} alt={article.title} width={700} height={440} loading="eager" aspectClass="aspect-[16/10] w-full" className="rounded-sm mb-4" />
+        )}
         <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{article.category}</span>
         <h3 className="font-serif text-xl md:text-2xl font-bold leading-tight mt-1 group-hover:underline decoration-1 underline-offset-4">
           {article.title}
@@ -618,7 +644,23 @@ function NewspaperArticleCard({ article, variant = "standard" }: { article: Arti
 
   return (
     <Link to="/article/$slug" params={{ slug: article.slug }} className="group block">
-      <SmartImage src={cover} alt={article.title} width={400} height={250} loading="lazy" aspectClass="aspect-[16/10] w-full" className="rounded-sm mb-3" />
+      {hasVideo ? (
+        <div className="relative aspect-[16/10] w-full rounded-sm mb-3 overflow-hidden bg-black">
+          <video
+            src={article.cover_video_url!}
+            poster={cover}
+            controls
+            playsInline
+            preload="metadata"
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+          <span className="absolute top-2 left-2 bg-black/70 text-white text-xs font-medium px-1.5 py-0.5 rounded flex items-center gap-1">
+            <Play className="h-3 w-3" />
+          </span>
+        </div>
+      ) : (
+        <SmartImage src={cover} alt={article.title} width={400} height={250} loading="lazy" aspectClass="aspect-[16/10] w-full" className="rounded-sm mb-3" />
+      )}
       <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{article.category}</span>
       <h4 className="font-serif text-base font-bold leading-snug mt-1 group-hover:underline decoration-1 underline-offset-4 line-clamp-2">
         {article.title}
@@ -630,5 +672,52 @@ function NewspaperArticleCard({ article, variant = "standard" }: { article: Arti
         </span>
       )}
     </Link>
+  );
+}
+
+function WordOfDaySection({ word }: { word: WordOfDay }) {
+  return (
+    <div className="mt-8 p-6 border-2 rule rounded-sm bg-muted/30">
+      <div className="flex items-center gap-2 mb-4">
+        <BookOpen className="h-5 w-5" />
+        <h3 className="font-serif text-xl font-bold">Expand Your Vocabulary</h3>
+        <span className="text-xs text-muted-foreground ml-auto uppercase tracking-wider">Word of the Day</span>
+      </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        <div>
+          <div className="flex items-baseline gap-3 flex-wrap">
+            <h4 className="font-serif text-2xl font-bold">{word.word}</h4>
+            {word.pronunciation && <span className="text-sm text-muted-foreground italic">{word.pronunciation}</span>}
+            {word.part_of_speech && <span className="text-xs uppercase tracking-wider text-muted-foreground border border-foreground/20 px-2 py-0.5 rounded">{word.part_of_speech}</span>}
+          </div>
+          {word.meaning && <p className="text-sm mt-2 leading-relaxed">{word.meaning}</p>}
+          {word.example && (
+            <p className="text-sm italic text-muted-foreground mt-2 border-l-2 border-foreground/20 pl-3">{word.example}</p>
+          )}
+        </div>
+        <div className="space-y-3">
+          {word.synonyms.length > 0 && (
+            <div>
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Synonyms</span>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {word.synonyms.map((s) => (
+                  <span key={s} className="text-xs border border-foreground/20 px-2 py-0.5 rounded-full">{s}</span>
+                ))}
+              </div>
+            </div>
+          )}
+          {word.antonyms.length > 0 && (
+            <div>
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Antonyms</span>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {word.antonyms.map((a) => (
+                  <span key={a} className="text-xs border border-foreground/20 px-2 py-0.5 rounded-full">{a}</span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

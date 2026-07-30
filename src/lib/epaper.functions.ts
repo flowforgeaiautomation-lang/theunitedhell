@@ -19,7 +19,7 @@ function publicClient() {
 }
 
 const SUMMARY_COLS =
-  "id,slug,title,dek,category,subcategory,cover_image_url,cover_video_url,read_time_minutes,country_code,featured_slot,published_at,created_at,view_count,like_count,bookmark_count,comment_count";
+  "id,slug,title,dek,category,subcategory,cover_image_url,cover_video_url,read_time_minutes,country_code,featured_slot,published_at,created_at,view_count,like_count,bookmark_count,comment_count,trending_score";
 
 export type MarketSnap = {
   symbol: string;
@@ -43,6 +43,16 @@ export type EpaperPage = {
   heroArticle: ArticleSummary | null;
 };
 
+export type WordOfDay = {
+  word: string;
+  pronunciation: string | null;
+  part_of_speech: string | null;
+  meaning: string | null;
+  example: string | null;
+  synonyms: string[];
+  antonyms: string[];
+};
+
 export type EpaperData = {
   date: string;
   dateDisplay: string;
@@ -58,6 +68,7 @@ export type EpaperData = {
   thisDayHistory: string[];
   photoOfDay: { url: string; caption: string; credit: string };
   weather: { temp: string; condition: string; location: string };
+  wordOfDay: WordOfDay;
 };
 
 export type ArchiveEntry = {
@@ -145,6 +156,16 @@ const WEATHER_OPTIONS = [
   { temp: "19°C", condition: "Light Rain", location: "Global Edition" },
   { temp: "25°C", condition: "Misty Morning", location: "Global Edition" },
 ];
+
+const WORD_FALLBACK: WordOfDay = {
+  word: "curiosity",
+  pronunciation: "/ˌkjʊərɪˈɒsɪti/",
+  part_of_speech: "noun",
+  meaning: "A strong desire to learn or know something; inquisitiveness.",
+  example: "Her curiosity about the natural world led her to become a scientist.",
+  synonyms: ["inquisitiveness", "interest", "eagerness", "wonder"],
+  antonyms: ["indifference", "apathy", "boredom"],
+};
 
 function pickDaily<T>(arr: T[], dateKey: string): T {
   const seed = dateKey.split("-").reduce((a, b) => a + parseInt(b, 10), 0);
@@ -363,6 +384,31 @@ export const getEpaperData = createServerFn({ method: "GET" }).validator(
     credit: "The United Hell",
   };
 
+  let wordOfDay: WordOfDay = WORD_FALLBACK;
+  try {
+    const supabase2 = publicClient();
+    const seed = dateStr.split("-").reduce((a, b) => a + parseInt(b, 10), 0);
+    const { data: vocabRows } = await supabase2
+      .from("vocabulary_cache")
+      .select("word,part_of_speech,meaning,example,synonyms,antonyms,pronunciation")
+      .order("search_count", { ascending: false, nullsFirst: false })
+      .range(seed % 200, (seed % 200) + 1);
+    if (vocabRows && vocabRows.length > 0) {
+      const v = vocabRows[0] as any;
+      wordOfDay = {
+        word: v.word ?? "curiosity",
+        pronunciation: v.pronunciation ?? null,
+        part_of_speech: v.part_of_speech ?? null,
+        meaning: v.meaning ?? null,
+        example: v.example ?? null,
+        synonyms: Array.isArray(v.synonyms) ? v.synonyms : [],
+        antonyms: Array.isArray(v.antonyms) ? v.antonyms : [],
+      };
+    }
+  } catch (err) {
+    console.error("[epaper] word of day error:", err);
+  }
+
   return {
     date: dateStr,
     dateDisplay,
@@ -378,6 +424,7 @@ export const getEpaperData = createServerFn({ method: "GET" }).validator(
     thisDayHistory,
     photoOfDay,
     weather,
+    wordOfDay,
   } as EpaperData;
 });
 
