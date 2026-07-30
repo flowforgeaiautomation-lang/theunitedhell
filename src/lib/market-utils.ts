@@ -41,6 +41,7 @@ export const CURRENCY_OPTIONS: { code: Currency; label: string; symbol: string }
   { code: "JPY", label: "JPY — Japanese Yen", symbol: "¥" },
 ];
 
+// Approximate static FX rates (for display currency conversion only)
 const FX_RATES: Record<Currency, number> = {
   USD: 1,
   INR: 83.5,
@@ -98,45 +99,86 @@ export function useMarketPrices(refreshMs = 15_000) {
   return { prices, loading, lastUpdate };
 }
 
-export function convertPrice(price: number | null, from: string | null | undefined, to: Currency): number | null {
-  if (price === null) return null;
-  const fromCur = (from || "USD") as Currency;
-  const usd = price / (FX_RATES[fromCur] || 1);
-  return usd * FX_RATES[to];
+// Convert a USD price to the display currency (for optional secondary display only)
+export function convertUsdToCurrency(usdPrice: number, to: Currency): number {
+  return usdPrice * FX_RATES[to];
 }
 
-export function formatPrice(price: number | null, currency: Currency, origCurrency?: string | null, unit?: string | null): string {
-  if (price === null) return "—";
-  const sym = CURRENCY_SYMBOLS[currency];
-  const converted = convertPrice(price, origCurrency, currency);
-  if (converted === null) return "—";
-  let decimals: number;
-  if (converted >= 100_000) decimals = 0;
-  else if (converted >= 1_000) decimals = 2;
-  else if (converted >= 1) decimals = 2;
-  else decimals = 4;
-  const formatted = converted.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
-  return `${sym}${formatted}${unit ?? ""}`;
+// Format the PRIMARY value in its native format — indices use "pts", forex uses pair notation,
+// commodities use currency + unit, crypto uses $ by default
+export function formatNativePrice(quote: MarketPrice): string {
+  if (!quote.available || quote.price === null) return "Live data temporarily unavailable";
+  const price = quote.price;
+  const category = quote.category;
+
+  if (category === "indices") {
+    // Indices are in points — show with thousands separators, 2 decimals
+    const formatted = price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return `${formatted} pts`;
+  }
+
+  if (category === "forex") {
+    // Forex: show the exchange rate with appropriate precision
+    const decimals = price >= 100 ? 2 : price >= 10 ? 3 : 4;
+    return price.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  }
+
+  if (category === "crypto") {
+    // Crypto: native is USD
+    return `$${price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+
+  // Commodities: currency symbol + unit
+  const curSym = CURRENCY_SYMBOLS[(quote.currency as Currency) || "USD"] || "$";
+  const unit = quote.unit ?? "";
+  return `${curSym}${price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${unit}`;
 }
 
-export function formatChange(
-  change: number | null,
-  changePercent: number | null,
-  currency: Currency,
-  origCurrency?: string | null,
-): { text: string; isPositive: boolean; isNeutral: boolean } {
-  if (change === null && changePercent === null) return { text: "—", isPositive: false, isNeutral: true };
-  const sym = CURRENCY_SYMBOLS[currency];
-  const converted = convertPrice(change, origCurrency, currency);
-  const arrow = converted !== null ? (converted >= 0 ? "▲" : "▼") : "";
-  const chgStr = converted !== null
-    ? `${converted >= 0 ? "+" : "-"}${sym}${Math.abs(converted).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-    : "";
-  const pctStr = changePercent !== null ? `${changePercent >= 0 ? "+" : ""}${changePercent.toFixed(2)}%` : "";
+// Optional secondary value — convert crypto/commodities (USD-denominated) to display currency
+export function formatConvertedPrice(quote: MarketPrice, displayCurrency: Currency): string | null {
+  if (!quote.available || quote.price === null) return null;
+  const category = quote.category;
+
+  // Only convert USD-denominated instruments (crypto, commodities)
+  // Never convert indices (they're in points) or forex (they're exchange rates)
+  if (category === "indices" || category === "forex") return null;
+  if (category !== "crypto" && category !== "commodities") return null;
+  // Only show conversion if display currency differs from native currency
+  const nativeCur = (quote.currency as Currency) || "USD";
+  if (nativeCur === displayCurrency) return null;
+
+  const sym = CURRENCY_SYMBOLS[displayCurrency];
+  const converted = convertUsdToCurrency(price, displayCurrency);
+  return `≈ ${sym}${converted.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+// Format absolute change and percentage change in native currency
+export function formatNativeChange(quote: MarketPrice): { text: string; isPositive: boolean; isNeutral: boolean } {
+  if (!quote.available || (quote.change === null && quote.change_percent === null)) {
+    return { text: "—", isPositive: false, isNeutral: true };
+  }
+  const category = quote.category;
+  const change = quote.change ?? 0;
+  const changePct = quote.change_percent ?? 0;
+  const arrow = change >= 0 ? "▲" : "▼";
+  const sign = change >= 0 ? "+" : "-";
+
+  let chgStr: string;
+  if (category === "indices") {
+    chgStr = `${sign}${Math.abs(change).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  } else if (category === "forex") {
+    const decimals = Math.abs(change) >= 100 ? 2 : Math.abs(change) >= 1 ? 3 : 4;
+    chgStr = `${sign}${Math.abs(change).toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
+  } else {
+    const curSym = CURRENCY_SYMBOLS[(quote.currency as Currency) || "USD"] || "$";
+    chgStr = `${sign}${curSym}${Math.abs(change).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+
+  const pctStr = `${changePct >= 0 ? "+" : ""}${changePct.toFixed(2)}%`;
   return {
-    text: `${arrow} ${chgStr} (${pctStr})`.trim(),
-    isPositive: (changePercent ?? 0) > 0,
-    isNeutral: changePercent === 0 || (changePercent === null && change === null),
+    text: `${arrow} ${chgStr} (${pctStr})`,
+    isPositive: changePct > 0,
+    isNeutral: changePct === 0,
   };
 }
 
@@ -151,10 +193,11 @@ export function formatTime(ts: string | null, timezone?: string | null): string 
   }
 }
 
-export type MarketStatus = "open" | "closed" | "pre" | "after" | "always";
+export type MarketStatus = "open" | "closed" | "pre" | "after" | "always" | "forex";
 
 export function getMarketStatus(timezone: string | null, category: string): MarketStatus {
-  if (category === "crypto" || category === "forex") return "always";
+  if (category === "crypto") return "always";
+  if (category === "forex") return "forex";
   if (!timezone) return "closed";
   try {
     const now = new Date();
@@ -164,8 +207,11 @@ export function getMarketStatus(timezone: string | null, category: string): Mark
     const totalMin = local.getHours() * 60 + local.getMinutes();
     const isWeekday = day >= 1 && day <= 5;
     if (!isWeekday) return "closed";
-    if (totalMin >= 540 && totalMin < 600) return "pre";
-    if (totalMin >= 600 && totalMin < 960) return "open";
+    // Market hours: 9:30 AM to 4:00 PM local time (standard for most exchanges)
+    // Pre-market: 8:00 AM to 9:30 AM
+    // After hours: 4:00 PM to 8:00 PM
+    if (totalMin >= 480 && totalMin < 570) return "pre";
+    if (totalMin >= 570 && totalMin < 960) return "open";
     if (totalMin >= 960 && totalMin < 1200) return "after";
     return "closed";
   } catch {
@@ -173,12 +219,13 @@ export function getMarketStatus(timezone: string | null, category: string): Mark
   }
 }
 
-export const MARKET_STATUS_CONFIG: Record<MarketStatus, { label: string; dot: string; text: string }> = {
-  open: { label: "Market Open", dot: "bg-green-500", text: "text-green-600 dark:text-green-400" },
-  closed: { label: "Market Closed", dot: "bg-red-500", text: "text-red-600 dark:text-red-400" },
-  pre: { label: "Pre-Market", dot: "bg-yellow-500", text: "text-yellow-600 dark:text-yellow-400" },
-  after: { label: "After Hours", dot: "bg-orange-500", text: "text-orange-600 dark:text-orange-400" },
-  always: { label: "Live 24/7", dot: "bg-green-500", text: "text-green-600 dark:text-green-400" },
+export const MARKET_STATUS_CONFIG: Record<MarketStatus, { label: string; emoji: string; dot: string; text: string }> = {
+  open: { label: "Market Open", emoji: "🟢", dot: "bg-green-500", text: "text-green-600 dark:text-green-400" },
+  closed: { label: "Market Closed", emoji: "🔴", dot: "bg-red-500", text: "text-red-600 dark:text-red-400" },
+  pre: { label: "Pre-Market", emoji: "🟡", dot: "bg-yellow-500", text: "text-yellow-600 dark:text-yellow-400" },
+  after: { label: "After Hours", emoji: "🟠", dot: "bg-orange-500", text: "text-orange-600 dark:text-orange-400" },
+  always: { label: "Live 24/7", emoji: "🌐", dot: "bg-green-500", text: "text-green-600 dark:text-green-400" },
+  forex: { label: "Live (Forex)", emoji: "🌍", dot: "bg-green-500", text: "text-green-600 dark:text-green-400" },
 };
 
 export function formatVolume(vol: number | null): string {
@@ -192,10 +239,28 @@ export function formatVolume(vol: number | null): string {
 export function formatMarketCap(cap: number | null, currency: Currency): string {
   if (cap === null || cap <= 0) return "—";
   const sym = CURRENCY_SYMBOLS[currency];
-  const converted = convertPrice(cap, "USD", currency);
-  if (converted === null) return "—";
+  const converted = convertUsdToCurrency(cap, currency);
   if (converted >= 1_000_000_000_000) return `${sym}${(converted / 1_000_000_000_000).toFixed(2)}T`;
   if (converted >= 1_000_000_000) return `${sym}${(converted / 1_000_000_000).toFixed(2)}B`;
   if (converted >= 1_000_000) return `${sym}${(converted / 1_000_000).toFixed(2)}M`;
   return `${sym}${converted.toLocaleString("en-US")}`;
+}
+
+// Format a detail value (for tooltips) in native format
+export function formatDetailValue(value: number | null, quote: MarketPrice): string {
+  if (value === null || value <= 0) return "—";
+  const category = quote.category;
+  if (category === "indices") {
+    return `${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} pts`;
+  }
+  if (category === "forex") {
+    const decimals = value >= 100 ? 2 : value >= 10 ? 3 : 4;
+    return value.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  }
+  if (category === "crypto") {
+    return `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+  const curSym = CURRENCY_SYMBOLS[(quote.currency as Currency) || "USD"] || "$";
+  const unit = quote.unit ?? "";
+  return `${curSym}${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${unit}`;
 }

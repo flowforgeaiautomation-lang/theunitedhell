@@ -3,11 +3,10 @@ import { useNavigate } from "@tanstack/react-router";
 import { TrendingUp, TrendingDown, Activity } from "lucide-react";
 import {
   fetchMarketPrices,
-  formatPrice,
-  formatChange,
+  formatNativePrice,
+  formatNativeChange,
   formatTime,
   type MarketPrice,
-  type Currency,
 } from "@/lib/market-utils";
 
 const FALLBACK: MarketPrice[] = [
@@ -42,14 +41,14 @@ function Sparkline({ positive, seed }: { positive: boolean; seed: number }) {
   );
 }
 
-function MarketCard({ quote, index, currency }: { quote: MarketPrice; index: number; currency: Currency }) {
+function MarketCard({ quote, index }: { quote: MarketPrice; index: number }) {
   const navigate = useNavigate();
   const positive = (quote.change_percent ?? 0) >= 0;
   const colorClass = quote.available
     ? positive ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
     : "text-muted-foreground";
-  const { text: changeText } = formatChange(quote.change, quote.change_percent, currency, quote.currency);
-  const priceText = quote.available ? formatPrice(quote.price, currency, quote.currency, quote.unit) : "Unavailable";
+  const { text: changeText } = formatNativeChange(quote);
+  const priceText = quote.available ? formatNativePrice(quote) : "Unavailable";
 
   function handleClick() { navigate({ to: "/markets", search: { asset: quote.symbol } }); }
   function handleKeyDown(e: React.KeyboardEvent) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleClick(); } }
@@ -96,8 +95,6 @@ export function MarketTicker() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [paused, setPaused] = useState(false);
   const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const currency: Currency = "USD";
 
   useEffect(() => {
     let mounted = true;
@@ -157,7 +154,7 @@ export function MarketTicker() {
           >
             {!loaded
               ? Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)
-              : quotes.map((q, i) => <MarketCard key={q.symbol} quote={q} index={i} currency={currency} />)}
+              : quotes.map((q, i) => <MarketCard key={q.symbol} quote={q} index={i} />)}
           </div>
         </div>
       </div>
