@@ -203,10 +203,11 @@ function CollapsibleGroup({ label, count, children, defaultOpen = true }: {
 function MarketsPage() {
   const search = useSearch({ from: "/markets" });
   const navigate = useNavigate();
-  const [currency, setCurrency] = useState<Currency>(() => {
-    try { return (localStorage.getItem("market-currency") as Currency) || "USD"; } catch { return "USD"; }
-  });
+  const [currency, setCurrency] = useState<Currency>("USD");
 
+  useEffect(() => {
+    try { const saved = localStorage.getItem("market-currency") as Currency | null; if (saved) setCurrency(saved); } catch { /* ignore */ }
+  }, []);
   useEffect(() => { try { localStorage.setItem("market-currency", currency); } catch { /* ignore */ } }, [currency]);
 
   const { prices, loading, lastUpdate } = useMarketPrices(15_000);
@@ -300,8 +301,7 @@ function MarketsPage() {
           <div className="flex items-center gap-2 mt-4 text-xs text-muted-foreground">
             <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse" />
             <span className="font-medium">Live</span><span>·</span>
-            <span>Updated {lastUpdate.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true })}</span>
-            <span>·</span><span>Auto-refreshes every 15 seconds</span>
+            <span>Auto-refreshes every 15 seconds</span>
           </div>
         )}
       </header>
@@ -323,7 +323,15 @@ function MarketsPage() {
           const groupQuotes = prices.filter((q) =>
             group.categories.includes(q.category) && group.regions.includes(q.region ?? "")
           );
-          if (groupQuotes.length === 0 && loading) return null;
+          if (groupQuotes.length === 0 && loading) {
+            return (
+              <CollapsibleGroup key={group.label} label={group.label} count={0}>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}
+                </div>
+              </CollapsibleGroup>
+            );
+          }
           if (groupQuotes.length === 0 && !loading) return null;
           return (
             <CollapsibleGroup key={group.label} label={group.label} count={groupQuotes.length}>

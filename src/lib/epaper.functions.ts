@@ -17,9 +17,9 @@ function publicClient() {
   });
 }
 
-// EXACT same column list as articles.functions.ts — includes cover_video_url + trending_score
+// EXACT same column list as articles.functions.ts listArticles — must match or query fails
 const SUMMARY_COLS =
-  "id,slug,title,dek,category,subcategory,cover_image_url,cover_video_url,read_time_minutes,country_code,featured_slot,published_at,created_at,view_count,like_count,bookmark_count,comment_count,trending_score";
+  "id,slug,title,dek,category,subcategory,cover_image_url,read_time_minutes,country_code,featured_slot,published_at,created_at,view_count,like_count,bookmark_count,comment_count";
 
 export type MarketSnap = {
   symbol: string;

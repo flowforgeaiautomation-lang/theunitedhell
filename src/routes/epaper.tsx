@@ -77,12 +77,6 @@ function EpaperPage() {
     else root.classList.remove("dark");
   }, [darkMode, mounted]);
 
-  useEffect(() => {
-    const root = document.documentElement;
-    if (darkMode) root.classList.add("dark");
-    else root.classList.remove("dark");
-  }, [darkMode]);
-
   // Never hang forever on "Loading..." — after 15s, show retry option
   useEffect(() => {
     if (isLoading) {
