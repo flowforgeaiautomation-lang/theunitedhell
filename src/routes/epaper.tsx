@@ -663,7 +663,7 @@ function categoryToDesk(category: string): string {
     movies: "Entertainment Desk", football: "Sports Desk", cricket: "Sports Desk",
     books: "Books Desk", psychology: "Psychology Desk", physics: "Science Desk",
     "electric-vehicles": "Auto Desk", sustainability: "Climate Desk", robotics: "AI Desk",
-    sport: "Sports Desk", business: "Business Desk",
+    sport: "Sports Desk",
   };
   return deskMap[category] || "Editorial Desk";
 }
@@ -738,7 +738,7 @@ function NewspaperArticleCard({ article, variant = "standard" }: { article: Arti
       {hasVideo ? (
         <div className="relative aspect-[16/10] w-full rounded-sm mb-3 overflow-hidden bg-black">
           <video
-            src={(article as any).cover_video_url!}
+            src={article.cover_video_url!}
             poster={cover}
             controls
             playsInline
