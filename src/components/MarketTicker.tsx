@@ -11,16 +11,16 @@ import {
 } from "@/lib/market-utils";
 
 const FALLBACK: MarketPrice[] = [
-  { symbol: "SENSEX", name: "Sensex", category: "indices", region: "India", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "", currency: "INR", exchange: "BSE" },
-  { symbol: "NIFTY50", name: "NIFTY 50", category: "indices", region: "India", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "", currency: "INR", exchange: "NSE" },
-  { symbol: "BANKNIFTY", name: "Bank NIFTY", category: "indices", region: "India", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "", currency: "INR", exchange: "NSE" },
-  { symbol: "DJI", name: "Dow Jones", category: "indices", region: "US", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "", currency: "USD", exchange: "NYSE" },
-  { symbol: "SPX", name: "S&P 500", category: "indices", region: "US", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "", currency: "USD", exchange: "NYSE" },
-  { symbol: "IXIC", name: "NASDAQ", category: "indices", region: "US", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "", currency: "USD", exchange: "NASDAQ" },
-  { symbol: "GOLD", name: "Gold", category: "commodities", region: "Global", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "", currency: "USD", unit: "/oz", exchange: "COMEX" },
-  { symbol: "BRENT", name: "Brent Crude", category: "commodities", region: "Global", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "", currency: "USD", unit: "/bbl", exchange: "ICE" },
-  { symbol: "BTC", name: "Bitcoin", category: "crypto", region: "Global", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "", currency: "USD", exchange: "CoinGecko" },
-  { symbol: "ETH", name: "Ethereum", category: "crypto", region: "Global", price: null, change: null, change_percent: null, source: null, available: false, updated_at: "", currency: "USD", exchange: "CoinGecko" },
+  { symbol: "SENSEX", name: "Sensex", category: "indices", region: "India", price: null, change: null, change_percent: null, source: null, available: false, updated_at: null, currency: "INR", exchange: "BSE" },
+  { symbol: "NIFTY50", name: "NIFTY 50", category: "indices", region: "India", price: null, change: null, change_percent: null, source: null, available: false, updated_at: null, currency: "INR", exchange: "NSE" },
+  { symbol: "BANKNIFTY", name: "Bank NIFTY", category: "indices", region: "India", price: null, change: null, change_percent: null, source: null, available: false, updated_at: null, currency: "INR", exchange: "NSE" },
+  { symbol: "DJI", name: "Dow Jones", category: "indices", region: "US", price: null, change: null, change_percent: null, source: null, available: false, updated_at: null, currency: "USD", exchange: "NYSE" },
+  { symbol: "SPX", name: "S&P 500", category: "indices", region: "US", price: null, change: null, change_percent: null, source: null, available: false, updated_at: null, currency: "USD", exchange: "NYSE" },
+  { symbol: "IXIC", name: "NASDAQ", category: "indices", region: "US", price: null, change: null, change_percent: null, source: null, available: false, updated_at: null, currency: "USD", exchange: "NASDAQ" },
+  { symbol: "GOLD", name: "Gold", category: "commodities", region: "Global", price: null, change: null, change_percent: null, source: null, available: false, updated_at: null, currency: "USD", unit: "/oz", exchange: "COMEX" },
+  { symbol: "BRENT", name: "Brent Crude", category: "commodities", region: "Global", price: null, change: null, change_percent: null, source: null, available: false, updated_at: null, currency: "USD", unit: "/bbl", exchange: "ICE" },
+  { symbol: "BTC", name: "Bitcoin", category: "crypto", region: "Global", price: null, change: null, change_percent: null, source: null, available: false, updated_at: null, currency: "USD", exchange: "CoinGecko" },
+  { symbol: "ETH", name: "Ethereum", category: "crypto", region: "Global", price: null, change: null, change_percent: null, source: null, available: false, updated_at: null, currency: "USD", exchange: "CoinGecko" },
 ];
 
 function Sparkline({ positive, seed }: { positive: boolean; seed: number }) {
@@ -51,13 +51,13 @@ function MarketCard({ quote, index, currency }: { quote: MarketPrice; index: num
   const { text: changeText } = formatChange(quote.change, quote.change_percent, currency, quote.currency);
   const priceText = quote.available ? formatPrice(quote.price, currency, quote.currency, quote.unit) : "Unavailable";
 
-  function handleClick() {
-    navigate({ to: "/markets", search: { asset: quote.symbol } });
-  }
+  function handleClick() { navigate({ to: "/markets", search: { asset: quote.symbol } }); }
+  function handleKeyDown(e: React.KeyboardEvent) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleClick(); } }
 
   return (
     <button
       onClick={handleClick}
+      onKeyDown={handleKeyDown}
       className="flex items-center gap-3 px-4 py-2 border-r rule shrink-0 whitespace-nowrap hover:bg-foreground/[0.03] transition-colors text-left min-w-[240px] focus:outline-none focus:ring-2 focus:ring-foreground/40"
       aria-label={`${quote.name}, ${quote.available ? `${priceText}, ${changeText}` : "data temporarily unavailable"}. Click to view ${quote.name} market news.`}
       tabIndex={0}
@@ -101,24 +101,14 @@ export function MarketTicker() {
 
   useEffect(() => {
     let mounted = true;
-
     async function load() {
       const data = await fetchMarketPrices();
-      if (mounted && data.length > 0) {
-        setQuotes(data);
-        setLoaded(true);
-      } else if (mounted) {
-        setLoaded(true);
-      }
+      if (mounted && data.length > 0) { setQuotes(data); setLoaded(true); }
+      else if (mounted) { setLoaded(true); }
     }
-
     load();
     const interval = setInterval(load, 15_000);
-
-    return () => {
-      mounted = false;
-      clearInterval(interval);
-    };
+    return () => { mounted = false; clearInterval(interval); };
   }, []);
 
   useEffect(() => {
@@ -143,23 +133,15 @@ export function MarketTicker() {
     scrollTimerRef.current = setTimeout(() => setPaused(false), 10_000);
   }
 
-  useEffect(() => {
-    return () => { if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current); };
-  }, []);
+  useEffect(() => { return () => { if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current); }; }, []);
 
   return (
-    <section
-      className="border-b rule bg-background overflow-hidden"
-      aria-label="Live Global Markets"
-      role="region"
-    >
+    <section className="border-b rule bg-background overflow-hidden" aria-label="Live Global Markets" role="region">
       <div className="container-edit">
         <div className="flex items-center gap-3 py-2">
           <div className="flex items-center gap-1.5 shrink-0 pr-3 border-r rule" aria-hidden="true">
             <Activity className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="text-[0.6rem] uppercase tracking-widest font-semibold text-muted-foreground hidden sm:inline">
-              Live Markets
-            </span>
+            <span className="text-[0.6rem] uppercase tracking-widest font-semibold text-muted-foreground hidden sm:inline">Live Markets</span>
           </div>
           <div
             ref={scrollRef}
