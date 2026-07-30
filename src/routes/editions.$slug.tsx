@@ -83,20 +83,23 @@ function BookDetailPage() {
       {/* Background */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute inset-0 bg-gradient-to-b from-[#090705] via-[#0F0906] to-[#140B07]" />
-        {Array.from({ length: 40 }).map((_, i) => (
-          <div
-            key={i}
-            className="absolute rounded-full bg-[#FFF2D8]"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              width: `${Math.random() * 1.5 + 0.5}px`,
-              height: `${Math.random() * 1.5 + 0.5}px`,
-              opacity: 0.3,
-              animation: `twinkle ${Math.random() * 3 + 2}s ease-in-out ${Math.random() * 5}s infinite`,
-            }}
-          />
-        ))}
+        {Array.from({ length: 40 }).map((_, i) => {
+          const seed = (n: number) => ((Math.sin(n * 12.9898 + 78.233) * 43758.5453) % 1 + 1) % 1;
+          return (
+            <div
+              key={i}
+              className="absolute rounded-full bg-[#FFF2D8]"
+              style={{
+                left: `${seed(i) * 100}%`,
+                top: `${seed(i + 100) * 100}%`,
+                width: `${seed(i + 200) * 1.5 + 0.5}px`,
+                height: `${seed(i + 200) * 1.5 + 0.5}px`,
+                opacity: 0.3,
+                animation: `twinkle ${seed(i + 300) * 3 + 2}s ease-in-out ${seed(i + 400) * 5}s infinite`,
+              }}
+            />
+          );
+        })}
       </div>
 
       {/* Breadcrumbs */}

@@ -45,6 +45,7 @@ export function SiteHeader() {
   const router = useRouter();
   const [isHidden, setIsHidden] = useState(false);
   const ticking = useRef(false);
+  const [dateLabel, setDateLabel] = useState("");
 
   const isDark = prefs.theme === "dark" || prefs.theme === "midnight" ||
     (prefs.theme === "system" && typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches);
@@ -109,12 +110,12 @@ export function SiteHeader() {
     window.dispatchEvent(new Event("tuh-preferences"));
   }
 
-  const dateLabel = new Date().toLocaleDateString(undefined, {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  useEffect(() => {
+    const d = new Date();
+    const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    setDateLabel(`${weekdays[d.getDay()]}, ${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`);
+  }, []);
 
   return (
     <header
@@ -322,7 +323,7 @@ export function SiteFooter({ signedIn = false }: SiteFooterProps) {
         </div>
       </div>
       <div className="container-edit mt-10 pt-6 border-t rule flex flex-col gap-2 text-xs text-muted-foreground text-center md:text-left">
-        <div>© {new Date().getFullYear()} The United Hell.</div>
+        <div>© 2025 The United Hell.</div>
         <div>Exploring the world through knowledge, discovery, and truth.</div>
         <div>Powered by verified sources, human oversight, and artificial intelligence.</div>
         <div>All rights reserved.</div>

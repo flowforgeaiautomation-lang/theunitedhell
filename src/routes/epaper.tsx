@@ -5,7 +5,7 @@ import {
   Newspaper, Clock, TrendingUp, TrendingDown, Sun, Moon, Type,
   ArrowRight, ArrowLeft, ArrowRight as ArrowNext, Quote, CalendarDays,
   Camera, BarChart3, Globe, Sparkles, ChevronLeft, ChevronRight,
-  List, X, Home, Bookmark, Share2, Volume2, BookOpen, Play, Headphones,
+  List, X, Home, Bookmark, Share2, Volume2, BookOpen, Headphones,
   Calendar, Lightbulb, Building2, Loader2,
 } from "lucide-react";
 import { getEpaperData, type EpaperData, type EpaperPage, type WordOfDay } from "@/lib/epaper.functions";
@@ -674,30 +674,13 @@ function categoryToDesk(category: string): string {
 
 function NewspaperArticleCard({ article, variant = "standard" }: { article: ArticleSummary; variant?: "hero" | "compact" | "standard" }) {
   const cover = article.cover_image_url || fallbackCoverUrl(article);
-  const hasVideo = !!(article as any).cover_video_url;
   const pubDate = formatDate(article.published_at || article.created_at);
   const desk = categoryToDesk(article.category);
 
   if (variant === "hero") {
     return (
       <Link to="/article/$slug" params={{ slug: article.slug }} preload="intent" className="group block">
-        {hasVideo ? (
-          <div className="relative aspect-[16/10] w-full rounded-sm mb-4 overflow-hidden bg-black">
-            <video
-              src={(article as any).cover_video_url!}
-              poster={cover}
-              controls
-              playsInline
-              preload="metadata"
-              className="absolute inset-0 h-full w-full object-cover"
-            />
-            <span className="absolute top-3 left-3 bg-black/70 text-white text-xs font-medium px-2 py-1 rounded flex items-center gap-1">
-              <Play className="h-3 w-3" /> Video
-            </span>
-          </div>
-        ) : (
-          <SmartImage src={cover} alt={article.title} width={700} height={440} loading="eager" aspectClass="aspect-[16/10] w-full" className="rounded-sm mb-4" />
-        )}
+        <SmartImage src={cover} alt={article.title} width={700} height={440} loading="eager" aspectClass="aspect-[16/10] w-full" className="rounded-sm mb-4" />
         <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{article.category}</span>
         <h3 className="font-serif text-xl md:text-2xl font-bold leading-tight mt-1 group-hover:underline decoration-1 underline-offset-4">
           {article.title}
@@ -739,23 +722,7 @@ function NewspaperArticleCard({ article, variant = "standard" }: { article: Arti
 
   return (
     <Link to="/article/$slug" params={{ slug: article.slug }} className="group block">
-      {hasVideo ? (
-        <div className="relative aspect-[16/10] w-full rounded-sm mb-3 overflow-hidden bg-black">
-          <video
-            src={(article as any).cover_video_url!}
-            poster={cover}
-            controls
-            playsInline
-            preload="metadata"
-            className="absolute inset-0 h-full w-full object-cover"
-          />
-          <span className="absolute top-2 left-2 bg-black/70 text-white text-xs font-medium px-1.5 py-0.5 rounded flex items-center gap-1">
-            <Play className="h-3 w-3" />
-          </span>
-        </div>
-      ) : (
-        <SmartImage src={cover} alt={article.title} width={400} height={250} loading="lazy" aspectClass="aspect-[16/10] w-full" className="rounded-sm mb-3" />
-      )}
+      <SmartImage src={cover} alt={article.title} width={400} height={250} loading="lazy" aspectClass="aspect-[16/10] w-full" className="rounded-sm mb-3" />
       <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{article.category}</span>
       <h4 className="font-serif text-base font-bold leading-snug mt-1 group-hover:underline decoration-1 underline-offset-4 line-clamp-2">
         {article.title}

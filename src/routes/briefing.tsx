@@ -5,6 +5,13 @@ import { canonicalUrl, SITE_NAME, SITE_LOGO } from "@/lib/seo";
 
 const briefingQ = queryOptions({ queryKey: ["briefing"], queryFn: () => getBriefingToday() });
 
+function formatFixedDate(dateStr: string): string {
+  const d = new Date(dateStr + "T00:00:00Z");
+  const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  return `${weekdays[d.getUTCDay()]}, ${months[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
+}
+
 export const Route = createFileRoute("/briefing")({
   head: () => ({
     meta: [
@@ -37,8 +44,8 @@ export const Route = createFileRoute("/briefing")({
 function BriefingPage() {
   const { data: briefing } = useSuspenseQuery(briefingQ);
   const dateStr = briefing
-    ? new Date(briefing.briefing_date).toLocaleDateString(undefined, { dateStyle: "full" })
-    : new Date().toLocaleDateString(undefined, { dateStyle: "full" });
+    ? formatFixedDate(briefing.briefing_date)
+    : formatFixedDate(new Date().toISOString().slice(0, 10));
 
   return (
     <div className="container-edit py-10 md:py-16">
