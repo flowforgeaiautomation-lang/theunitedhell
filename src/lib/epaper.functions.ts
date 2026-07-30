@@ -1,21 +1,40 @@
 import { createServerFn } from "@tanstack/react-start";
-import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@/integrations/supabase/types";
 import type { ArticleSummary } from "./types";
 
-const SUPABASE_URL = "https://myrteqlcfwckgdokzzhg.supabase.co";
+const SUPABASE_URL =
+  (import.meta as any).env?.VITE_SUPABASE_URL ||
+  process.env.SUPABASE_URL ||
+  process.env.VITE_SUPABASE_URL ||
+  "https://myrteqlcfwckgdokzzhg.supabase.co";
+
 const SUPABASE_ANON_KEY =
+  (import.meta as any).env?.VITE_SUPABASE_ANON_KEY ||
+  process.env.SUPABASE_ANON_KEY ||
+  process.env.VITE_SUPABASE_ANON_KEY ||
+  process.env.SUPABASE_PUBLISHABLE_KEY ||
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im15cnRlcWxjZndja2dkb2t6emhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3MjE4OTgsImV4cCI6MjA5ODI5Nzg5OH0.lGAyAxmYrJAag1yONChoqV4-A1QQAkdWKxZp5IMJyII";
 
-function publicClient() {
-  const url = process.env.SUPABASE_URL || SUPABASE_URL;
-  const key =
-    process.env.SUPABASE_PUBLISHABLE_KEY ||
-    process.env.SUPABASE_ANON_KEY ||
-    SUPABASE_ANON_KEY;
-  return createClient<Database>(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false, storage: undefined },
-  });
+function supabaseHeaders() {
+  return {
+    apikey: SUPABASE_ANON_KEY,
+    Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    "Content-Type": "application/json",
+  };
+}
+
+async function supabaseSelect(table: string, select: string, params: Record<string, string>): Promise<any[]> {
+  const url = new URL(`${SUPABASE_URL}/rest/v1/${table}`);
+  url.searchParams.set("select", select);
+  for (const [k, v] of Object.entries(params)) {
+    url.searchParams.set(k, v);
+  }
+  const res = await fetch(url.toString(), { headers: supabaseHeaders() });
+  if (!res.ok) {
+    const text = await res.text();
+    console.error(`[epaper] supabaseSelect ${table} failed: ${res.status} ${text}`);
+    return [];
+  }
+  return await res.json();
 }
 
 const SUMMARY_COLS =
@@ -180,11 +199,9 @@ function dateToNumber(dateStr: string): number {
 
 async function fetchMarketSnapshot(): Promise<MarketSnap[]> {
   try {
-    const url = process.env.SUPABASE_URL || SUPABASE_URL;
-    const key = process.env.SUPABASE_ANON_KEY || SUPABASE_ANON_KEY;
     const res = await fetch(
-      `${url}/rest/v1/market_prices?select=symbol,name,category,region,price,change,change_percent,available&order=symbol.asc`,
-      { headers: { apikey: key, Authorization: `Bearer ${key}` } }
+      `${SUPABASE_URL}/rest/v1/market_prices?select=symbol,name,category,region,price,change,change_percent,available&order=symbol.asc`,
+      { headers: supabaseHeaders() }
     );
     if (!res.ok) return [];
     const data = await res.json();
@@ -330,33 +347,28 @@ export const getEpaperData = createServerFn({ method: "GET" }).validator(
 
   let articles: ArticleSummary[] = [];
   try {
-    const supabase = publicClient();
-    const startDate = new Date(dateStr + "T00:00:00");
-    const endDate = new Date(dateStr + "T23:59:59");
-
-    let query = supabase
-      .from("articles")
-      .select(SUMMARY_COLS)
-      .eq("is_published", true)
-      .order("published_at", { ascending: false });
-
+    const params: Record<string, string> = {
+      "is_published": "eq.true",
+      "order": "published_at.desc",
+      "limit": "500",
+    };
     if (inputDate) {
-      query = query.gte("published_at", startDate.toISOString()).lte("published_at", endDate.toISOString());
+      const startDate = new Date(dateStr + "T00:00:00").toISOString();
+      const endDate = new Date(dateStr + "T23:59:59").toISOString();
+      params["published_at"] = `gte.${startDate}`;
+      params["published_at"] = `lte.${endDate}`;
     }
 
-    const { data: rows, error } = await query.limit(500);
+    const rows = await supabaseSelect("articles", SUMMARY_COLS, params);
 
-    if (error) {
-      console.error("[epaper] articles query error:", error.message);
-    }
-
-    const allArticles = (rows ?? []) as unknown as ArticleSummary[];
+    const allArticles = rows as unknown as ArticleSummary[];
     const seen = new Set<string>();
     articles = allArticles.filter((a) => {
       if (!a.id || seen.has(a.id)) return false;
       seen.add(a.id);
       return true;
     });
+    console.log(`[epaper] fetched ${articles.length} articles`);
   } catch (err) {
     console.error("[epaper] failed to fetch articles:", err);
   }
@@ -386,13 +398,13 @@ export const getEpaperData = createServerFn({ method: "GET" }).validator(
 
   let wordOfDay: WordOfDay = WORD_FALLBACK;
   try {
-    const supabase2 = publicClient();
     const seed = dateStr.split("-").reduce((a, b) => a + parseInt(b, 10), 0);
-    const { data: vocabRows } = await supabase2
-      .from("vocabulary_cache")
-      .select("word,part_of_speech,meaning,example,synonyms,antonyms,pronunciation")
-      .order("search_count", { ascending: false, nullsFirst: false })
-      .range(seed % 200, (seed % 200) + 1);
+    const offset = seed % 200;
+    const vocabRows = await supabaseSelect(
+      "vocabulary_cache",
+      "word,part_of_speech,meaning,example,synonyms,antonyms,pronunciation",
+      { "order": "search_count.desc.nullslast", "limit": "2", "offset": String(offset) },
+    );
     if (vocabRows && vocabRows.length > 0) {
       const v = vocabRows[0] as any;
       wordOfDay = {
@@ -430,15 +442,13 @@ export const getEpaperData = createServerFn({ method: "GET" }).validator(
 
 export const getArchiveList = createServerFn({ method: "GET" }).handler(async () => {
   try {
-    const supabase = publicClient();
-    const { data: rows, error } = await supabase
-      .from("articles")
-      .select("published_at, cover_image_url, title, category")
-      .eq("is_published", true)
-      .order("published_at", { ascending: false })
-      .limit(500);
+    const rows = await supabaseSelect(
+      "articles",
+      "published_at,cover_image_url,title,category",
+      { "is_published": "eq.true", "order": "published_at.desc", "limit": "500" },
+    );
 
-    if (error || !rows || rows.length === 0) return [];
+    if (!rows || rows.length === 0) return [];
 
     const byDate = new Map<string, { articles: typeof rows; cover: typeof rows[0] | null }>();
     for (const row of rows) {
