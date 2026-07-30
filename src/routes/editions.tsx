@@ -147,7 +147,7 @@ function EditionsPage() {
           ) : (
             <div className="divide-y divide-border border-y border-border">
               <Link
-                to="/editions/epaper"
+                to="/epaper"
                 className="group flex items-center gap-4 sm:gap-6 py-5 px-2 sm:px-4 transition-colors animate-fade-in cursor-pointer hover:bg-muted/50 bg-muted/30"
                 style={{ animationDelay: "0ms" }}
               >
