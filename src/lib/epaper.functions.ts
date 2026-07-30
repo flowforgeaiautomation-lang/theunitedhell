@@ -341,43 +341,28 @@ export const getEpaperData = createServerFn({ method: "GET" })
     });
     const editionNumber = dateToNumber(dateStr);
 
-    // EXACT same query pattern as the homepage's listArticles — no try/catch
-    // that swallows errors. If this fails, the error propagates to the UI.
-    // Paginate to fetch ALL published articles — no artificial limit.
+    // Single query — fast, one round trip. Supabase supports up to 1000 rows.
     const supabase = publicClient();
-    const allArticles: ArticleSummary[] = [];
-    const PAGE_SIZE = 200;
-    let offset = 0;
-    let hasMore = true;
+    let query = supabase
+      .from("articles")
+      .select(SUMMARY_COLS)
+      .eq("is_published", true)
+      .order("published_at", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(1000);
 
-    while (hasMore) {
-      let pageQuery = supabase
-        .from("articles")
-        .select(SUMMARY_COLS)
-        .eq("is_published", true)
-        .order("published_at", { ascending: false })
-        .order("id", { ascending: false })
-        .range(offset, offset + PAGE_SIZE - 1);
-
-      if (inputDate) {
-        const startDate = new Date(dateStr + "T00:00:00").toISOString();
-        const endDate = new Date(dateStr + "T23:59:59").toISOString();
-        pageQuery = pageQuery.gte("published_at", startDate).lte("published_at", endDate);
-      }
-
-      const { data: rows, error } = await pageQuery;
-      if (error) throw new Error(`Epaper article query failed: ${error.message}`);
-
-      const pageRows = (rows ?? []) as unknown as ArticleSummary[];
-      for (const row of pageRows) allArticles.push(row);
-
-      hasMore = pageRows.length === PAGE_SIZE;
-      offset += PAGE_SIZE;
+    if (inputDate) {
+      const startDate = new Date(dateStr + "T00:00:00").toISOString();
+      const endDate = new Date(dateStr + "T23:59:59").toISOString();
+      query = query.gte("published_at", startDate).lte("published_at", endDate);
     }
+
+    const { data: rows, error } = await query;
+    if (error) throw new Error(`Epaper article query failed: ${error.message}`);
 
     // Deduplicate by ID
     const seen = new Set<string>();
-    const articles: ArticleSummary[] = allArticles.filter((a) => {
+    const articles: ArticleSummary[] = ((rows ?? []) as unknown as ArticleSummary[]).filter((a) => {
       if (!a.id || seen.has(a.id)) return false;
       seen.add(a.id);
       return true;

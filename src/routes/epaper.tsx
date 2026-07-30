@@ -19,6 +19,9 @@ const epaperQ = (date?: string) =>
   queryOptions({
     queryKey: ["epaper", date ?? "today"],
     queryFn: () => getEpaperData({ data: { date } }),
+    staleTime: 5 * 60 * 1000,
+    retry: 2,
+    retryDelay: 2000,
   });
 
 export const Route = createFileRoute("/epaper")({
@@ -37,9 +40,9 @@ export const Route = createFileRoute("/epaper")({
     links: [{ rel: "canonical", href: canonicalUrl("/epaper") }],
   }),
   loader: async ({ context }) => {
-    try {
-      await context.queryClient.prefetchQuery(epaperQ());
-    } catch {}
+    // Prefetch but don't swallow errors — let the client component handle retry.
+    // If the prefetch fails, useQuery will retry on the client side.
+    await context.queryClient.prefetchQuery(epaperQ()).catch(() => {});
   },
   component: EpaperPage,
   errorComponent: ({ error }) => (
@@ -61,7 +64,17 @@ function EpaperPage() {
   const [showToc, setShowToc] = useState(false);
   const [flipDirection, setFlipDirection] = useState<"next" | "prev">("next");
   const [isFlipping, setIsFlipping] = useState(false);
+  const [timedOut, setTimedOut] = useState(false);
   const touchStartX = useRef(0);
+
+  // Never hang forever on "Loading..." — after 15s, show retry option
+  useEffect(() => {
+    if (isLoading) {
+      const t = setTimeout(() => setTimedOut(true), 15000);
+      return () => clearTimeout(t);
+    }
+    setTimedOut(false);
+  }, [isLoading]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -75,11 +88,23 @@ function EpaperPage() {
 
   if (isLoading) {
     return (
-      <div className="bg-background text-foreground min-h-screen epaper-root">
+      <div className="bg-background text-foreground min-h-screen epaper-root flex items-center justify-center">
         <div className="max-w-7xl mx-auto px-4 py-20 text-center">
           <Newspaper className="h-12 w-12 text-muted-foreground mx-auto mb-4 animate-pulse" />
           <p className="font-serif text-2xl mb-2">The Daily Discovery Edition</p>
-          <p className="text-sm text-muted-foreground animate-pulse">Loading today's edition...</p>
+          {timedOut ? (
+            <>
+              <p className="text-sm text-red-500 mb-4">This is taking longer than expected. The edition may be loading a large number of articles.</p>
+              <button
+                onClick={() => query.refetch()}
+                className="border border-foreground px-4 py-2 text-xs uppercase tracking-widest hover:bg-foreground hover:text-background transition"
+              >
+                Retry
+              </button>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground animate-pulse">Loading today's edition...</p>
+          )}
         </div>
       </div>
     );
@@ -222,13 +247,13 @@ function EpaperPage() {
             <span className="hidden sm:inline">Previous</span>
           </button>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 max-w-[40vw] sm:max-w-[30vw] md:max-w-[25vw] overflow-x-auto scrollbar-hide">
             {pages.map((p, i) => (
               <button
                 key={i}
                 onClick={() => goToPage(i)}
-                className={`w-2 h-2 rounded-full transition-all ${
-                  i === currentPage ? "bg-foreground w-6" : "bg-muted-foreground/30 hover:bg-muted-foreground/60"
+                className={`h-2 rounded-full transition-all shrink-0 ${
+                  i === currentPage ? "bg-foreground w-6" : "bg-muted-foreground/30 hover:bg-muted-foreground/60 w-2"
                 }`}
                 aria-label={`Go to page ${i + 1}: ${p.sectionLabel}`}
               />
