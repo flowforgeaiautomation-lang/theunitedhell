@@ -75,25 +75,36 @@ export function useMarketPrices(refreshMs = 15_000) {
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const mountedRef = useRef(true);
+  const retryCount = useRef(0);
 
   useEffect(() => {
     mountedRef.current = true;
     let timer: ReturnType<typeof setInterval>;
+    let retryTimer: ReturnType<typeof setTimeout>;
 
     async function load() {
       const data = await fetchMarketPrices();
-      if (mountedRef.current && data.length > 0) {
+      if (!mountedRef.current) return;
+      if (data.length > 0) {
         setPrices(data);
         setLastUpdate(new Date());
         setLoading(false);
-      } else if (mountedRef.current) {
-        setLoading(false);
+        retryCount.current = 0;
+      } else {
+        // Retry with backoff — don't give up, keep trying
+        retryCount.current += 1;
+        const delay = Math.min(1000 * Math.pow(2, retryCount.current), 10_000);
+        retryTimer = setTimeout(load, delay);
       }
     }
 
     load();
     timer = setInterval(load, refreshMs);
-    return () => { mountedRef.current = false; clearInterval(timer); };
+    return () => {
+      mountedRef.current = false;
+      clearInterval(timer);
+      clearTimeout(retryTimer);
+    };
   }, [refreshMs]);
 
   return { prices, loading, lastUpdate };

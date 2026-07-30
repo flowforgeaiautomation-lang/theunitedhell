@@ -171,6 +171,13 @@ function pickDaily<T>(arr: T[], dateKey: string): T {
   return arr[seed % arr.length];
 }
 
+function formatFixedDate(dateStr: string): string {
+  const d = new Date(dateStr + "T00:00:00Z");
+  const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  return `${weekdays[d.getUTCDay()]}, ${months[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
+}
+
 function dateToNumber(dateStr: string): number {
   const epoch = new Date("2025-01-01").getTime();
   const target = new Date(dateStr).getTime();
@@ -333,12 +340,7 @@ export const getEpaperData = createServerFn({ method: "GET" })
     const inputDate = data?.date;
     const today = new Date();
     const dateStr = inputDate || today.toISOString().slice(0, 10);
-    const dateDisplay = new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    const dateDisplay = formatFixedDate(dateStr);
     const editionNumber = dateToNumber(dateStr);
 
     // Paginate through ALL published articles — no hardcoded cap.
@@ -485,12 +487,7 @@ export const getArchiveList = createServerFn({ method: "GET" }).handler(async ()
 
   const entries: ArchiveEntry[] = [];
   for (const [date, info] of byDate) {
-    const dateDisplay = new Date(date + "T00:00:00").toLocaleDateString("en-US", {
-      weekday: "short",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    const dateDisplay = formatFixedDate(date);
     const totalPages = Math.max(2, Math.ceil(info.articles.length / 8) + 2);
     entries.push({
       date,

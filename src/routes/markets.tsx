@@ -319,6 +319,13 @@ function MarketsPage() {
 
       {/* Unified dashboard — expandable categories, no duplicates */}
       <div className="space-y-8 mb-12">
+        {prices.length === 0 && !loading && (
+          <div className="text-center py-16 border rule">
+            <BarChart3 className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
+            <p className="dek mb-2">Live market data is temporarily unavailable.</p>
+            <p className="text-xs text-muted-foreground">Prices will appear automatically when the data feed reconnects.</p>
+          </div>
+        )}
         {MARKET_GROUPS_ORDER.map((group) => {
           const groupQuotes = prices.filter((q) =>
             group.categories.includes(q.category) && group.regions.includes(q.region ?? "")
