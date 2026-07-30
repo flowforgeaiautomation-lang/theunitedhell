@@ -1,17 +1,40 @@
 import { createServerFn } from "@tanstack/react-start";
-import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@/integrations/supabase/types";
 import type { ArticleSummary } from "./types";
 
-function publicClient() {
-  const url = process.env.SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL;
-  const key =
-    process.env.SUPABASE_PUBLISHABLE_KEY ||
-    import.meta.env.VITE_SUPABASE_ANON_KEY ||
-    import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-  return createClient<Database>(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false, storage: undefined },
-  });
+const SUPABASE_URL =
+  (import.meta as any).env?.VITE_SUPABASE_URL ||
+  process.env.SUPABASE_URL ||
+  process.env.VITE_SUPABASE_URL ||
+  "https://myrteqlcfwckgdokzzhg.supabase.co";
+
+const SUPABASE_ANON_KEY =
+  (import.meta as any).env?.VITE_SUPABASE_ANON_KEY ||
+  process.env.SUPABASE_ANON_KEY ||
+  process.env.VITE_SUPABASE_ANON_KEY ||
+  process.env.SUPABASE_PUBLISHABLE_KEY ||
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im15cnRlcWxjZndja2dkb2t6emhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3MjE4OTgsImV4cCI6MjA5ODI5Nzg5OH0.lGAyAxmYrJAag1yONChoqV4-A1QQAkdWKxZp5IMJyII";
+
+function supabaseHeaders() {
+  return {
+    apikey: SUPABASE_ANON_KEY,
+    Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    "Content-Type": "application/json",
+  };
+}
+
+async function supabaseSelect(table: string, select: string, params: Record<string, string>): Promise<any[]> {
+  const url = new URL(`${SUPABASE_URL}/rest/v1/${table}`);
+  url.searchParams.set("select", select);
+  for (const [k, v] of Object.entries(params)) {
+    url.searchParams.set(k, v);
+  }
+  const res = await fetch(url.toString(), { headers: supabaseHeaders() });
+  if (!res.ok) {
+    const text = await res.text();
+    console.error(`[epaper] supabaseSelect ${table} failed: ${res.status} ${text}`);
+    return [];
+  }
+  return await res.json();
 }
 
 const SUMMARY_COLS =
@@ -77,6 +100,8 @@ export type ArchiveEntry = {
   coverTitle: string;
 };
 
+// ── Section definitions: maps categories to newspaper sections ──
+// Maps both the actual DB categories and legacy category names to sections.
 const SECTION_MAP: { id: string; label: string; kicker: string; cats: string[] }[] = [
   { id: "world", label: "World", kicker: "Planet Earth", cats: ["world", "world-discovery", "global-affairs", "geopolitics", "politics", "government", "diplomacy", "international-relations", "public-policy", "elections"] },
   { id: "india", label: "India", kicker: "The Nation", cats: ["india", "indian-innovation", "indian-startups", "indian-history", "indian-culture", "indian-science", "indian-wildlife", "indian-discoveries"] },
@@ -174,13 +199,13 @@ function dateToNumber(dateStr: string): number {
 
 async function fetchMarketSnapshot(): Promise<MarketSnap[]> {
   try {
-    const supabase = publicClient();
-    const { data, error } = await supabase
-      .from("market_prices")
-      .select("symbol,name,category,region,price,change,change_percent,available")
-      .order("symbol", { ascending: true });
-    if (error || !data) return [];
-    return data as unknown as MarketSnap[];
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/market_prices?select=symbol,name,category,region,price,change,change_percent,available&order=symbol.asc`,
+      { headers: supabaseHeaders() }
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
   } catch {
     return [];
   }
@@ -195,6 +220,7 @@ function buildPages(
   const pages: EpaperPage[] = [];
   const usedIds = new Set<string>();
 
+  // PAGE 1: Front Page — top stories + breaking news
   pages.push({
     pageNumber: 1,
     sectionId: "front",
@@ -208,6 +234,7 @@ function buildPages(
   topStories.slice(0, 5).forEach((a) => usedIds.add(a.id));
   editorsPicks.forEach((a) => usedIds.add(a.id));
 
+  // PAGE 2: Editor's Picks & Breaking
   if (editorsPicks.length > 0 || breakingNews.length > 0) {
     const pageArticles = [...breakingNews, ...editorsPicks].filter((a) => !usedIds.has(a.id));
     pageArticles.forEach((a) => usedIds.add(a.id));
@@ -223,12 +250,14 @@ function buildPages(
     });
   }
 
+  // Generate section pages dynamically — only sections with articles get a page
   for (const sec of SECTION_MAP) {
     const secArticles = articles.filter(
       (a) => sec.cats.includes(a.category) && !usedIds.has(a.id),
     );
     if (secArticles.length === 0) continue;
 
+    // If a section has many articles, split into multiple pages (max 8 per page)
     const chunks: ArticleSummary[][] = [];
     for (let i = 0; i < secArticles.length; i += 8) {
       chunks.push(secArticles.slice(i, i + 8));
@@ -250,6 +279,7 @@ function buildPages(
     });
   }
 
+  // Dynamic sections for unmapped categories — group by actual category name
   const mappedCats = new Set(SECTION_MAP.flatMap((s) => s.cats));
   const unmappedByCat = new Map<string, ArticleSummary[]>();
   for (const a of articles) {
@@ -282,6 +312,7 @@ function buildPages(
     });
   }
 
+  // LAST PAGE: Back Page — remaining notable articles
   const remaining = articles.filter((a) => !usedIds.has(a.id));
   if (remaining.length > 0 || pages.length > 0) {
     const backPageArticles = (remaining.length > 0 ? remaining : editorsPicks).slice(0, 6);
@@ -316,26 +347,21 @@ export const getEpaperData = createServerFn({ method: "GET" }).validator(
 
   let articles: ArticleSummary[] = [];
   try {
-    const supabase = publicClient();
-    let query = supabase
-      .from("articles")
-      .select(SUMMARY_COLS)
-      .eq("is_published", true)
-      .order("published_at", { ascending: false });
-
+    const params: Record<string, string> = {
+      "is_published": "eq.true",
+      "order": "published_at.desc",
+      "limit": "500",
+    };
     if (inputDate) {
       const startDate = new Date(dateStr + "T00:00:00").toISOString();
       const endDate = new Date(dateStr + "T23:59:59").toISOString();
-      query = query.gte("published_at", startDate).lte("published_at", endDate);
+      params["published_at"] = `gte.${startDate}`;
+      params["and"] = `(published_at.lte.${endDate})`;
     }
 
-    const { data: rows, error } = await query.limit(500);
+    const rows = await supabaseSelect("articles", SUMMARY_COLS, params);
 
-    if (error) {
-      console.error("[epaper] articles query error:", error.message);
-    }
-
-    const allArticles = (rows ?? []) as unknown as ArticleSummary[];
+    const allArticles = rows as unknown as ArticleSummary[];
     const seen = new Set<string>();
     articles = allArticles.filter((a) => {
       if (!a.id || seen.has(a.id)) return false;
@@ -372,13 +398,13 @@ export const getEpaperData = createServerFn({ method: "GET" }).validator(
 
   let wordOfDay: WordOfDay = WORD_FALLBACK;
   try {
-    const supabase2 = publicClient();
     const seed = dateStr.split("-").reduce((a, b) => a + parseInt(b, 10), 0);
-    const { data: vocabRows } = await supabase2
-      .from("vocabulary_cache")
-      .select("word,part_of_speech,meaning,example,synonyms,antonyms,pronunciation")
-      .order("search_count", { ascending: false, nullsFirst: false })
-      .range(seed % 200, (seed % 200) + 1);
+    const offset = seed % 200;
+    const vocabRows = await supabaseSelect(
+      "vocabulary_cache",
+      "word,part_of_speech,meaning,example,synonyms,antonyms,pronunciation",
+      { "order": "search_count.desc.nullslast", "limit": "2", "offset": String(offset) },
+    );
     if (vocabRows && vocabRows.length > 0) {
       const v = vocabRows[0] as any;
       wordOfDay = {
@@ -416,15 +442,13 @@ export const getEpaperData = createServerFn({ method: "GET" }).validator(
 
 export const getArchiveList = createServerFn({ method: "GET" }).handler(async () => {
   try {
-    const supabase = publicClient();
-    const { data: rows, error } = await supabase
-      .from("articles")
-      .select("published_at,cover_image_url,title,category")
-      .eq("is_published", true)
-      .order("published_at", { ascending: false })
-      .limit(500);
+    const rows = await supabaseSelect(
+      "articles",
+      "published_at,cover_image_url,title,category",
+      { "is_published": "eq.true", "order": "published_at.desc", "limit": "500" },
+    );
 
-    if (error || !rows || rows.length === 0) return [];
+    if (!rows || rows.length === 0) return [];
 
     const byDate = new Map<string, { articles: typeof rows; cover: typeof rows[0] | null }>();
     for (const row of rows) {
@@ -447,6 +471,7 @@ export const getArchiveList = createServerFn({ method: "GET" }).handler(async ()
         month: "long",
         day: "numeric",
       });
+      const sectionCount = new Set(info.articles.map((a) => a.category)).size;
       const totalPages = Math.max(2, Math.ceil(info.articles.length / 8) + 2);
       entries.push({
         date,
