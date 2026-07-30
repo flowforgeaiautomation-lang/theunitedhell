@@ -35,6 +35,11 @@ export const Route = createFileRoute("/editions/epaper")({
     ],
     links: [{ rel: "canonical", href: canonicalUrl("/editions/epaper") }],
   }),
+  loader: async ({ context }) => {
+    try {
+      await context.queryClient.prefetchQuery(epaperQ());
+    } catch {}
+  },
   component: EpaperPage,
   errorComponent: ({ error }) => (
     <div className="container-read py-20 text-center">

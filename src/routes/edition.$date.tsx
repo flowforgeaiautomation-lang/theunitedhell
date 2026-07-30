@@ -32,6 +32,11 @@ export const Route = createFileRoute("/edition/$date")({
     ],
     links: [{ rel: "canonical", href: canonicalUrl(`/edition/${params.date}`) }],
   }),
+  loader: async ({ context, params }) => {
+    try {
+      await context.queryClient.prefetchQuery(editionQ(params.date));
+    } catch {}
+  },
   component: EditionDatePage,
   errorComponent: ({ error }) => (
     <div className="container-read py-20 text-center">

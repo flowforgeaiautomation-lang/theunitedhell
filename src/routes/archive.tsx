@@ -25,6 +25,11 @@ export const Route = createFileRoute("/archive")({
     ],
     links: [{ rel: "canonical", href: canonicalUrl("/archive") }],
   }),
+  loader: async ({ context }) => {
+    try {
+      await context.queryClient.prefetchQuery(archiveQ);
+    } catch {}
+  },
   component: ArchivePage,
 });
 
