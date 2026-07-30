@@ -6,6 +6,7 @@ import {
   ArrowRight, ArrowLeft, ArrowRight as ArrowNext, Quote, CalendarDays,
   Camera, BarChart3, Globe, Sparkles, ChevronLeft, ChevronRight,
   List, X, Home, Bookmark, Share2, Volume2, BookOpen, Play, Headphones,
+  Calendar, Lightbulb, Building2, Loader2,
 } from "lucide-react";
 import { getEpaperData, type EpaperData, type EpaperPage, type WordOfDay } from "@/lib/epaper.functions";
 import { ScrollToTop } from "@/components/ScrollToTop";
@@ -50,7 +51,10 @@ export const Route = createFileRoute("/epaper")({
 });
 
 function EpaperPage() {
-  const { data: epaper, isLoading } = useQuery(epaperQ());
+  const query = useQuery(epaperQ());
+  const epaper = query.data;
+  const isLoading = query.isLoading;
+  const isError = query.isError;
   const [currentPage, setCurrentPage] = useState(0);
   const [fontSize, setFontSize] = useState(1);
   const [darkMode, setDarkMode] = useState(false);
@@ -69,13 +73,33 @@ function EpaperPage() {
   const page = pages[currentPage];
   const totalPages = pages.length;
 
-  if (isLoading || !epaper) {
+  if (isLoading) {
     return (
       <div className="bg-background text-foreground min-h-screen epaper-root">
         <div className="max-w-7xl mx-auto px-4 py-20 text-center">
           <Newspaper className="h-12 w-12 text-muted-foreground mx-auto mb-4 animate-pulse" />
           <p className="font-serif text-2xl mb-2">The Daily Discovery Edition</p>
           <p className="text-sm text-muted-foreground animate-pulse">Loading today's edition...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isError || !epaper) {
+    return (
+      <div className="bg-background text-foreground min-h-screen epaper-root">
+        <div className="max-w-7xl mx-auto px-4 py-20 text-center">
+          <Newspaper className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <p className="font-serif text-2xl mb-2">The Daily Discovery Edition</p>
+          <p className="text-sm text-red-500 mb-4">
+            Could not load today's edition: {(query.error as Error)?.message || "Unknown error"}
+          </p>
+          <button
+            onClick={() => query.refetch()}
+            className="border border-foreground px-4 py-2 text-xs uppercase tracking-widest hover:bg-foreground hover:text-background transition"
+          >
+            Try again
+          </button>
         </div>
       </div>
     );
@@ -595,9 +619,33 @@ function DailyWidgets({ epaper }: { epaper: EpaperData }) {
 }
 
 /* ────────── Newspaper Article Card ────────── */
+function formatDate(dateStr: string): string {
+  try {
+    return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  } catch { return dateStr; }
+}
+
+function categoryToDesk(category: string): string {
+  const deskMap: Record<string, string> = {
+    technology: "Technology Desk", "artificial-intelligence": "AI Desk", science: "Science Desk",
+    space: "Space Desk", astronomy: "Astronomy Desk", world: "World Desk", india: "India Desk",
+    business: "Business Desk", markets: "Markets Desk", economics: "Economics Desk",
+    health: "Health Desk", politics: "Politics Desk", climate: "Climate Desk",
+    environment: "Environment Desk", wildlife: "Wildlife Desk", history: "History Desk",
+    archaeology: "Archaeology Desk", gaming: "Gaming Desk", music: "Music Desk",
+    movies: "Entertainment Desk", football: "Sports Desk", cricket: "Sports Desk",
+    books: "Books Desk", psychology: "Psychology Desk", physics: "Science Desk",
+    "electric-vehicles": "Auto Desk", sustainability: "Climate Desk", robotics: "AI Desk",
+    sport: "Sports Desk", business: "Business Desk",
+  };
+  return deskMap[category] || "Editorial Desk";
+}
+
 function NewspaperArticleCard({ article, variant = "standard" }: { article: ArticleSummary; variant?: "hero" | "compact" | "standard" }) {
   const cover = article.cover_image_url || fallbackCoverUrl(article);
   const hasVideo = !!article.cover_video_url;
+  const pubDate = formatDate(article.published_at || article.created_at);
+  const desk = categoryToDesk(article.category);
 
   if (variant === "hero") {
     return (
@@ -624,8 +672,12 @@ function NewspaperArticleCard({ article, variant = "standard" }: { article: Arti
           {article.title}
         </h3>
         {article.dek && <p className="text-sm text-muted-foreground mt-2 leading-relaxed line-clamp-3">{article.dek}</p>}
-        <div className="flex items-center gap-3 text-xs text-muted-foreground mt-3">
+        <div className="flex items-center gap-3 text-xs text-muted-foreground mt-3 flex-wrap">
           {article.read_time_minutes > 0 && <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {article.read_time_minutes} min</span>}
+          <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {pubDate}</span>
+          <span className="flex items-center gap-1"><Building2 className="h-3 w-3" /> {desk}</span>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-2">
           <span className="border-b border-foreground pb-0.5 font-medium text-foreground">Continue reading</span>
           <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
         </div>
@@ -644,11 +696,11 @@ function NewspaperArticleCard({ article, variant = "standard" }: { article: Arti
           <h4 className="font-serif text-sm font-bold leading-snug mt-0.5 group-hover:underline decoration-1 underline-offset-2 line-clamp-2">
             {article.title}
           </h4>
-          {article.read_time_minutes > 0 && (
-            <span className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-              <Clock className="h-3 w-3" /> {article.read_time_minutes} min
-            </span>
-          )}
+          {article.dek && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{article.dek}</p>}
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+            {article.read_time_minutes > 0 && <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {article.read_time_minutes} min</span>}
+            <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {pubDate}</span>
+          </div>
         </div>
       </Link>
     );
@@ -678,11 +730,11 @@ function NewspaperArticleCard({ article, variant = "standard" }: { article: Arti
         {article.title}
       </h4>
       {article.dek && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{article.dek}</p>}
-      {article.read_time_minutes > 0 && (
-        <span className="text-xs text-muted-foreground flex items-center gap-1 mt-2">
-          <Clock className="h-3 w-3" /> {article.read_time_minutes} min read
-        </span>
-      )}
+      <div className="flex items-center gap-2 text-xs text-muted-foreground mt-2 flex-wrap">
+        {article.read_time_minutes > 0 && <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {article.read_time_minutes} min read</span>}
+        <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {pubDate}</span>
+        <span className="flex items-center gap-1"><Building2 className="h-3 w-3" /> {desk}</span>
+      </div>
     </Link>
   );
 }

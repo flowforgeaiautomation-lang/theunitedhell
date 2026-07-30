@@ -1,27 +1,23 @@
 import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import type { Database } from "@integrations/supabase/types";
+import type { Database } from "@/integrations/supabase/types";
 import type { ArticleSummary } from "./types";
 
-const SUPABASE_URL =
-  process.env.SUPABASE_URL ||
-  (import.meta as any).env?.VITE_SUPABASE_URL ||
-  "https://myrteqlcfwckgdokzzhg.supabase.co";
-
-const SUPABASE_ANON_KEY =
-  process.env.SUPABASE_PUBLISHABLE_KEY ||
-  process.env.SUPABASE_ANON_KEY ||
-  (import.meta as any).env?.VITE_SUPABASE_ANON_KEY ||
-  (import.meta as any).env?.VITE_SUPABASE_PUBLISHABLE_KEY ||
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im15cnRlcWxjZndja2dkb2t6emhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3MjE4OTgsImV4cCI6MjA5ODI5Nzg5OH0.lGAyAxmYrJAag1yONChoqV4-A1QQAkdWKxZp5IMJyII";
-
+// EXACT same pattern as articles.functions.ts — no try/catch swallowing,
+// no dynamic import.meta access that Vite can't statically replace.
 function publicClient() {
-  return createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  const url = process.env.SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL;
+  const key =
+    process.env.SUPABASE_PUBLISHABLE_KEY ||
+    import.meta.env.VITE_SUPABASE_ANON_KEY ||
+    import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  return createClient<Database>(url, key, {
     auth: { persistSession: false, autoRefreshToken: false, storage: undefined },
   });
 }
 
+// Same column list as articles.functions.ts + cover_video_url + trending_score
 const SUMMARY_COLS =
   "id,slug,title,dek,category,subcategory,cover_image_url,cover_video_url,read_time_minutes,country_code,featured_slot,published_at,created_at,view_count,like_count,bookmark_count,comment_count,trending_score";
 
@@ -67,6 +63,7 @@ export type EpaperData = {
   topStories: ArticleSummary[];
   editorsPicks: ArticleSummary[];
   breakingNews: ArticleSummary[];
+  trendingStories: ArticleSummary[];
   marketSnapshot: MarketSnap[];
   quoteOfDay: { text: string; author: string };
   thisDayHistory: string[];
@@ -181,17 +178,13 @@ function dateToNumber(dateStr: string): number {
 }
 
 async function fetchMarketSnapshot(): Promise<MarketSnap[]> {
-  try {
-    const supabase = publicClient();
-    const { data, error } = await supabase
-      .from("market_prices")
-      .select("symbol,name,category,region,price,change,change_percent,available")
-      .order("symbol", { ascending: true });
-    if (error || !data) return [];
-    return data as unknown as MarketSnap[];
-  } catch {
-    return [];
-  }
+  const supabase = publicClient();
+  const { data, error } = await supabase
+    .from("market_prices")
+    .select("symbol,name,category,region,price,change,change_percent,available")
+    .order("symbol", { ascending: true });
+  if (error || !data) return [];
+  return data as unknown as MarketSnap[];
 }
 
 function buildPages(
@@ -199,10 +192,12 @@ function buildPages(
   topStories: ArticleSummary[],
   editorsPicks: ArticleSummary[],
   breakingNews: ArticleSummary[],
+  trendingStories: ArticleSummary[],
 ): EpaperPage[] {
   const pages: EpaperPage[] = [];
   const usedIds = new Set<string>();
 
+  // Page 1: Front Page
   pages.push({
     pageNumber: 1,
     sectionId: "front",
@@ -216,6 +211,7 @@ function buildPages(
   topStories.slice(0, 5).forEach((a) => usedIds.add(a.id));
   editorsPicks.forEach((a) => usedIds.add(a.id));
 
+  // Page 2: Editor's Picks & Breaking News
   if (editorsPicks.length > 0 || breakingNews.length > 0) {
     const pageArticles = [...breakingNews, ...editorsPicks].filter((a) => !usedIds.has(a.id));
     pageArticles.forEach((a) => usedIds.add(a.id));
@@ -231,6 +227,25 @@ function buildPages(
     });
   }
 
+  // Page 3: Trending
+  if (trendingStories.length > 0) {
+    const trendingArticles = trendingStories.filter((a) => !usedIds.has(a.id));
+    trendingArticles.forEach((a) => usedIds.add(a.id));
+    if (trendingArticles.length > 0) {
+      pages.push({
+        pageNumber: pages.length + 1,
+        sectionId: "trending",
+        sectionLabel: "Trending Now",
+        sectionKicker: "What the World is Reading",
+        isFrontPage: false,
+        isBackPage: false,
+        articles: trendingArticles,
+        heroArticle: trendingArticles[0] ?? null,
+      });
+    }
+  }
+
+  // Section pages — dynamically generate as many as needed
   for (const sec of SECTION_MAP) {
     const secArticles = articles.filter(
       (a) => sec.cats.includes(a.category) && !usedIds.has(a.id),
@@ -258,6 +273,7 @@ function buildPages(
     });
   }
 
+  // Unmapped categories — never leave articles behind
   const mappedCats = new Set(SECTION_MAP.flatMap((s) => s.cats));
   const unmappedByCat = new Map<string, ArticleSummary[]>();
   for (const a of articles) {
@@ -290,6 +306,7 @@ function buildPages(
     });
   }
 
+  // Back Page
   const remaining = articles.filter((a) => !usedIds.has(a.id));
   if (remaining.length > 0 || pages.length > 0) {
     const backPageArticles = (remaining.length > 0 ? remaining : editorsPicks).slice(0, 6);
@@ -313,25 +330,26 @@ export const getEpaperData = createServerFn({ method: "GET" })
     z.object({ date: z.string().optional() }).parse(d ?? {}),
   )
   .handler(async ({ data }) => {
-  const inputDate = data?.date;
-  const today = new Date();
-  const dateStr = inputDate || today.toISOString().slice(0, 10);
-  const dateDisplay = new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-  const editionNumber = dateToNumber(dateStr);
+    const inputDate = data?.date;
+    const today = new Date();
+    const dateStr = inputDate || today.toISOString().slice(0, 10);
+    const dateDisplay = new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+    const editionNumber = dateToNumber(dateStr);
 
-  let articles: ArticleSummary[] = [];
-  try {
+    // EXACT same query pattern as the homepage's listArticles — no try/catch
+    // that swallows errors. If this fails, the error propagates to the UI.
     const supabase = publicClient();
     let query = supabase
       .from("articles")
       .select(SUMMARY_COLS)
       .eq("is_published", true)
-      .order("published_at", { ascending: false });
+      .order("published_at", { ascending: false })
+      .order("id", { ascending: false });
 
     if (inputDate) {
       const startDate = new Date(dateStr + "T00:00:00").toISOString();
@@ -340,138 +358,139 @@ export const getEpaperData = createServerFn({ method: "GET" })
     }
 
     const { data: rows, error } = await query.limit(500);
+    if (error) throw new Error(`Epaper article query failed: ${error.message}`);
 
-    if (error) {
-      console.error("[epaper] articles query error:", error.message);
-    }
-
-    const allArticles = (rows ?? []) as unknown as ArticleSummary[];
     const seen = new Set<string>();
-    articles = allArticles.filter((a) => {
+    const articles: ArticleSummary[] = ((rows ?? []) as unknown as ArticleSummary[]).filter((a) => {
       if (!a.id || seen.has(a.id)) return false;
       seen.add(a.id);
       return true;
     });
-    console.log(`[epaper] fetched ${articles.length} articles`);
-  } catch (err) {
-    console.error("[epaper] failed to fetch articles:", err);
-  }
 
-  const topStories = [...articles].sort((a, b) => (b.trending_score ?? 0) - (a.trending_score ?? 0)).slice(0, 10);
-  const editorsPicks = [...articles].sort((a, b) => (b.view_count ?? 0) - (a.view_count ?? 0)).slice(0, 5);
-  const breakingNews = articles.filter((a) => a.category === "breaking-news").slice(0, 5);
+    // Sort by: trending score, then views, then recency
+    const topStories = [...articles]
+      .sort((a, b) => (b.trending_score ?? 0) - (a.trending_score ?? 0))
+      .slice(0, 10);
+    const editorsPicks = [...articles]
+      .sort((a, b) => (b.view_count ?? 0) - (a.view_count ?? 0))
+      .slice(0, 5);
+    const breakingNews = articles.filter((a) => a.category === "breaking-news").slice(0, 5);
+    const trendingStories = [...articles]
+      .sort((a, b) => {
+        const scoreA = (a.trending_score ?? 0) + (a.view_count ?? 0) * 0.01 + (a.like_count ?? 0) * 0.1;
+        const scoreB = (b.trending_score ?? 0) + (b.view_count ?? 0) * 0.01 + (b.like_count ?? 0) * 0.1;
+        return scoreB - scoreA;
+      })
+      .slice(0, 8);
 
-  const pages = buildPages(articles, topStories, editorsPicks, breakingNews);
+    const pages = buildPages(articles, topStories, editorsPicks, breakingNews, trendingStories);
 
-  let marketSnapshot: MarketSnap[] = [];
-  try {
-    marketSnapshot = await fetchMarketSnapshot();
-  } catch (err) {
-    console.error("[epaper] failed to fetch market snapshot:", err);
-  }
-
-  const quoteOfDay = pickDaily(QUOTES, dateStr);
-  const thisDayHistory = [pickDaily(HISTORY_FACTS, dateStr)];
-  const weather = pickDaily(WEATHER_OPTIONS, dateStr);
-  const photoArticle = articles.find((a) => a.cover_image_url);
-  const photoOfDay = {
-    url: photoArticle?.cover_image_url ?? "",
-    caption: photoArticle?.title ?? "Today's featured image",
-    credit: "The United Hell",
-  };
-
-  let wordOfDay: WordOfDay = WORD_FALLBACK;
-  try {
-    const supabase2 = publicClient();
-    const seed = dateStr.split("-").reduce((a, b) => a + parseInt(b, 10), 0);
-    const { data: vocabRows } = await supabase2
-      .from("vocabulary_cache")
-      .select("word,part_of_speech,meaning,example,synonyms,antonyms,pronunciation")
-      .order("search_count", { ascending: false, nullsFirst: false })
-      .range(seed % 200, (seed % 200) + 1);
-    if (vocabRows && vocabRows.length > 0) {
-      const v = vocabRows[0] as any;
-      wordOfDay = {
-        word: v.word ?? "curiosity",
-        pronunciation: v.pronunciation ?? null,
-        part_of_speech: v.part_of_speech ?? null,
-        meaning: v.meaning ?? null,
-        example: v.example ?? null,
-        synonyms: Array.isArray(v.synonyms) ? v.synonyms : [],
-        antonyms: Array.isArray(v.antonyms) ? v.antonyms : [],
-      };
+    // Market snapshot — non-fatal if it fails
+    let marketSnapshot: MarketSnap[] = [];
+    try {
+      marketSnapshot = await fetchMarketSnapshot();
+    } catch (err) {
+      console.error("[epaper] market snapshot error:", err);
     }
-  } catch (err) {
-    console.error("[epaper] word of day error:", err);
-  }
 
-  return {
-    date: dateStr,
-    dateDisplay,
-    editionNumber,
-    totalArticles: articles.length,
-    totalPages: pages.length,
-    pages,
-    topStories,
-    editorsPicks,
-    breakingNews,
-    marketSnapshot,
-    quoteOfDay,
-    thisDayHistory,
-    photoOfDay,
-    weather,
-    wordOfDay,
-  } as EpaperData;
+    const quoteOfDay = pickDaily(QUOTES, dateStr);
+    const thisDayHistory = [pickDaily(HISTORY_FACTS, dateStr)];
+    const weather = pickDaily(WEATHER_OPTIONS, dateStr);
+    const photoArticle = articles.find((a) => a.cover_image_url);
+    const photoOfDay = {
+      url: photoArticle?.cover_image_url ?? "",
+      caption: photoArticle?.title ?? "Today's featured image",
+      credit: "The United Hell",
+    };
+
+    // Word of the Day — non-fatal if it fails
+    let wordOfDay: WordOfDay = WORD_FALLBACK;
+    try {
+      const seed = dateStr.split("-").reduce((a, b) => a + parseInt(b, 10), 0);
+      const { data: vocabRows } = await supabase
+        .from("vocabulary_cache")
+        .select("word,part_of_speech,meaning,example,synonyms,antonyms,pronunciation")
+        .order("search_count", { ascending: false, nullsFirst: false })
+        .range(seed % 200, (seed % 200) + 1);
+      if (vocabRows && vocabRows.length > 0) {
+        const v = vocabRows[0] as any;
+        wordOfDay = {
+          word: v.word ?? "curiosity",
+          pronunciation: v.pronunciation ?? null,
+          part_of_speech: v.part_of_speech ?? null,
+          meaning: v.meaning ?? null,
+          example: v.example ?? null,
+          synonyms: Array.isArray(v.synonyms) ? v.synonyms : [],
+          antonyms: Array.isArray(v.antonyms) ? v.antonyms : [],
+        };
+      }
+    } catch (err) {
+      console.error("[epaper] word of day error:", err);
+    }
+
+    return {
+      date: dateStr,
+      dateDisplay,
+      editionNumber,
+      totalArticles: articles.length,
+      totalPages: pages.length,
+      pages,
+      topStories,
+      editorsPicks,
+      breakingNews,
+      trendingStories,
+      marketSnapshot,
+      quoteOfDay,
+      thisDayHistory,
+      photoOfDay,
+      weather,
+      wordOfDay,
+    } as EpaperData;
   });
 
 export const getArchiveList = createServerFn({ method: "GET" }).handler(async () => {
-  try {
-    const supabase = publicClient();
-    const { data: rows, error } = await supabase
-      .from("articles")
-      .select("published_at,cover_image_url,title,category")
-      .eq("is_published", true)
-      .order("published_at", { ascending: false })
-      .limit(500);
+  const supabase = publicClient();
+  const { data: rows, error } = await supabase
+    .from("articles")
+    .select("published_at,cover_image_url,title,category")
+    .eq("is_published", true)
+    .order("published_at", { ascending: false })
+    .limit(500);
 
-    if (error || !rows || rows.length === 0) return [];
+  if (error || !rows || rows.length === 0) return [];
 
-    const byDate = new Map<string, { articles: typeof rows; cover: typeof rows[0] | null }>();
-    for (const row of rows) {
-      const date = (row.published_at as string).slice(0, 10);
-      if (!byDate.has(date)) {
-        byDate.set(date, { articles: [], cover: null });
-      }
-      const entry = byDate.get(date)!;
-      entry.articles.push(row);
-      if (!entry.cover && row.cover_image_url) {
-        entry.cover = row;
-      }
+  const byDate = new Map<string, { articles: typeof rows; cover: typeof rows[0] | null }>();
+  for (const row of rows) {
+    const date = (row.published_at as string).slice(0, 10);
+    if (!byDate.has(date)) {
+      byDate.set(date, { articles: [], cover: null });
     }
-
-    const entries: ArchiveEntry[] = [];
-    for (const [date, info] of byDate) {
-      const dateDisplay = new Date(date + "T00:00:00").toLocaleDateString("en-US", {
-        weekday: "short",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      });
-      const totalPages = Math.max(2, Math.ceil(info.articles.length / 8) + 2);
-      entries.push({
-        date,
-        dateDisplay,
-        editionNumber: dateToNumber(date),
-        totalArticles: info.articles.length,
-        totalPages,
-        coverImage: info.cover?.cover_image_url ?? null,
-        coverTitle: info.cover?.title ?? info.articles[0]?.title ?? "Edition Available",
-      });
+    const entry = byDate.get(date)!;
+    entry.articles.push(row);
+    if (!entry.cover && row.cover_image_url) {
+      entry.cover = row;
     }
-
-    return entries.slice(0, 60);
-  } catch (err) {
-    console.error("[epaper] archive list error:", err);
-    return [];
   }
+
+  const entries: ArchiveEntry[] = [];
+  for (const [date, info] of byDate) {
+    const dateDisplay = new Date(date + "T00:00:00").toLocaleDateString("en-US", {
+      weekday: "short",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+    const totalPages = Math.max(2, Math.ceil(info.articles.length / 8) + 2);
+    entries.push({
+      date,
+      dateDisplay,
+      editionNumber: dateToNumber(date),
+      totalArticles: info.articles.length,
+      totalPages,
+      coverImage: info.cover?.cover_image_url ?? null,
+      coverTitle: info.cover?.title ?? info.articles[0]?.title ?? "Edition Available",
+    });
+  }
+
+  return entries.slice(0, 60);
 });
