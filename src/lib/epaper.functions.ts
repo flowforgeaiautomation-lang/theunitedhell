@@ -71,17 +71,17 @@ export type ArchiveEntry = {
 };
 
 // ── Section definitions: maps categories to newspaper sections ──
+// Maps both the actual DB categories and legacy category names to sections.
 const SECTION_MAP: { id: string; label: string; kicker: string; cats: string[] }[] = [
   { id: "world", label: "World", kicker: "Planet Earth", cats: ["world", "world-discovery", "global-affairs", "geopolitics", "politics", "government", "diplomacy", "international-relations", "public-policy", "elections"] },
   { id: "india", label: "India", kicker: "The Nation", cats: ["india", "indian-innovation", "indian-startups", "indian-history", "indian-culture", "indian-science", "indian-wildlife", "indian-discoveries"] },
-  { id: "business", label: "Business & Economy", kicker: "Money & Markets", cats: ["markets", "economics", "investing", "success-stories", "entrepreneurs", "startups", "business-leaders", "personal-finance", "wealth-creation", "billionaires"] },
-  { id: "markets", label: "Markets", kicker: "Live Markets", cats: ["markets", "economics", "investing"] },
+  { id: "business", label: "Business & Economy", kicker: "Money & Markets", cats: ["business", "markets", "economics", "investing", "success-stories", "entrepreneurs", "startups", "business-leaders", "personal-finance", "wealth-creation", "billionaires", "electric-vehicles"] },
   { id: "technology", label: "Technology", kicker: "Innovation", cats: ["technology", "future-technology", "innovation", "digital-transformation", "hardware", "software"] },
   { id: "ai", label: "Artificial Intelligence", kicker: "The AI Revolution", cats: ["artificial-intelligence", "future-of-ai", "robotics", "quantum-computing"] },
   { id: "science", label: "Science", kicker: "Discovery", cats: ["science", "physics", "chemistry", "biology", "genetics", "neuroscience", "medicine", "research", "scientific-discoveries", "breakthroughs"] },
   { id: "space", label: "Space", kicker: "The Universe", cats: ["space", "astronomy", "cosmology", "space-missions", "exoplanets", "black-holes", "future-space-exploration", "rocket-science"] },
   { id: "climate", label: "Climate", kicker: "A Changing Planet", cats: ["climate", "sustainability", "green-technology", "environmental-protection"] },
-  { id: "environment", label: "Environment", kicker: "Earth Chronicle", cats: ["environmental-protection", "conservation", "biodiversity", "forests", "national-parks"] },
+  { id: "environment", label: "Environment", kicker: "Earth Chronicle", cats: ["environment", "environmental-protection", "conservation", "biodiversity", "forests", "national-parks"] },
   { id: "wildlife", label: "Wildlife", kicker: "The Animal Kingdom", cats: ["wildlife", "nature", "endangered-species", "animal-kingdom", "marine-life"] },
   { id: "oceans", label: "Oceans", kicker: "The Deep Blue", cats: ["ocean-exploration", "deep-sea-mysteries", "marine-science", "underwater-discoveries", "coral-reefs", "ocean-wildlife"] },
   { id: "history", label: "History", kicker: "The Past Revisited", cats: ["history", "ancient-civilizations", "ancient-india", "ancient-egypt", "ancient-rome", "historical-figures"] },
@@ -99,13 +99,9 @@ const SECTION_MAP: { id: string; label: string; kicker: string; cats: string[] }
   { id: "tv", label: "TV & Streaming", kicker: "The Small Screen", cats: ["web-series", "streaming", "internet-culture", "pop-culture"] },
   { id: "music", label: "Music", kicker: "Sound & Rhythm", cats: ["music"] },
   { id: "gaming", label: "Gaming", kicker: "Interactive Entertainment", cats: ["gaming", "esports"] },
-  { id: "sports", label: "Sports Headlines", kicker: "The Game", cats: ["cricket", "football", "olympics", "athletes", "sports-science", "major-events"] },
+  { id: "sports", label: "Sports Headlines", kicker: "The Game", cats: ["sport", "sports", "cricket", "football", "olympics", "athletes", "sports-science", "major-events", "basketball", "tennis", "golf", "hockey", "badminton", "motorsport"] },
   { id: "cricket", label: "Cricket", kicker: "The Gentleman's Game", cats: ["cricket"] },
   { id: "football", label: "Football", kicker: "The Beautiful Game", cats: ["football"] },
-  { id: "basketball", label: "Basketball", kicker: "The Hardwood", cats: ["sports-science"] },
-  { id: "tennis", label: "Tennis", kicker: "Court & Racket", cats: ["athletes"] },
-  { id: "f1", label: "Formula 1", kicker: "Motorsport", cats: ["major-events"] },
-  { id: "olympics", label: "Olympics", kicker: "The Games", cats: ["olympics"] },
   { id: "astronomy", label: "Astronomy Tonight", kicker: "The Night Sky", cats: ["astronomy", "cosmology"] },
 ];
 
@@ -245,6 +241,39 @@ function buildPages(
     });
   }
 
+  // Dynamic sections for unmapped categories — group by actual category name
+  const mappedCats = new Set(SECTION_MAP.flatMap((s) => s.cats));
+  const unmappedByCat = new Map<string, ArticleSummary[]>();
+  for (const a of articles) {
+    if (usedIds.has(a.id) || mappedCats.has(a.category)) continue;
+    if (!unmappedByCat.has(a.category)) unmappedByCat.set(a.category, []);
+    unmappedByCat.get(a.category)!.push(a);
+  }
+  for (const [cat, catArticles] of unmappedByCat) {
+    const label = cat
+      .split(/[-_]/)
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ");
+    const chunks: ArticleSummary[][] = [];
+    for (let i = 0; i < catArticles.length; i += 8) {
+      chunks.push(catArticles.slice(i, i + 8));
+    }
+    chunks.forEach((chunk, chunkIdx) => {
+      chunk.forEach((a) => usedIds.add(a.id));
+      const pageLabel = chunks.length > 1 ? `${label} ${chunkIdx + 1}` : label;
+      pages.push({
+        pageNumber: pages.length + 1,
+        sectionId: cat + (chunkIdx > 0 ? `-${chunkIdx + 1}` : ""),
+        sectionLabel: pageLabel,
+        sectionKicker: "More Stories",
+        isFrontPage: false,
+        isBackPage: false,
+        articles: chunk,
+        heroArticle: chunk[0] ?? null,
+      });
+    });
+  }
+
   // LAST PAGE: Back Page — remaining notable articles
   const remaining = articles.filter((a) => !usedIds.has(a.id));
   if (remaining.length > 0 || pages.length > 0) {
@@ -292,11 +321,9 @@ export const getEpaperData = createServerFn({ method: "GET" }).validator(
 
     if (inputDate) {
       query = query.gte("published_at", startDate.toISOString()).lte("published_at", endDate.toISOString());
-    } else {
-      query = query.gte("published_at", new Date(Date.now() - 30 * 86400000).toISOString()).limit(200);
     }
 
-    const { data: rows, error } = await query.limit(200);
+    const { data: rows, error } = await query.limit(500);
 
     if (error) {
       console.error("[epaper] articles query error:", error.message);
