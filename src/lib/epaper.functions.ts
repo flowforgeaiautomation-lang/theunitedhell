@@ -356,7 +356,7 @@ export const getEpaperData = createServerFn({ method: "GET" }).validator(
       const startDate = new Date(dateStr + "T00:00:00").toISOString();
       const endDate = new Date(dateStr + "T23:59:59").toISOString();
       params["published_at"] = `gte.${startDate}`;
-      params["published_at"] = `lte.${endDate}`;
+      params["and"] = `(published_at.lte.${endDate})`;
     }
 
     const rows = await supabaseSelect("articles", SUMMARY_COLS, params);
