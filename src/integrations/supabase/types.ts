@@ -91,9 +91,11 @@ export type Database = {
           country_code: string | null
           cover_image_prompt: string | null
           cover_image_url: string | null
+          cover_video_url: string | null
           created_at: string
           created_by: string | null
           dek: string | null
+          dek_clean: string | null
           featured_slot: string | null
           id: string
           is_published: boolean
@@ -107,6 +109,7 @@ export type Database = {
           story: Json
           subcategory: string | null
           title: string
+          trending_score: number | null
           trust_score: number
           updated_at: string
           view_count: number
@@ -120,9 +123,11 @@ export type Database = {
           country_code?: string | null
           cover_image_prompt?: string | null
           cover_image_url?: string | null
+          cover_video_url?: string | null
           created_at?: string
           created_by?: string | null
           dek?: string | null
+          dek_clean?: string | null
           featured_slot?: string | null
           id?: string
           is_published?: boolean
@@ -149,9 +154,11 @@ export type Database = {
           country_code?: string | null
           cover_image_prompt?: string | null
           cover_image_url?: string | null
+          cover_video_url?: string | null
           created_at?: string
           created_by?: string | null
           dek?: string | null
+          dek_clean?: string | null
           featured_slot?: string | null
           id?: string
           is_published?: boolean
@@ -165,6 +172,7 @@ export type Database = {
           story?: Json
           subcategory?: string | null
           title?: string
+          trending_score?: number | null
           trust_score?: number
           updated_at?: string
           view_count?: number
