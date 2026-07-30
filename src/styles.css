@@ -733,3 +733,42 @@
   .tuh-audio-player {
     backdrop-filter: blur(12px);
   }
+
+  /* ── E-Paper page flip animations ── */
+  @keyframes flip-next {
+    0% { opacity: 0; transform: perspective(1200px) rotateY(15deg) translateX(20px); }
+    100% { opacity: 1; transform: perspective(1200px) rotateY(0) translateX(0); }
+  }
+  @keyframes flip-prev {
+    0% { opacity: 0; transform: perspective(1200px) rotateY(-15deg) translateX(-20px); }
+    100% { opacity: 1; transform: perspective(1200px) rotateY(0) translateX(0); }
+  }
+  .epaper-page-flip.flip-next {
+    animation: flip-next 0.4s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  .epaper-page-flip.flip-prev {
+    animation: flip-prev 0.4s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+
+  /* ── Marquee for breaking news ── */
+  @keyframes marquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  .animate-marquee {
+    animation: marquee 30s linear infinite;
+  }
+
+  /* ── Slide-in for TOC drawer ── */
+  @keyframes slide-in-left {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(0); }
+  }
+  .animate-slide-in-left {
+    animation: slide-in-left 0.3s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+
+  /* ── E-Paper root: ensure smooth scrolling ── */
+  .epaper-root {
+    scroll-behavior: smooth;
+  }

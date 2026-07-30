@@ -19,29 +19,9 @@ function publicClient() {
 }
 
 const SUMMARY_COLS =
-  "id,slug,title,dek,category,subcategory,cover_image_url,read_time_minutes,country_code,featured_slot,published_at,created_at,view_count,like_count,bookmark_count,comment_count";
+  "id,slug,title,dek,category,subcategory,cover_image_url,cover_video_url,read_time_minutes,country_code,featured_slot,published_at,created_at,view_count,like_count,bookmark_count,comment_count";
 
-export type EpaperSection = {
-  id: string;
-  label: string;
-  kicker: string;
-  articles: ArticleSummary[];
-};
-
-export type EpaperData = {
-  date: string;
-  dateDisplay: string;
-  topStories: ArticleSummary[];
-  editorsPicks: ArticleSummary[];
-  sections: EpaperSection[];
-  marketSnapshot: MarketSnap[];
-  quoteOfDay: { text: string; author: string };
-  thisDayHistory: string[];
-  photoOfDay: { url: string; caption: string; credit: string };
-  totalArticles: number;
-};
-
-type MarketSnap = {
+export type MarketSnap = {
   symbol: string;
   name: string;
   category: string;
@@ -50,42 +30,84 @@ type MarketSnap = {
   change: number | null;
   change_percent: number | null;
   available: boolean;
-  currency: string | null;
-  exchange: string | null;
-  unit: string | null;
-  market_timezone: string | null;
-  source: string | null;
-  updated_at: string | null;
 };
 
-const SECTION_MAP: { id: string; label: string; kicker: string; cats: string[] }[] = [
-  { id: "world", label: "World", kicker: "Planet Earth", cats: ["world", "world-discovery", "global-affairs", "geopolitics", "politics", "government", "diplomacy", "international-relations"] },
-  { id: "india", label: "India", kicker: "Nation", cats: ["india", "indian-innovation", "indian-startups", "indian-history", "indian-culture", "indian-science", "indian-wildlife"] },
-  { id: "business", label: "Business & Economy", kicker: "Money & Success", cats: ["markets", "economics", "investing", "success-stories", "entrepreneurs", "startups", "business-leaders", "personal-finance", "wealth-creation"] },
-  { id: "technology", label: "Technology & AI", kicker: "Future & Innovation", cats: ["technology", "artificial-intelligence", "robotics", "future-technology", "innovation", "cybersecurity", "quantum-computing"] },
-  { id: "science", label: "Science", kicker: "Discovery", cats: ["science", "physics", "chemistry", "biology", "genetics", "neuroscience", "medicine", "research", "scientific-discoveries", "breakthroughs"] },
-  { id: "space", label: "Space & Astronomy", kicker: "The Universe", cats: ["space", "astronomy", "cosmology", "space-missions", "exoplanets", "black-holes", "future-space-exploration"] },
-  { id: "nature", label: "Nature & Climate", kicker: "Earth Chronicle", cats: ["climate", "sustainability", "environmental-protection", "wildlife", "nature", "conservation", "biodiversity", "marine-life", "ocean-exploration"] },
-  { id: "history", label: "History & Knowledge", kicker: "Deep Reads", cats: ["history", "ancient-civilizations", "archaeology", "historical-mysteries", "unsolved-mysteries", "books", "education", "explainers"] },
-  { id: "health", label: "Health & Lifestyle", kicker: "Living Well", cats: ["health", "fitness", "nutrition", "longevity", "psychology", "wellness", "food-culinary-culture", "travel"] },
-  { id: "entertainment", label: "Culture & Entertainment", kicker: "The Arts", cats: ["entertainment", "movies", "music", "gaming", "culture", "art", "photography", "streaming", "web-series"] },
-  { id: "sports", label: "Sports", kicker: "The Game", cats: ["cricket", "football", "olympics", "athletes", "sports-science", "major-events", "esports"] },
-  { id: "future", label: "Future of Humanity", kicker: "Tomorrow", cats: ["future", "future-of-ai", "future-of-work", "future-of-civilization", "future-predictions", "future-energy", "future-cities"] },
-];
+export type EpaperPage = {
+  pageNumber: number;
+  sectionId: string;
+  sectionLabel: string;
+  sectionKicker: string;
+  isFrontPage: boolean;
+  isBackPage: boolean;
+  articles: ArticleSummary[];
+  heroArticle: ArticleSummary | null;
+};
 
-async function fetchMarketSnapshot(): Promise<MarketSnap[]> {
-  try {
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/market_prices?select=symbol,name,category,region,price,change,change_percent,available,currency,exchange,unit,market_timezone,source,updated_at&order=symbol.asc`,
-      { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
-    );
-    if (!res.ok) return [];
-    const data = await res.json();
-    return Array.isArray(data) ? data : [];
-  } catch {
-    return [];
-  }
-}
+export type EpaperData = {
+  date: string;
+  dateDisplay: string;
+  editionNumber: number;
+  totalArticles: number;
+  totalPages: number;
+  pages: EpaperPage[];
+  topStories: ArticleSummary[];
+  editorsPicks: ArticleSummary[];
+  breakingNews: ArticleSummary[];
+  marketSnapshot: MarketSnap[];
+  quoteOfDay: { text: string; author: string };
+  thisDayHistory: string[];
+  photoOfDay: { url: string; caption: string; credit: string };
+  weather: { temp: string; condition: string; location: string };
+};
+
+export type ArchiveEntry = {
+  date: string;
+  dateDisplay: string;
+  editionNumber: number;
+  totalArticles: number;
+  totalPages: number;
+  coverImage: string | null;
+  coverTitle: string;
+};
+
+// ── Section definitions: maps categories to newspaper sections ──
+const SECTION_MAP: { id: string; label: string; kicker: string; cats: string[] }[] = [
+  { id: "world", label: "World", kicker: "Planet Earth", cats: ["world", "world-discovery", "global-affairs", "geopolitics", "politics", "government", "diplomacy", "international-relations", "public-policy", "elections"] },
+  { id: "india", label: "India", kicker: "The Nation", cats: ["india", "indian-innovation", "indian-startups", "indian-history", "indian-culture", "indian-science", "indian-wildlife", "indian-discoveries"] },
+  { id: "business", label: "Business & Economy", kicker: "Money & Markets", cats: ["markets", "economics", "investing", "success-stories", "entrepreneurs", "startups", "business-leaders", "personal-finance", "wealth-creation", "billionaires"] },
+  { id: "markets", label: "Markets", kicker: "Live Markets", cats: ["markets", "economics", "investing"] },
+  { id: "technology", label: "Technology", kicker: "Innovation", cats: ["technology", "future-technology", "innovation", "digital-transformation", "hardware", "software"] },
+  { id: "ai", label: "Artificial Intelligence", kicker: "The AI Revolution", cats: ["artificial-intelligence", "future-of-ai", "robotics", "quantum-computing"] },
+  { id: "science", label: "Science", kicker: "Discovery", cats: ["science", "physics", "chemistry", "biology", "genetics", "neuroscience", "medicine", "research", "scientific-discoveries", "breakthroughs"] },
+  { id: "space", label: "Space", kicker: "The Universe", cats: ["space", "astronomy", "cosmology", "space-missions", "exoplanets", "black-holes", "future-space-exploration", "rocket-science"] },
+  { id: "climate", label: "Climate", kicker: "A Changing Planet", cats: ["climate", "sustainability", "green-technology", "environmental-protection"] },
+  { id: "environment", label: "Environment", kicker: "Earth Chronicle", cats: ["environmental-protection", "conservation", "biodiversity", "forests", "national-parks"] },
+  { id: "wildlife", label: "Wildlife", kicker: "The Animal Kingdom", cats: ["wildlife", "nature", "endangered-species", "animal-kingdom", "marine-life"] },
+  { id: "oceans", label: "Oceans", kicker: "The Deep Blue", cats: ["ocean-exploration", "deep-sea-mysteries", "marine-science", "underwater-discoveries", "coral-reefs", "ocean-wildlife"] },
+  { id: "history", label: "History", kicker: "The Past Revisited", cats: ["history", "ancient-civilizations", "ancient-india", "ancient-egypt", "ancient-rome", "historical-figures"] },
+  { id: "archaeology", label: "Archaeology", kicker: "Unearthing the Past", cats: ["archaeology", "historical-mysteries"] },
+  { id: "mysteries", label: "Mysteries", kicker: "Unsolved & Enigmatic", cats: ["unsolved-mysteries", "lost-civilizations", "ancient-secrets", "strange-phenomena", "historical-enigmas", "curiosity-stories"] },
+  { id: "education", label: "Education", kicker: "Learning & Growth", cats: ["education", "learning", "study-skills", "scholarships", "exams"] },
+  { id: "careers", label: "Careers", kicker: "Work & Opportunity", cats: ["careers", "jobs", "government-jobs", "internships", "fellowships", "skill-development", "future-of-work"] },
+  { id: "health", label: "Health", kicker: "Living Well", cats: ["health", "fitness", "nutrition", "longevity", "medical-innovation", "wellness"] },
+  { id: "psychology", label: "Psychology", kicker: "The Human Mind", cats: ["psychology", "human-behavior", "society", "relationships", "philosophy", "ethics"] },
+  { id: "food", label: "Food", kicker: "Culinary Culture", cats: ["food-culinary-culture", "world-foods", "indian-foods", "traditional-recipes", "food-science", "rare-foods", "culinary-history"] },
+  { id: "travel", label: "Travel", kicker: "Destinations & Adventure", cats: ["travel", "adventure", "exploration", "amazing-places", "hidden-places", "luxury-travel", "natural-wonders"] },
+  { id: "culture", label: "Culture", kicker: "Arts & Heritage", cats: ["culture", "art", "photography", "architecture", "museums", "heritage", "languages"] },
+  { id: "books", label: "Books", kicker: "The Literary World", cats: ["books", "book-summaries", "authors", "literature", "classic-books", "modern-books", "reading-lists"] },
+  { id: "movies", label: "Movies", kicker: "Cinema", cats: ["movies", "entertainment", "celebrities"] },
+  { id: "tv", label: "TV & Streaming", kicker: "The Small Screen", cats: ["web-series", "streaming", "internet-culture", "pop-culture"] },
+  { id: "music", label: "Music", kicker: "Sound & Rhythm", cats: ["music"] },
+  { id: "gaming", label: "Gaming", kicker: "Interactive Entertainment", cats: ["gaming", "esports"] },
+  { id: "sports", label: "Sports Headlines", kicker: "The Game", cats: ["cricket", "football", "olympics", "athletes", "sports-science", "major-events"] },
+  { id: "cricket", label: "Cricket", kicker: "The Gentleman's Game", cats: ["cricket"] },
+  { id: "football", label: "Football", kicker: "The Beautiful Game", cats: ["football"] },
+  { id: "basketball", label: "Basketball", kicker: "The Hardwood", cats: ["sports-science"] },
+  { id: "tennis", label: "Tennis", kicker: "Court & Racket", cats: ["athletes"] },
+  { id: "f1", label: "Formula 1", kicker: "Motorsport", cats: ["major-events"] },
+  { id: "olympics", label: "Olympics", kicker: "The Games", cats: ["olympics"] },
+  { id: "astronomy", label: "Astronomy Tonight", kicker: "The Night Sky", cats: ["astronomy", "cosmology"] },
+];
 
 const QUOTES = [
   { text: "The future belongs to those who believe in the beauty of their dreams.", author: "Eleanor Roosevelt" },
@@ -95,6 +117,11 @@ const QUOTES = [
   { text: "The universe is not only queerer than we suppose, but queerer than we can suppose.", author: "J.B.S. Haldane" },
   { text: "Somewhere, something incredible is waiting to be known.", author: "Carl Sagan" },
   { text: "The greatest discovery of all time is that a person can change their future by merely changing their attitude.", author: "Oprah Winfrey" },
+  { text: "What we know is a drop, what we don't know is an ocean.", author: "Isaac Newton" },
+  { text: "The important thing is not to stop questioning.", author: "Albert Einstein" },
+  { text: "Imagination is more important than knowledge.", author: "Albert Einstein" },
+  { text: "The mind is not a vessel to be filled, but a fire to be kindled.", author: "Plutarch" },
+  { text: "Innovation distinguishes between a leader and a follower.", author: "Steve Jobs" },
 ];
 
 const HISTORY_FACTS = [
@@ -106,6 +133,21 @@ const HISTORY_FACTS = [
   "In 2012, the Higgs boson particle was discovered at CERN.",
   "In 2015, gravitational waves were detected, confirming Einstein's prediction.",
   "In 2019, the first image of a black hole was captured.",
+  "In 1453, the Gutenberg Bible was printed, revolutionizing knowledge.",
+  "In 1492, Columbus reached the Americas, changing world history.",
+  "In 1687, Newton published Principia Mathematica, defining physics.",
+  "In 1859, Darwin published On the Origin of Species.",
+  "In 1903, the Wright Brothers achieved the first powered flight.",
+  "In 1945, the United Nations was founded after World War II.",
+  "In 1969, ARPANET was created, the precursor to the internet.",
+];
+
+const WEATHER_OPTIONS = [
+  { temp: "28°C", condition: "Partly Cloudy", location: "Global Edition" },
+  { temp: "22°C", condition: "Clear Skies", location: "Global Edition" },
+  { temp: "31°C", condition: "Sunny", location: "Global Edition" },
+  { temp: "19°C", condition: "Light Rain", location: "Global Edition" },
+  { temp: "25°C", condition: "Misty Morning", location: "Global Edition" },
 ];
 
 function pickDaily<T>(arr: T[], dateKey: string): T {
@@ -113,34 +155,156 @@ function pickDaily<T>(arr: T[], dateKey: string): T {
   return arr[seed % arr.length];
 }
 
-export const getEpaperData = createServerFn({ method: "GET" }).handler(async () => {
+function dateToNumber(dateStr: string): number {
+  const epoch = new Date("2025-01-01").getTime();
+  const target = new Date(dateStr).getTime();
+  return Math.floor((target - epoch) / 86400000) + 1;
+}
+
+async function fetchMarketSnapshot(): Promise<MarketSnap[]> {
+  try {
+    const url = process.env.SUPABASE_URL || SUPABASE_URL;
+    const key = process.env.SUPABASE_ANON_KEY || SUPABASE_ANON_KEY;
+    const res = await fetch(
+      `${url}/rest/v1/market_prices?select=symbol,name,category,region,price,change,change_percent,available&order=symbol.asc`,
+      { headers: { apikey: key, Authorization: `Bearer ${key}` } }
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+
+function buildPages(
+  articles: ArticleSummary[],
+  topStories: ArticleSummary[],
+  editorsPicks: ArticleSummary[],
+  breakingNews: ArticleSummary[],
+): EpaperPage[] {
+  const pages: EpaperPage[] = [];
+  const usedIds = new Set<string>();
+
+  // PAGE 1: Front Page — top stories + breaking news
+  pages.push({
+    pageNumber: 1,
+    sectionId: "front",
+    sectionLabel: "Front Page",
+    sectionKicker: "The Daily Discovery Edition",
+    isFrontPage: true,
+    isBackPage: false,
+    articles: topStories.slice(0, 10),
+    heroArticle: topStories[0] ?? null,
+  });
+  topStories.slice(0, 5).forEach((a) => usedIds.add(a.id));
+  editorsPicks.forEach((a) => usedIds.add(a.id));
+
+  // PAGE 2: Editor's Picks & Breaking
+  if (editorsPicks.length > 0 || breakingNews.length > 0) {
+    const pageArticles = [...breakingNews, ...editorsPicks].filter((a) => !usedIds.has(a.id));
+    pageArticles.forEach((a) => usedIds.add(a.id));
+    pages.push({
+      pageNumber: 2,
+      sectionId: "editors",
+      sectionLabel: "Editor's Picks & Breaking",
+      sectionKicker: "Curated by The United Hell",
+      isFrontPage: false,
+      isBackPage: false,
+      articles: pageArticles,
+      heroArticle: pageArticles[0] ?? null,
+    });
+  }
+
+  // Generate section pages dynamically — only sections with articles get a page
+  for (const sec of SECTION_MAP) {
+    const secArticles = articles.filter(
+      (a) => sec.cats.includes(a.category) && !usedIds.has(a.id),
+    );
+    if (secArticles.length === 0) continue;
+
+    // If a section has many articles, split into multiple pages (max 8 per page)
+    const chunks: ArticleSummary[][] = [];
+    for (let i = 0; i < secArticles.length; i += 8) {
+      chunks.push(secArticles.slice(i, i + 8));
+    }
+
+    chunks.forEach((chunk, chunkIdx) => {
+      chunk.forEach((a) => usedIds.add(a.id));
+      const pageLabel = chunks.length > 1 ? `${sec.label} ${chunkIdx + 1}` : sec.label;
+      pages.push({
+        pageNumber: pages.length + 1,
+        sectionId: sec.id + (chunkIdx > 0 ? `-${chunkIdx + 1}` : ""),
+        sectionLabel: pageLabel,
+        sectionKicker: sec.kicker,
+        isFrontPage: false,
+        isBackPage: false,
+        articles: chunk,
+        heroArticle: chunk[0] ?? null,
+      });
+    });
+  }
+
+  // LAST PAGE: Back Page — remaining notable articles
+  const remaining = articles.filter((a) => !usedIds.has(a.id));
+  if (remaining.length > 0 || pages.length > 0) {
+    const backPageArticles = (remaining.length > 0 ? remaining : editorsPicks).slice(0, 6);
+    pages.push({
+      pageNumber: pages.length + 1,
+      sectionId: "back",
+      sectionLabel: "Back Page",
+      sectionKicker: "More to Explore",
+      isFrontPage: false,
+      isBackPage: true,
+      articles: backPageArticles,
+      heroArticle: backPageArticles[0] ?? null,
+    });
+  }
+
+  return pages;
+}
+
+export const getEpaperData = createServerFn({ method: "GET" }).validator(
+  (input: { date?: string } | undefined) => input ?? {},
+).handler(async ({ data }) => {
+  const inputDate = data?.date;
   const today = new Date();
-  const dateStr = today.toISOString().slice(0, 10);
-  const dateDisplay = today.toLocaleDateString("en-US", {
+  const dateStr = inputDate || today.toISOString().slice(0, 10);
+  const dateDisplay = new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
     month: "long",
     day: "numeric",
   });
+  const editionNumber = dateToNumber(dateStr);
 
-  let deduped: ArticleSummary[] = [];
+  let articles: ArticleSummary[] = [];
   try {
     const supabase = publicClient();
-    const { data: todayRows, error } = await supabase
+    const startDate = new Date(dateStr + "T00:00:00");
+    const endDate = new Date(dateStr + "T23:59:59");
+
+    let query = supabase
       .from("articles")
       .select(SUMMARY_COLS)
       .eq("is_published", true)
-      .gte("published_at", new Date(Date.now() - 30 * 86400000).toISOString())
-      .order("published_at", { ascending: false })
-      .limit(200);
+      .order("published_at", { ascending: false });
+
+    if (inputDate) {
+      query = query.gte("published_at", startDate.toISOString()).lte("published_at", endDate.toISOString());
+    } else {
+      query = query.gte("published_at", new Date(Date.now() - 30 * 86400000).toISOString()).limit(200);
+    }
+
+    const { data: rows, error } = await query.limit(200);
 
     if (error) {
       console.error("[epaper] articles query error:", error.message);
     }
 
-    const allArticles = (todayRows ?? []) as unknown as ArticleSummary[];
+    const allArticles = (rows ?? []) as unknown as ArticleSummary[];
     const seen = new Set<string>();
-    deduped = allArticles.filter((a) => {
+    articles = allArticles.filter((a) => {
       if (!a.id || seen.has(a.id)) return false;
       seen.add(a.id);
       return true;
@@ -149,22 +313,11 @@ export const getEpaperData = createServerFn({ method: "GET" }).handler(async () 
     console.error("[epaper] failed to fetch articles:", err);
   }
 
-  const topStories = deduped.slice(0, 10);
-  const editorsPicks = [...deduped]
-    .sort((a, b) => (b.view_count ?? 0) - (a.view_count ?? 0))
-    .slice(0, 5);
+  const topStories = [...articles].sort((a, b) => (b.trending_score ?? 0) - (a.trending_score ?? 0)).slice(0, 10);
+  const editorsPicks = [...articles].sort((a, b) => (b.view_count ?? 0) - (a.view_count ?? 0)).slice(0, 5);
+  const breakingNews = articles.filter((a) => a.category === "breaking-news").slice(0, 5);
 
-  const usedIds = new Set<string>([
-    ...topStories.slice(0, 5).map((a) => a.id),
-    ...editorsPicks.map((a) => a.id),
-  ]);
-  const sections: EpaperSection[] = SECTION_MAP.map((sec) => {
-    const articles = deduped
-      .filter((a) => sec.cats.includes(a.category) && !usedIds.has(a.id))
-      .slice(0, 6);
-    articles.forEach((a) => usedIds.add(a.id));
-    return { id: sec.id, label: sec.label, kicker: sec.kicker, articles };
-  }).filter((s) => s.articles.length > 0);
+  const pages = buildPages(articles, topStories, editorsPicks, breakingNews);
 
   let marketSnapshot: MarketSnap[] = [];
   try {
@@ -175,7 +328,8 @@ export const getEpaperData = createServerFn({ method: "GET" }).handler(async () 
 
   const quoteOfDay = pickDaily(QUOTES, dateStr);
   const thisDayHistory = [pickDaily(HISTORY_FACTS, dateStr)];
-  const photoArticle = deduped.find((a) => a.cover_image_url);
+  const weather = pickDaily(WEATHER_OPTIONS, dateStr);
+  const photoArticle = articles.find((a) => a.cover_image_url);
   const photoOfDay = {
     url: photoArticle?.cover_image_url ?? "",
     caption: photoArticle?.title ?? "Today's featured image",
@@ -185,13 +339,70 @@ export const getEpaperData = createServerFn({ method: "GET" }).handler(async () 
   return {
     date: dateStr,
     dateDisplay,
+    editionNumber,
+    totalArticles: articles.length,
+    totalPages: pages.length,
+    pages,
     topStories,
     editorsPicks,
-    sections,
+    breakingNews,
     marketSnapshot,
     quoteOfDay,
     thisDayHistory,
     photoOfDay,
-    totalArticles: deduped.length,
+    weather,
   } as EpaperData;
+});
+
+export const getArchiveList = createServerFn({ method: "GET" }).handler(async () => {
+  try {
+    const supabase = publicClient();
+    const { data: rows, error } = await supabase
+      .from("articles")
+      .select("published_at, cover_image_url, title, category")
+      .eq("is_published", true)
+      .order("published_at", { ascending: false })
+      .limit(500);
+
+    if (error || !rows || rows.length === 0) return [];
+
+    const byDate = new Map<string, { articles: typeof rows; cover: typeof rows[0] | null }>();
+    for (const row of rows) {
+      const date = (row.published_at as string).slice(0, 10);
+      if (!byDate.has(date)) {
+        byDate.set(date, { articles: [], cover: null });
+      }
+      const entry = byDate.get(date)!;
+      entry.articles.push(row);
+      if (!entry.cover && row.cover_image_url) {
+        entry.cover = row;
+      }
+    }
+
+    const entries: ArchiveEntry[] = [];
+    for (const [date, info] of byDate) {
+      const dateDisplay = new Date(date + "T00:00:00").toLocaleDateString("en-US", {
+        weekday: "short",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+      const sectionCount = new Set(info.articles.map((a) => a.category)).size;
+      const totalPages = Math.max(2, Math.ceil(info.articles.length / 8) + 2);
+      entries.push({
+        date,
+        dateDisplay,
+        editionNumber: dateToNumber(date),
+        totalArticles: info.articles.length,
+        totalPages,
+        coverImage: info.cover?.cover_image_url ?? null,
+        coverTitle: info.cover?.title ?? info.articles[0]?.title ?? "Edition Available",
+      });
+    }
+
+    return entries.slice(0, 60);
+  } catch (err) {
+    console.error("[epaper] archive list error:", err);
+    return [];
+  }
 });
