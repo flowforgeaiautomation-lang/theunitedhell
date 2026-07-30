@@ -17,9 +17,9 @@ function publicClient() {
   });
 }
 
-// Same column list as articles.functions.ts + cover_video_url + trending_score
+// EXACT same column list as articles.functions.ts — no extra columns that may not exist
 const SUMMARY_COLS =
-  "id,slug,title,dek,category,subcategory,cover_image_url,cover_video_url,read_time_minutes,country_code,featured_slot,published_at,created_at,view_count,like_count,bookmark_count,comment_count,trending_score";
+  "id,slug,title,dek,category,subcategory,cover_image_url,read_time_minutes,country_code,featured_slot,published_at,created_at,view_count,like_count,bookmark_count,comment_count";
 
 export type MarketSnap = {
   symbol: string;
@@ -343,33 +343,49 @@ export const getEpaperData = createServerFn({ method: "GET" })
 
     // EXACT same query pattern as the homepage's listArticles — no try/catch
     // that swallows errors. If this fails, the error propagates to the UI.
+    // Paginate to fetch ALL published articles — no artificial limit.
     const supabase = publicClient();
-    let query = supabase
-      .from("articles")
-      .select(SUMMARY_COLS)
-      .eq("is_published", true)
-      .order("published_at", { ascending: false })
-      .order("id", { ascending: false });
+    const allArticles: ArticleSummary[] = [];
+    const PAGE_SIZE = 200;
+    let offset = 0;
+    let hasMore = true;
 
-    if (inputDate) {
-      const startDate = new Date(dateStr + "T00:00:00").toISOString();
-      const endDate = new Date(dateStr + "T23:59:59").toISOString();
-      query = query.gte("published_at", startDate).lte("published_at", endDate);
+    while (hasMore) {
+      let pageQuery = supabase
+        .from("articles")
+        .select(SUMMARY_COLS)
+        .eq("is_published", true)
+        .order("published_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(offset, offset + PAGE_SIZE - 1);
+
+      if (inputDate) {
+        const startDate = new Date(dateStr + "T00:00:00").toISOString();
+        const endDate = new Date(dateStr + "T23:59:59").toISOString();
+        pageQuery = pageQuery.gte("published_at", startDate).lte("published_at", endDate);
+      }
+
+      const { data: rows, error } = await pageQuery;
+      if (error) throw new Error(`Epaper article query failed: ${error.message}`);
+
+      const pageRows = (rows ?? []) as unknown as ArticleSummary[];
+      for (const row of pageRows) allArticles.push(row);
+
+      hasMore = pageRows.length === PAGE_SIZE;
+      offset += PAGE_SIZE;
     }
 
-    const { data: rows, error } = await query.limit(500);
-    if (error) throw new Error(`Epaper article query failed: ${error.message}`);
-
+    // Deduplicate by ID
     const seen = new Set<string>();
-    const articles: ArticleSummary[] = ((rows ?? []) as unknown as ArticleSummary[]).filter((a) => {
+    const articles: ArticleSummary[] = allArticles.filter((a) => {
       if (!a.id || seen.has(a.id)) return false;
       seen.add(a.id);
       return true;
     });
 
-    // Sort by: trending score, then views, then recency
+    // Sort by views and recency (trending_score may not exist in all environments)
     const topStories = [...articles]
-      .sort((a, b) => (b.trending_score ?? 0) - (a.trending_score ?? 0))
+      .sort((a, b) => (b.view_count ?? 0) - (a.view_count ?? 0))
       .slice(0, 10);
     const editorsPicks = [...articles]
       .sort((a, b) => (b.view_count ?? 0) - (a.view_count ?? 0))
@@ -377,8 +393,8 @@ export const getEpaperData = createServerFn({ method: "GET" })
     const breakingNews = articles.filter((a) => a.category === "breaking-news").slice(0, 5);
     const trendingStories = [...articles]
       .sort((a, b) => {
-        const scoreA = (a.trending_score ?? 0) + (a.view_count ?? 0) * 0.01 + (a.like_count ?? 0) * 0.1;
-        const scoreB = (b.trending_score ?? 0) + (b.view_count ?? 0) * 0.01 + (b.like_count ?? 0) * 0.1;
+        const scoreA = (a.view_count ?? 0) + (a.like_count ?? 0) * 5 + (a.bookmark_count ?? 0) * 4 + (a.comment_count ?? 0) * 3;
+        const scoreB = (b.view_count ?? 0) + (b.like_count ?? 0) * 5 + (b.bookmark_count ?? 0) * 4 + (b.comment_count ?? 0) * 3;
         return scoreB - scoreA;
       })
       .slice(0, 8);

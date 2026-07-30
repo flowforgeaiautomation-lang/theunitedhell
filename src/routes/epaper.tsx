@@ -643,7 +643,7 @@ function categoryToDesk(category: string): string {
 
 function NewspaperArticleCard({ article, variant = "standard" }: { article: ArticleSummary; variant?: "hero" | "compact" | "standard" }) {
   const cover = article.cover_image_url || fallbackCoverUrl(article);
-  const hasVideo = !!article.cover_video_url;
+  const hasVideo = !!(article as any).cover_video_url;
   const pubDate = formatDate(article.published_at || article.created_at);
   const desk = categoryToDesk(article.category);
 
@@ -653,7 +653,7 @@ function NewspaperArticleCard({ article, variant = "standard" }: { article: Arti
         {hasVideo ? (
           <div className="relative aspect-[16/10] w-full rounded-sm mb-4 overflow-hidden bg-black">
             <video
-              src={article.cover_video_url!}
+              src={(article as any).cover_video_url!}
               poster={cover}
               controls
               playsInline
@@ -711,7 +711,7 @@ function NewspaperArticleCard({ article, variant = "standard" }: { article: Arti
       {hasVideo ? (
         <div className="relative aspect-[16/10] w-full rounded-sm mb-3 overflow-hidden bg-black">
           <video
-            src={article.cover_video_url!}
+            src={(article as any).cover_video_url!}
             poster={cover}
             controls
             playsInline
