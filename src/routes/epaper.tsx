@@ -89,6 +89,29 @@ function EpaperPage() {
   const page = pages[currentPage];
   const totalPages = pages.length;
 
+  const goToPage = useCallback((idx: number) => {
+    if (idx < 0 || idx >= totalPages || idx === currentPage) return;
+    setFlipDirection(idx > currentPage ? "next" : "prev");
+    setIsFlipping(true);
+    setCurrentPage(idx);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    setTimeout(() => setIsFlipping(false), 400);
+  }, [currentPage, totalPages]);
+
+  const nextPage = useCallback(() => goToPage(currentPage + 1), [currentPage, goToPage]);
+  const prevPage = useCallback(() => goToPage(currentPage - 1), [currentPage, goToPage]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); nextPage(); }
+      if (e.key === "ArrowLeft") { e.preventDefault(); prevPage(); }
+      if (e.key === "Escape") setShowToc(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [nextPage, prevPage]);
+
   if (isLoading) {
     return (
       <div className="bg-background text-foreground min-h-screen epaper-root flex items-center justify-center">
@@ -132,29 +155,6 @@ function EpaperPage() {
       </div>
     );
   }
-
-  const goToPage = useCallback((idx: number) => {
-    if (idx < 0 || idx >= totalPages || idx === currentPage) return;
-    setFlipDirection(idx > currentPage ? "next" : "prev");
-    setIsFlipping(true);
-    setCurrentPage(idx);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-    setTimeout(() => setIsFlipping(false), 400);
-  }, [currentPage, totalPages]);
-
-  const nextPage = useCallback(() => goToPage(currentPage + 1), [currentPage, goToPage]);
-  const prevPage = useCallback(() => goToPage(currentPage - 1), [currentPage, goToPage]);
-
-  // Keyboard navigation
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); nextPage(); }
-      if (e.key === "ArrowLeft") { e.preventDefault(); prevPage(); }
-      if (e.key === "Escape") setShowToc(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [nextPage, prevPage]);
 
   // Touch swipe
   function onTouchStart(e: React.TouchEvent) {
