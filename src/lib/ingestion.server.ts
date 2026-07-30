@@ -23,6 +23,13 @@ type RawItem = {
 
 const ALLOWED_SLUGS = CATEGORIES.filter((c) => c.slug !== "all").map((c) => c.slug);
 
+// Sources known to inject promotional boilerplate or non-news content — permanently blocked
+const BLOCKED_SOURCES = /^(konexio|konexio network|moneycontrol promo|goodreturns promo|financialexpress promo|zee business promo|et now promo)$/i;
+
+// Promotional boilerplate patterns that indicate an article is NOT genuine news —
+// these appear as footer text injected by content farms and PR syndicators
+const PROMOTIONAL_BOILERPLATE = /konexio network helps our society|helps our society with the daily business|corporate interview,? article on market|article on market and general article|which help our readers|daily business news updates|sponsored content|promoted content|paid post|brand content|advertising feature|guest post|this article is sponsored|brought to you by|in partnership with|presented by/i;
+
 // Category-specific keyword queries — these drive REAL targeted searches per topic.
 // Subset of high-value slugs; the AI still classifies into any allowed slug.
 const CATEGORY_QUERIES: { slug: string; q: string }[] = [
@@ -1054,6 +1061,12 @@ function cleanEditorialText(value?: string) {
     .replace(/Credit:[^\n]*\./gi, "")
     .replace(/Courtesy of[^\n]*\./gi, "")
     .replace(/Screenshot from[^\n]*\./gi, "")
+    // Strip content-farm promotional boilerplate (e.g. "Konexio Network helps our society...")
+    .replace(/konexio network helps our society[^.]*\./gi, "")
+    .replace(/helps our society with the daily business[^.]*\./gi, "")
+    .replace(/corporate interview,? article on market and general article[^.]*\./gi, "")
+    .replace(/which help our readers[^.]*\./gi, "")
+    .replace(/daily business news updates[^.]*\./gi, "")
     // Strip any remaining HTML tags
     .replace(/<[^>]+>/g, "")
     // Decode HTML entities
@@ -1541,6 +1554,8 @@ function validateArticleContent(p: Processed): boolean {
   // No advertisement code
   const allText = [p.title, p.dek, bodyText, ...(story.key_developments || []), ...(story.quick_insights || [])].join(" ");
   if (/blogherads|googletag|gpt-dsk|setTargeting|defineSlot|adthrive|<script|<iframe|<ins\b/i.test(allText)) return false;
+  // No promotional boilerplate from content farms / PR syndicators (e.g. Konexio Network)
+  if (PROMOTIONAL_BOILERPLATE.test(allText)) return false;
   // No login/subscription/paywall/cookie/newsletter prompts
   if (/save this article by registering|sign-in if you have an account|register for free|subscribe to|subscription required|paywall|continue reading|newsletter sign|cookie notice|cookie policy|we use cookies|this site uses cookies|register to read|login to read|sign in to read|create a free account|already a subscriber|subscribe now|unlock full access|premium content|members only|exclusive access|join now|sign up for|sponsored content|sponsored by|promo code/i.test(allText)) return false;
   // No HTML artifacts (including truncated entities without semicolons)
@@ -1999,6 +2014,11 @@ export async function runIngestion(opts?: { maxItems?: number; priorityCategory?
   }
   const fresh = queue
     .filter((q) => {
+      // Reject items from blocked promotional sources
+      if (BLOCKED_SOURCES.test(q.source || "")) return false;
+      // Reject items whose title or description contains promotional boilerplate
+      const combinedText = `${q.title} ${q.description || ""}`;
+      if (PROMOTIONAL_BOILERPLATE.test(combinedText)) return false;
       const titleKey = normalizeText(q.title);
       if (existingSet.has(titleKey) || existingSet.has(normalizeUrl(q.url)) || existingSet.has(normalizeText(q.description))) return false;
       return !existingTitles.some((t) => similarity(t, q.title) >= 0.75);

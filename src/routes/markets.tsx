@@ -401,6 +401,9 @@ function getAssetNewsCategory(symbol: string): string {
 // Filter out promotional/non-financial content from news feed
 const PROMO_PATTERNS = /\b(sponsored|promoted|advertisement|promo|sponsored content|paid post|brand content|press release|advertising feature|guest post|real estate listing|property listing|travel deal|wellness tip|product launch announcement|exclusive offer|limited time|discount code|coupon|buy now|shop now|free trial|giveaway|contest|sweepstakes|sign up for our|newsletter signup|download our app|subscribe to our)\b/i;
 
+// Content-farm boilerplate — e.g. "Konexio Network helps our society with the daily business news..."
+const CONTENT_FARM_BOILERPLATE = /konexio network helps our society|helps our society with the daily business|corporate interview,? article on market|article on market and general article|which help our readers|daily business news updates/i;
+
 const FINANCIAL_KEYWORDS = /\b(stock|market|index|indices|nifty|sensex|dow jones|nasdaq|s&p|sp500|ftse|dax|cac|nikkei|hang seng|shanghai|bitcoin|ethereum|crypto|cryptocurrency|gold|silver|oil|crude|brent|wti|natural gas|commodity|commodities|forex|currency|exchange rate|inflation|gdp|interest rate|federal reserve|fed|rbi|ecb|central bank|earnings|revenue|profit|loss|quarterly|fiscal|treasury|bond|yield|trade|tariff|recession|economy|economic|merger|acquisition|ipo|nasdaq|nyse|bse|nse|sec|sebi|bull|bear|rally|correction|volatility|portfolio|hedge|dividend|market cap|price target|analyst|upgrade|downgrade|rating|outlook|forecast|guidance)\b/i;
 
 function filterFinancialNews(items: ArticleSummary[]): ArticleSummary[] {
@@ -408,6 +411,8 @@ function filterFinancialNews(items: ArticleSummary[]): ArticleSummary[] {
     const text = `${article.title ?? ""} ${article.dek ?? ""} ${article.category ?? ""}`.toLowerCase();
     // Always exclude promotional content
     if (PROMO_PATTERNS.test(text)) return false;
+    // Always exclude content-farm boilerplate (Konexio etc.)
+    if (CONTENT_FARM_BOILERPLATE.test(text)) return false;
     // Include if it has financial keywords or is in a financial category
     if (FINANCIAL_KEYWORDS.test(text)) return true;
     // Include if category is financial
