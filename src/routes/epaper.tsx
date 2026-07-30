@@ -40,9 +40,8 @@ export const Route = createFileRoute("/epaper")({
     links: [{ rel: "canonical", href: canonicalUrl("/epaper") }],
   }),
   loader: async ({ context }) => {
-    // Prefetch but don't swallow errors — let the client component handle retry.
-    // If the prefetch fails, useQuery will retry on the client side.
-    await context.queryClient.prefetchQuery(epaperQ()).catch(() => {});
+    // Fire prefetch but don't block SSR — let the client component handle loading.
+    context.queryClient.prefetchQuery(epaperQ()).catch(() => {});
   },
   component: EpaperPage,
   errorComponent: ({ error }) => (

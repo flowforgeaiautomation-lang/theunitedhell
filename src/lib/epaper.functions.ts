@@ -184,16 +184,6 @@ function dateToNumber(dateStr: string): number {
   return Math.floor((target - epoch) / 86400000) + 1;
 }
 
-async function fetchMarketSnapshot(): Promise<MarketSnap[]> {
-  const supabase = publicClient();
-  const { data, error } = await supabase
-    .from("market_prices")
-    .select("symbol,name,category,region,price,change,change_percent,available")
-    .order("symbol", { ascending: true });
-  if (error || !data) return [];
-  return data as unknown as MarketSnap[];
-}
-
 function buildPages(
   articles: ArticleSummary[],
   topStories: ArticleSummary[],
@@ -343,39 +333,42 @@ export const getEpaperData = createServerFn({ method: "GET" })
     const dateDisplay = formatFixedDate(dateStr);
     const editionNumber = dateToNumber(dateStr);
 
-    // Paginate through ALL published articles — no hardcoded cap.
-    // Supabase returns max 1000 per request, so we loop until exhausted.
     const supabase = publicClient();
-    let baseQuery = supabase
+
+    // Single query — 459 articles fits in one request. No loop needed.
+    let query = supabase
       .from("articles")
       .select(SUMMARY_COLS)
       .eq("is_published", true)
       .order("published_at", { ascending: false })
-      .order("id", { ascending: false });
+      .order("id", { ascending: false })
+      .limit(1000);
 
     if (inputDate) {
       const startDate = new Date(dateStr + "T00:00:00").toISOString();
       const endDate = new Date(dateStr + "T23:59:59").toISOString();
-      baseQuery = baseQuery.gte("published_at", startDate).lte("published_at", endDate);
+      query = query.gte("published_at", startDate).lte("published_at", endDate);
     }
 
-    const allRows: ArticleSummary[] = [];
+    // Run all queries in parallel for speed
+    const [articlesResult, marketResult, vocabResult] = await Promise.all([
+      query,
+      supabase.from("market_prices").select("symbol,name,category,region,price,change,change_percent,available").order("symbol", { ascending: true }),
+      (async () => {
+        const seed = dateStr.split("-").reduce((a, b) => a + parseInt(b, 10), 0);
+        return supabase.from("vocabulary_cache").select("word,part_of_speech,meaning,example,synonyms,antonyms,pronunciation").order("search_count", { ascending: false, nullsFirst: false }).range(seed % 200, (seed % 200) + 1);
+      })(),
+    ]);
+
+    if (articlesResult.error) throw new Error(`Epaper article query failed: ${articlesResult.error.message}`);
+
     const seen = new Set<string>();
-    let offset = 0;
-    const pageSize = 1000;
-    for (;;) {
-      const { data: batch, error } = await baseQuery.range(offset, offset + pageSize - 1);
-      if (error) throw new Error(`Epaper article query failed: ${error.message}`);
-      if (!batch || batch.length === 0) break;
-      for (const row of batch as unknown as ArticleSummary[]) {
-        if (!row.id || seen.has(row.id)) continue;
-        seen.add(row.id);
-        allRows.push(row);
-      }
-      if (batch.length < pageSize) break;
-      offset += pageSize;
+    const articles: ArticleSummary[] = [];
+    for (const row of (articlesResult.data ?? []) as unknown as ArticleSummary[]) {
+      if (!row.id || seen.has(row.id)) continue;
+      seen.add(row.id);
+      articles.push(row);
     }
-    const articles = allRows;
 
     // Sort by trending_score (falls back to composite engagement score)
     const compositeScore = (a: ArticleSummary) =>
@@ -398,10 +391,18 @@ export const getEpaperData = createServerFn({ method: "GET" })
 
     const pages = buildPages(articles, topStories, editorsPicks, breakingNews, trendingStories);
 
-    // Market snapshot — non-fatal if it fails
+    // Market snapshot from parallel query result
     let marketSnapshot: MarketSnap[] = [];
     try {
-      marketSnapshot = await fetchMarketSnapshot();
+      if (marketResult.data && marketResult.data.length > 0) {
+        marketSnapshot = (marketResult.data as any[]).slice(0, 8).map((r) => ({
+          symbol: r.symbol ?? "",
+          name: r.name ?? r.symbol ?? "",
+          price: r.price ?? 0,
+          change_percent: r.change_percent ?? 0,
+          category: r.category ?? "",
+        }));
+      }
     } catch (err) {
       console.error("[epaper] market snapshot error:", err);
     }
@@ -416,17 +417,11 @@ export const getEpaperData = createServerFn({ method: "GET" })
       credit: "The United Hell",
     };
 
-    // Word of the Day — non-fatal if it fails
+    // Word of the Day from parallel query result
     let wordOfDay: WordOfDay = WORD_FALLBACK;
     try {
-      const seed = dateStr.split("-").reduce((a, b) => a + parseInt(b, 10), 0);
-      const { data: vocabRows } = await supabase
-        .from("vocabulary_cache")
-        .select("word,part_of_speech,meaning,example,synonyms,antonyms,pronunciation")
-        .order("search_count", { ascending: false, nullsFirst: false })
-        .range(seed % 200, (seed % 200) + 1);
-      if (vocabRows && vocabRows.length > 0) {
-        const v = vocabRows[0] as any;
+      if (vocabResult.data && vocabResult.data.length > 0) {
+        const v = vocabResult.data[0] as any;
         wordOfDay = {
           word: v.word ?? "curiosity",
           pronunciation: v.pronunciation ?? null,
