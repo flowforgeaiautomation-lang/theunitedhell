@@ -59,7 +59,7 @@ function PremiumAdminPage() {
   });
 
   const formatMoney = (cents: number) => `₹${(cents / 100).toLocaleString("en-IN")}`;
-  const formatDate = (d: string) => d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—";
+  const formatDate = (d: string | null) => d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—";
 
   const TABS = [
     { id: "overview" as const, label: "Overview", icon: TrendingUp },
