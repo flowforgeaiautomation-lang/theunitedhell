@@ -91,11 +91,9 @@ export type Database = {
           country_code: string | null
           cover_image_prompt: string | null
           cover_image_url: string | null
-          cover_video_url: string | null
           created_at: string
           created_by: string | null
           dek: string | null
-          dek_clean: string | null
           featured_slot: string | null
           id: string
           is_published: boolean
@@ -109,7 +107,6 @@ export type Database = {
           story: Json
           subcategory: string | null
           title: string
-          trending_score: number | null
           trust_score: number
           updated_at: string
           view_count: number
@@ -123,11 +120,9 @@ export type Database = {
           country_code?: string | null
           cover_image_prompt?: string | null
           cover_image_url?: string | null
-          cover_video_url?: string | null
           created_at?: string
           created_by?: string | null
           dek?: string | null
-          dek_clean?: string | null
           featured_slot?: string | null
           id?: string
           is_published?: boolean
@@ -154,11 +149,9 @@ export type Database = {
           country_code?: string | null
           cover_image_prompt?: string | null
           cover_image_url?: string | null
-          cover_video_url?: string | null
           created_at?: string
           created_by?: string | null
           dek?: string | null
-          dek_clean?: string | null
           featured_slot?: string | null
           id?: string
           is_published?: boolean
@@ -172,7 +165,6 @@ export type Database = {
           story?: Json
           subcategory?: string | null
           title?: string
-          trending_score?: number | null
           trust_score?: number
           updated_at?: string
           view_count?: number
@@ -351,6 +343,7 @@ export type Database = {
           display_name: string | null
           id: string
           interests: string[] | null
+          is_admin: boolean | null
           onboarded: boolean
           updated_at: string
           username: string | null
@@ -362,6 +355,7 @@ export type Database = {
           display_name?: string | null
           id: string
           interests?: string[] | null
+          is_admin?: boolean | null
           onboarded?: boolean
           updated_at?: string
           username?: string | null
@@ -373,9 +367,271 @@ export type Database = {
           display_name?: string | null
           id?: string
           interests?: string[] | null
+          is_admin?: boolean | null
           onboarded?: boolean
           updated_at?: string
           username?: string | null
+        }
+        Relationships: []
+      }
+      subscription_plans: {
+        Row: {
+          id: string
+          code: string
+          name: string
+          description: string | null
+          price_cents: number
+          currency: string
+          interval: string
+          stripe_price_id: string | null
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          code: string
+          name: string
+          description?: string | null
+          price_cents: number
+          currency?: string
+          interval: string
+          stripe_price_id?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          code?: string
+          name?: string
+          description?: string | null
+          price_cents?: number
+          currency?: string
+          interval?: string
+          stripe_price_id?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_subscriptions: {
+        Row: {
+          id: string
+          user_id: string
+          plan_code: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          status: string
+          current_period_start: string | null
+          current_period_end: string | null
+          canceled_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id?: string
+          plan_code: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          status?: string
+          current_period_start?: string | null
+          current_period_end?: string | null
+          canceled_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          plan_code?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          status?: string
+          current_period_start?: string | null
+          current_period_end?: string | null
+          canceled_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      coupons: {
+        Row: {
+          id: string
+          code: string
+          description: string | null
+          discount_type: string
+          discount_value: number
+          max_uses: number | null
+          max_uses_per_user: number
+          used_count: number
+          valid_from: string
+          valid_until: string | null
+          is_active: boolean
+          auto_apply: boolean
+          eligible_only_new_users: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          code: string
+          description?: string | null
+          discount_type: string
+          discount_value: number
+          max_uses?: number | null
+          max_uses_per_user?: number
+          used_count?: number
+          valid_from?: string
+          valid_until?: string | null
+          is_active?: boolean
+          auto_apply?: boolean
+          eligible_only_new_users?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          code?: string
+          description?: string | null
+          discount_type?: string
+          discount_value?: number
+          max_uses?: number | null
+          max_uses_per_user?: number
+          used_count?: number
+          valid_from?: string
+          valid_until?: string | null
+          is_active?: boolean
+          auto_apply?: boolean
+          eligible_only_new_users?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_coupons: {
+        Row: {
+          id: string
+          user_id: string
+          coupon_id: string
+          code: string
+          status: string
+          used_at: string | null
+          stripe_coupon_id: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id?: string
+          coupon_id: string
+          code: string
+          status?: string
+          used_at?: string | null
+          stripe_coupon_id?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          coupon_id?: string
+          code?: string
+          status?: string
+          used_at?: string | null
+          stripe_coupon_id?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          id: string
+          user_id: string
+          stripe_payment_intent_id: string | null
+          stripe_checkout_session_id: string | null
+          amount_cents: number
+          currency: string
+          plan_code: string
+          coupon_code: string | null
+          discount_cents: number
+          status: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id?: string
+          stripe_payment_intent_id?: string | null
+          stripe_checkout_session_id?: string | null
+          amount_cents: number
+          currency?: string
+          plan_code: string
+          coupon_code?: string | null
+          discount_cents?: number
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          stripe_payment_intent_id?: string | null
+          stripe_checkout_session_id?: string | null
+          amount_cents?: number
+          currency?: string
+          plan_code?: string
+          coupon_code?: string | null
+          discount_cents?: number
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      invoices: {
+        Row: {
+          id: string
+          user_id: string
+          transaction_id: string | null
+          invoice_number: string
+          stripe_invoice_id: string | null
+          amount_cents: number
+          currency: string
+          plan_code: string
+          period_start: string | null
+          period_end: string | null
+          pdf_url: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id?: string
+          transaction_id?: string | null
+          invoice_number: string
+          stripe_invoice_id?: string | null
+          amount_cents: number
+          currency?: string
+          plan_code: string
+          period_start?: string | null
+          period_end?: string | null
+          pdf_url?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          transaction_id?: string | null
+          invoice_number?: string
+          stripe_invoice_id?: string | null
+          amount_cents?: number
+          currency?: string
+          plan_code?: string
+          period_start?: string | null
+          period_end?: string | null
+          pdf_url?: string | null
+          created_at?: string
         }
         Relationships: []
       }
