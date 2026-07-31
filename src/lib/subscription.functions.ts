@@ -34,7 +34,7 @@ export type CouponInfo = {
 };
 
 export type CheckoutResult = {
-  url: string;
+  url: string | null;
   sessionId: string;
 };
 
@@ -241,12 +241,12 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("email, display_name")
+      .select("display_name")
       .eq("id", userId)
       .maybeSingle();
 
-    const userEmail = profile?.email || context.claims?.email || "";
-    const appUrl = process.env.APP_URL || process.env.VITE_SUPABASE_URL?.replace(".supabase.co", "") || "https://theunitedhell.vercel.app";
+    const userEmail = (context.claims as Record<string, unknown>)?.email as string || "";
+    const appUrl = process.env.APP_URL || (typeof window !== "undefined" ? window.location.origin : "https://theunitedhell.com");
 
     let stripeCouponId: string | undefined;
     let couponCodeUpper: string | undefined;
@@ -264,7 +264,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         const exhausted = couponRow.max_uses !== null && couponRow.used_count >= couponRow.max_uses;
         if (!expired && !exhausted) {
           const existingStripeCoupon = await stripe.coupons.list({ limit: 100 });
-          const found = existingStripeCoupon.data.find((c) => c.name?.includes(couponCodeUpper));
+          const found = existingStripeCoupon.data.find((c) => c.name?.includes(couponCodeUpper!));
           stripeCouponId = found?.id;
         }
       }
@@ -285,7 +285,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       }
     }
 
-    const sessionParams: Stripe.Checkout.SessionCreateParams = {
+    const sessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = {
       mode: "subscription",
       line_items: [{ price: planRow.stripe_price_id, quantity: 1 }],
       client_reference_id: userId,
@@ -322,7 +322,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       status: "pending",
     });
 
-    return { url: session.url, sessionId: session.id } satisfies CheckoutResult;
+    return { url: session.url ?? null, sessionId: session.id } satisfies CheckoutResult;
   });
 
 /* ──────────────────────────────────────────────────────────────
