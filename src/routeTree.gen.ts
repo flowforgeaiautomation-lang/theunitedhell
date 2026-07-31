@@ -11,22 +11,28 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as ArchiveRouteImport } from './routes/archive'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as BriefingRouteImport } from './routes/briefing'
 import { Route as DiscoverRouteImport } from './routes/discover'
 import { Route as EditionsRouteImport } from './routes/editions'
+import { Route as EpaperRouteImport } from './routes/epaper'
 import { Route as InformationRouteImport } from './routes/information'
 import { Route as MapRouteImport } from './routes/map'
 import { Route as MarketsRouteImport } from './routes/markets'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as TodayRouteImport } from './routes/today'
 import { Route as TrendingRouteImport } from './routes/trending'
 import { Route as WorldRouteImport } from './routes/world'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedBookmarksRouteImport } from './routes/_authenticated/bookmarks'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedPremiumAdminRouteImport } from './routes/_authenticated/premium-admin'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as ArticleSlugRouteImport } from './routes/article.$slug'
+import { Route as EditionDateRouteImport } from './routes/edition.$date'
 import { Route as EditionsSlugRouteImport } from './routes/editions.$slug'
 import { Route as EditionsEpaperRouteImport } from './routes/editions.epaper'
 import { Route as ApiPublicHooksBackfillQuizzesRouteImport } from './routes/api/public/hooks/backfill-quizzes'
@@ -43,6 +49,11 @@ const IndexRoute = IndexRouteImport.update({
 } as any)
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ArchiveRoute = ArchiveRouteImport.update({
+  id: '/archive',
+  path: '/archive',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -63,6 +74,11 @@ const DiscoverRoute = DiscoverRouteImport.update({
 const EditionsRoute = EditionsRouteImport.update({
   id: '/editions',
   path: '/editions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EpaperRoute = EpaperRouteImport.update({
+  id: '/epaper',
+  path: '/epaper',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InformationRoute = InformationRouteImport.update({
@@ -95,6 +111,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TodayRoute = TodayRouteImport.update({
+  id: '/today',
+  path: '/today',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TrendingRoute = TrendingRouteImport.update({
   id: '/trending',
   path: '/trending',
@@ -115,6 +136,17 @@ const AuthenticatedBookmarksRoute = AuthenticatedBookmarksRouteImport.update({
   path: '/bookmarks',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedPremiumAdminRoute =
+  AuthenticatedPremiumAdminRouteImport.update({
+    id: '/premium-admin',
+    path: '/premium-admin',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -123,6 +155,11 @@ const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
 const ArticleSlugRoute = ArticleSlugRouteImport.update({
   id: '/article/$slug',
   path: '/article/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EditionDateRoute = EditionDateRouteImport.update({
+  id: '/edition/$date',
+  path: '/edition/$date',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EditionsSlugRoute = EditionsSlugRouteImport.update({
@@ -171,22 +208,28 @@ const ApiPublicHooksReprocessRoute = ApiPublicHooksReprocessRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/archive': typeof ArchiveRoute
   '/auth': typeof AuthRoute
   '/briefing': typeof BriefingRoute
   '/discover': typeof DiscoverRoute
   '/editions': typeof EditionsRouteWithChildren
+  '/epaper': typeof EpaperRoute
   '/information': typeof InformationRoute
   '/map': typeof MapRoute
   '/markets': typeof MarketsRoute
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/today': typeof TodayRoute
   '/trending': typeof TrendingRoute
   '/world': typeof WorldRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/bookmarks': typeof AuthenticatedBookmarksRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/premium-admin': typeof AuthenticatedPremiumAdminRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/article/$slug': typeof ArticleSlugRoute
+  '/edition/$date': typeof EditionDateRoute
   '/editions/$slug': typeof EditionsSlugRoute
   '/editions/epaper': typeof EditionsEpaperRoute
   '/api/public/hooks/backfill-quizzes': typeof ApiPublicHooksBackfillQuizzesRoute
@@ -198,22 +241,28 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/archive': typeof ArchiveRoute
   '/auth': typeof AuthRoute
   '/briefing': typeof BriefingRoute
   '/discover': typeof DiscoverRoute
   '/editions': typeof EditionsRouteWithChildren
+  '/epaper': typeof EpaperRoute
   '/information': typeof InformationRoute
   '/map': typeof MapRoute
   '/markets': typeof MarketsRoute
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/today': typeof TodayRoute
   '/trending': typeof TrendingRoute
   '/world': typeof WorldRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/bookmarks': typeof AuthenticatedBookmarksRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/premium-admin': typeof AuthenticatedPremiumAdminRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/article/$slug': typeof ArticleSlugRoute
+  '/edition/$date': typeof EditionDateRoute
   '/editions/$slug': typeof EditionsSlugRoute
   '/editions/epaper': typeof EditionsEpaperRoute
   '/api/public/hooks/backfill-quizzes': typeof ApiPublicHooksBackfillQuizzesRoute
@@ -227,22 +276,28 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/archive': typeof ArchiveRoute
   '/auth': typeof AuthRoute
   '/briefing': typeof BriefingRoute
   '/discover': typeof DiscoverRoute
   '/editions': typeof EditionsRouteWithChildren
+  '/epaper': typeof EpaperRoute
   '/information': typeof InformationRoute
   '/map': typeof MapRoute
   '/markets': typeof MarketsRoute
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/today': typeof TodayRoute
   '/trending': typeof TrendingRoute
   '/world': typeof WorldRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/bookmarks': typeof AuthenticatedBookmarksRoute
+  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/premium-admin': typeof AuthenticatedPremiumAdminRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/article/$slug': typeof ArticleSlugRoute
+  '/edition/$date': typeof EditionDateRoute
   '/editions/$slug': typeof EditionsSlugRoute
   '/editions/epaper': typeof EditionsEpaperRoute
   '/api/public/hooks/backfill-quizzes': typeof ApiPublicHooksBackfillQuizzesRoute
@@ -256,22 +311,28 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/archive'
     | '/auth'
     | '/briefing'
     | '/discover'
     | '/editions'
+    | '/epaper'
     | '/information'
     | '/map'
     | '/markets'
     | '/reset-password'
     | '/search'
     | '/sitemap.xml'
+    | '/today'
     | '/trending'
     | '/world'
     | '/admin'
     | '/bookmarks'
+    | '/dashboard'
+    | '/premium-admin'
     | '/profile'
     | '/article/$slug'
+    | '/edition/$date'
     | '/editions/$slug'
     | '/editions/epaper'
     | '/api/public/hooks/backfill-quizzes'
@@ -283,22 +344,28 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/archive'
     | '/auth'
     | '/briefing'
     | '/discover'
     | '/editions'
+    | '/epaper'
     | '/information'
     | '/map'
     | '/markets'
     | '/reset-password'
     | '/search'
     | '/sitemap.xml'
+    | '/today'
     | '/trending'
     | '/world'
     | '/admin'
     | '/bookmarks'
+    | '/dashboard'
+    | '/premium-admin'
     | '/profile'
     | '/article/$slug'
+    | '/edition/$date'
     | '/editions/$slug'
     | '/editions/epaper'
     | '/api/public/hooks/backfill-quizzes'
@@ -311,22 +378,28 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_authenticated'
+    | '/archive'
     | '/auth'
     | '/briefing'
     | '/discover'
     | '/editions'
+    | '/epaper'
     | '/information'
     | '/map'
     | '/markets'
     | '/reset-password'
     | '/search'
     | '/sitemap.xml'
+    | '/today'
     | '/trending'
     | '/world'
     | '/_authenticated/admin'
     | '/_authenticated/bookmarks'
+    | '/_authenticated/dashboard'
+    | '/_authenticated/premium-admin'
     | '/_authenticated/profile'
     | '/article/$slug'
+    | '/edition/$date'
     | '/editions/$slug'
     | '/editions/epaper'
     | '/api/public/hooks/backfill-quizzes'
@@ -340,19 +413,23 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  ArchiveRoute: typeof ArchiveRoute
   AuthRoute: typeof AuthRoute
   BriefingRoute: typeof BriefingRoute
   DiscoverRoute: typeof DiscoverRoute
   EditionsRoute: typeof EditionsRouteWithChildren
+  EpaperRoute: typeof EpaperRoute
   InformationRoute: typeof InformationRoute
   MapRoute: typeof MapRoute
   MarketsRoute: typeof MarketsRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SearchRoute: typeof SearchRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  TodayRoute: typeof TodayRoute
   TrendingRoute: typeof TrendingRoute
   WorldRoute: typeof WorldRoute
   ArticleSlugRoute: typeof ArticleSlugRoute
+  EditionDateRoute: typeof EditionDateRoute
   ApiPublicHooksBackfillQuizzesRoute: typeof ApiPublicHooksBackfillQuizzesRoute
   ApiPublicHooksBackfillVideosRoute: typeof ApiPublicHooksBackfillVideosRoute
   ApiPublicHooksBackfillVocabRoute: typeof ApiPublicHooksBackfillVocabRoute
@@ -375,6 +452,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/archive': {
+      id: '/archive'
+      path: '/archive'
+      fullPath: '/archive'
+      preLoaderRoute: typeof ArchiveRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -403,6 +487,13 @@ declare module '@tanstack/react-router' {
       path: '/editions'
       fullPath: '/editions'
       preLoaderRoute: typeof EditionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/epaper': {
+      id: '/epaper'
+      path: '/epaper'
+      fullPath: '/epaper'
+      preLoaderRoute: typeof EpaperRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/information': {
@@ -447,6 +538,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/today': {
+      id: '/today'
+      path: '/today'
+      fullPath: '/today'
+      preLoaderRoute: typeof TodayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/trending': {
       id: '/trending'
       path: '/trending'
@@ -475,6 +573,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedBookmarksRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/premium-admin': {
+      id: '/_authenticated/premium-admin'
+      path: '/premium-admin'
+      fullPath: '/premium-admin'
+      preLoaderRoute: typeof AuthenticatedPremiumAdminRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/profile': {
       id: '/_authenticated/profile'
       path: '/profile'
@@ -487,6 +599,13 @@ declare module '@tanstack/react-router' {
       path: '/article/$slug'
       fullPath: '/article/$slug'
       preLoaderRoute: typeof ArticleSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/edition/$date': {
+      id: '/edition/$date'
+      path: '/edition/$date'
+      fullPath: '/edition/$date'
+      preLoaderRoute: typeof EditionDateRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/editions/$slug': {
@@ -551,12 +670,16 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedBookmarksRoute: typeof AuthenticatedBookmarksRoute
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedPremiumAdminRoute: typeof AuthenticatedPremiumAdminRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedBookmarksRoute: AuthenticatedBookmarksRoute,
+  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedPremiumAdminRoute: AuthenticatedPremiumAdminRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
 }
 
@@ -580,19 +703,23 @@ const EditionsRouteWithChildren = EditionsRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  ArchiveRoute: ArchiveRoute,
   AuthRoute: AuthRoute,
   BriefingRoute: BriefingRoute,
   DiscoverRoute: DiscoverRoute,
   EditionsRoute: EditionsRouteWithChildren,
+  EpaperRoute: EpaperRoute,
   InformationRoute: InformationRoute,
   MapRoute: MapRoute,
   MarketsRoute: MarketsRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SearchRoute: SearchRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  TodayRoute: TodayRoute,
   TrendingRoute: TrendingRoute,
   WorldRoute: WorldRoute,
   ArticleSlugRoute: ArticleSlugRoute,
+  EditionDateRoute: EditionDateRoute,
   ApiPublicHooksBackfillQuizzesRoute: ApiPublicHooksBackfillQuizzesRoute,
   ApiPublicHooksBackfillVideosRoute: ApiPublicHooksBackfillVideosRoute,
   ApiPublicHooksBackfillVocabRoute: ApiPublicHooksBackfillVocabRoute,
