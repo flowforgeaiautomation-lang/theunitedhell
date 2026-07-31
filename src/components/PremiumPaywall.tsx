@@ -8,7 +8,6 @@ import {
   BookText, Brain, Grid3x3,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -35,6 +34,7 @@ const PREMIUM_BENEFITS = [
   { icon: Globe, label: "Global Data" },
   { icon: Gamepad2, label: "Games & Puzzles" },
   { icon: Puzzle, label: "Crossword" },
+  { icon: Gamepad2, label: "Chess" },
   { icon: Grid3x3, label: "Sudoku" },
   { icon: BookText, label: "Word of the Day" },
   { icon: Headphones, label: "Text to Speech" },
@@ -54,10 +54,10 @@ export function PremiumPaywall({ open, onClose }: { open: boolean; onClose: () =
   const [view, setView] = useState<"benefits" | "plans" | "checkout">("benefits");
   const [premiumStatus, setPremiumStatus] = useState<PremiumStatus | null>(null);
   const [plans, setPlans] = useState<PlanInfo[]>([]);
-  const [coupons, setCoupons] = useState<{ code: string; status: string }[]>([]);
+  const [coupons, setCoupons] = useState<{ id: string; code: string; status: string }[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<string>("yearly");
   const [couponCode, setCouponCode] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountType: string; discountValue: number } | null>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountType: string; discountValue: number; description: string | null } | null>(null);
   const [autoWelcomeApplied, setAutoWelcomeApplied] = useState(false);
   const [showCouponInput, setShowCouponInput] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
@@ -114,11 +114,15 @@ export function PremiumPaywall({ open, onClose }: { open: boolean; onClose: () =
   async function handleGoogleSignIn() {
     setBusy(true);
     try {
-      const r = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
-      if (r.error) throw r.error instanceof Error ? r.error : new Error(String(r.error));
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: window.location.origin + "/epaper",
+        },
+      });
+      if (error) throw error;
     } catch (e) {
       toast.error((e as Error).message);
-    } finally {
       setBusy(false);
     }
   }
@@ -179,6 +183,7 @@ export function PremiumPaywall({ open, onClose }: { open: boolean; onClose: () =
       const result = await createCheckout({
         data: { planCode: selectedPlan as "monthly" | "yearly", couponCode: couponToUse },
       });
+      if (!result.url) throw new Error("Checkout session created but no URL returned");
       window.location.href = result.url;
     } catch (e) {
       toast.error((e as Error).message);
