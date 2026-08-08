@@ -235,7 +235,7 @@ async function fetchQuote(cfg: MarketSymbolConfig): Promise<MarketQuote> {
   return unavailable;
 }
 
-export const getMarketQuotes = createServerFn({ method: "GET" })(
+export const getMarketQuotes = createServerFn({ method: "GET" }).handler(
   async () => {
     // Process in batches of 6 to avoid rate limits and speed up loading
     const BATCH_SIZE = 6;

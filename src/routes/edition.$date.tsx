@@ -140,7 +140,7 @@ function EditionDatePage() {
             <button onClick={() => setShowToc(true)} className="p-2 hover:bg-muted rounded-sm transition flex items-center gap-1.5" aria-label="Table of Contents">
               <List className="h-4 w-4" /><span className="text-xs font-medium hidden sm:inline">Contents</span>
             </button>
-            <Link to="/" className="p-2 hover:bg-muted rounded-sm transition" aria-label="Home"><Home className="h-4 w-4" /></Link>
+            <Link search={{ category: undefined }} to="/" className="p-2 hover:bg-muted rounded-sm transition" aria-label="Home"><Home className="h-4 w-4" /></Link>
           </div>
           <div className="text-center flex-1 min-w-0">
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground truncate block">
@@ -213,7 +213,7 @@ function EditionDatePage() {
           <div className="mt-6 flex flex-wrap justify-center gap-4 text-xs text-muted-foreground">
             <Link to="/editions/epaper" className="hover:text-foreground transition">Today's Edition</Link>
             <Link to="/archive" className="hover:text-foreground transition">Archive</Link>
-            <Link to="/" className="hover:text-foreground transition">Home</Link>
+            <Link search={{ category: undefined }} to="/" className="hover:text-foreground transition">Home</Link>
           </div>
         </div>
       </footer>
@@ -350,7 +350,7 @@ function DailyWidgets({ epaper }: { epaper: EpaperData }) {
               <div key={m.symbol} className="flex items-center justify-between text-xs">
                 <span className="font-medium truncate">{m.name}</span>
                 <span className="flex items-center gap-1.5 tabular-nums shrink-0">
-                  {m.available && m.price !== null ? (<><span>{m.price.toLocaleString("en-US", { maximumFractionDigits: 2 })}</span><span className={m.change !== null && m.change >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>{m.change_percent !== null ? `${m.change >= 0 ? "+" : ""}${m.change_percent.toFixed(2)}%` : ""}</span>{m.change !== null && m.change >= 0 ? <TrendingUp className="h-3 w-3 text-green-600 dark:text-green-400" /> : <TrendingDown className="h-3 w-3 text-red-600 dark:text-red-400" />}</>) : <span className="text-muted-foreground">—</span>}
+                  {m.available && m.price !== null ? (<><span>{m.price.toLocaleString("en-US", { maximumFractionDigits: 2 })}</span><span className={(m.change ?? 0) !== null && (m.change ?? 0) >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>{m.change_percent !== null ? `${(m.change ?? 0) >= 0 ? "+" : ""}${m.change_percent.toFixed(2)}%` : ""}</span>{(m.change ?? 0) !== null && (m.change ?? 0) >= 0 ? <TrendingUp className="h-3 w-3 text-green-600 dark:text-green-400" /> : <TrendingDown className="h-3 w-3 text-red-600 dark:text-red-400" />}</>) : <span className="text-muted-foreground">—</span>}
                 </span>
               </div>
             ))}

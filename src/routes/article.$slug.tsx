@@ -359,7 +359,7 @@ function ArticlePage() {
         articleSlug={article.slug}
         articleContentRef={articleContentRef}
         articleTitle={article.title}
-        articleSections={story.sections?.map((s: any, i: number) => ({ id: `section-${i}`, label: s.heading || s.title || `Section ${i + 1}` })) || []}
+        articleSections={(story as any).sections?.map((s: any, i: number) => ({ id: `section-${i}`, label: s.heading || s.title || `Section ${i + 1}` })) || []}
       />
       <ArticleAudioPlayer articleContentRef={articleContentRef} articleTitle={article.title} />
 
@@ -633,7 +633,6 @@ const CURATED_VOCAB: Record<string, VocabEntry> = {
   humanitarian: { word: "humanitarian", partOfSpeech: "adjective", meaning: "Concerned with or seeking to promote human welfare.", simpleExplanation: "Focused on helping people who are suffering.", example: "Humanitarian aid was rushed to the disaster zone.", synonyms: ["compassionate", "benevolent", "charitable"], antonyms: ["cruel", "oppressive"], pronunciation: "hjuːˌmænɪˈtɛəriən" },
   volatile: { word: "volatile", partOfSpeech: "adjective", meaning: "Liable to change rapidly and unpredictably, especially for the worse.", simpleExplanation: "Something that can change quickly and without warning.", example: "The region's political situation remains volatile.", synonyms: ["unstable", "unpredictable", "changeable", "turbulent"], antonyms: ["stable", "steady", "calm"], pronunciation: "ˈvɒlətaɪl" },
   controversial: { word: "controversial", partOfSpeech: "adjective", meaning: "Giving rise to public disagreement or heated argument.", simpleExplanation: "Something people strongly disagree about.", example: "The controversial policy sparked nationwide protests.", synonyms: ["disputed", "debatable", "contentious"], antonyms: ["uncontroversial", "agreed"], pronunciation: "ˌkɒntrəˈvɜrʃəl" },
-  sanctions: { word: "sanctions", partOfSpeech: "noun", meaning: "Official penalties or restrictions imposed to pressure a country or group.", simpleExplanation: "Punishments used to make a country change its actions.", example: "International sanctions targeted the country's oil exports.", synonyms: ["penalties", "embargoes", "restrictions"], antonyms: ["rewards", "incentives"], pronunciation: "ˈsæŋkʃənz" },
   mandate: { word: "mandate", partOfSpeech: "noun", meaning: "The authority to carry out a policy, granted by the electorate to a winner of an election.", simpleExplanation: "Permission given by voters to a leader to carry out their plans.", example: "The president claimed a mandate to reform healthcare.", synonyms: ["authority", "commission", "directive", "charge"], antonyms: [], pronunciation: "ˈmændeɪt" },
   referendum: { word: "referendum", partOfSpeech: "noun", meaning: "A direct vote by the electorate on a single political question.", simpleExplanation: "When all voters decide on a specific question directly.", example: "The country held a referendum on leaving the union.", synonyms: ["plebiscite", "ballot", "vote"], antonyms: [], pronunciation: "ˌrɛfəˈrɛndəm" },
   sanction: { word: "sanction", partOfSpeech: "noun", meaning: "A threatened penalty for disobeying a law or rule.", simpleExplanation: "A punishment for breaking a rule.", example: "The sanction was lifted after the country complied.", synonyms: ["penalty", "punishment", "fine"], antonyms: ["approval"], pronunciation: "ˈsæŋkʃən" },
@@ -657,7 +656,6 @@ const CURATED_VOCAB: Record<string, VocabEntry> = {
   renewable: { word: "renewable", partOfSpeech: "adjective", meaning: "Able to be replenished naturally; not depleted when used.", simpleExplanation: "Energy or resources that don't run out, like wind or sun.", example: "Renewable energy now powers half the country.", synonyms: ["sustainable", "replenishable", "regenerative"], antonyms: ["finite", "nonrenewable"], pronunciation: "rɪˈnuːəbəl" },
   emission: { word: "emission", partOfSpeech: "noun", meaning: "The production and discharge of something, especially gas or radiation.", simpleExplanation: "Gases or pollution released into the air.", example: "Carbon emissions must be reduced to slow climate change.", synonyms: ["discharge", "release", "output"], antonyms: ["absorption"], pronunciation: "ɪˈmɪʃən" },
   biodiversity: { word: "biodiversity", partOfSpeech: "noun", meaning: "The variety of plant and animal life in a particular habitat.", simpleExplanation: "The variety of living things in a place.", example: "Protecting biodiversity is essential for healthy ecosystems.", synonyms: ["ecological variety", "biological diversity"], antonyms: ["monoculture"], pronunciation: "ˌbaɪoʊdaɪˈvɜrsɪti" },
-  sanctions: { word: "sanctions", partOfSpeech: "noun", meaning: "Official penalties or restrictions imposed to pressure a country or group.", simpleExplanation: "Punishments used to make a country change its actions.", example: "The sanctions targeted the country's financial sector.", synonyms: ["penalties", "restrictions", "embargoes"], antonyms: ["rewards"], pronunciation: "ˈsæŋkʃənz" },
   aftermath: { word: "aftermath", partOfSpeech: "noun", meaning: "The consequences or results of an event, especially an unpleasant one.", simpleExplanation: "What happens after a big event, usually bad.", example: "In the aftermath of the storm, aid poured in.", synonyms: ["consequences", "results", "effects", "fallout"], antonyms: [], pronunciation: "ˈæftərmæθ" },
   casualty: { word: "casualty", partOfSpeech: "noun", meaning: "A person killed or injured in war or accident.", simpleExplanation: "Someone hurt or killed in an event.", example: "There were no casualties in the evacuation.", synonyms: ["victim", "fatality", "injured"], antonyms: ["survivor"], pronunciation: "ˈkæʒuəlti" },
   evacuation: { word: "evacuation", partOfSpeech: "noun", meaning: "The action of moving people from a dangerous place to a safe one.", simpleExplanation: "Moving people away from danger to safety.", example: "The evacuation went smoothly despite the chaos.", synonyms: ["removal", "retreat", "exodus", "withdrawal"], antonyms: ["arrival"], pronunciation: "ɪˌvækjuˈeɪʃən" },
@@ -749,7 +747,7 @@ function KnowledgeCheckReflection({ articleId, story, title }: { articleId: stri
       const optimistic: CommentRow = {
         id: tempId,
         article_id: articleId,
-        user_id: null,
+        user_id: "",
         parent_id: null,
         prompt_type: "perspective",
         body: text,
@@ -888,7 +886,7 @@ function Discussion({ articleId }: { articleId: string }) {
       const optimistic: CommentRow = {
         id: tempId,
         article_id: articleId,
-        user_id: null,
+        user_id: "",
         parent_id: input.parentId ?? null,
         prompt_type: input.promptType,
         body: input.body,

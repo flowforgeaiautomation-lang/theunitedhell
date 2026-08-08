@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
 import type { Article, ArticleSummary, Briefing, CommentRow, VocabEntry } from "./types";
 
@@ -463,8 +464,8 @@ async function normalizeArticle(article: Article): Promise<Article> {
     );
     if (fallback.length) {
       // Merge with existing AI vocab, avoiding duplicates
-      const existing = new Set(finalVocab.map((v) => v.word?.toLowerCase()));
-      const merged = [...finalVocab, ...fallback.filter((v) => !existing.has(v.word?.toLowerCase()))].slice(0, 10);
+      const existing = new Set(finalVocab.map((v: { word?: string }) => v.word?.toLowerCase()));
+      const merged = [...finalVocab, ...fallback.filter((v: { word?: string }) => !existing.has(v.word?.toLowerCase()))].slice(0, 10);
       if (merged.length >= 5) {
         finalVocab = merged;
         vocabWasRegenerated = true;
@@ -478,8 +479,8 @@ async function normalizeArticle(article: Article): Promise<Article> {
       const allArticleText = [article.title, article.dek, summary, mainStory, decClean((currentStory as any).background), decClean((currentStory as any).expert_analysis), decClean((currentStory as any).why_it_matters), decClean((currentStory as any).historical_context), decClean((currentStory as any).future_outlook), ...(currentStory.key_developments || []), ...(currentStory.quick_insights || []), ...(currentStory.reader_takeaways || [])].filter(Boolean).join(" ");
       const moreFallback = await generateFallbackVocab(allArticleText, finalVocab);
       if (moreFallback.length) {
-        const existing = new Set(finalVocab.map((v) => v.word?.toLowerCase()));
-        const merged = [...finalVocab, ...moreFallback.filter((v) => !existing.has(v.word?.toLowerCase()))].slice(0, 10);
+        const existing = new Set(finalVocab.map((v: { word?: string }) => v.word?.toLowerCase()));
+        const merged = [...finalVocab, ...moreFallback.filter((v: { word?: string }) => !existing.has(v.word?.toLowerCase()))].slice(0, 10);
         finalVocab = merged;
         vocabWasRegenerated = true;
       }
@@ -541,7 +542,7 @@ async function normalizeArticle(article: Article): Promise<Article> {
   if (vocabWasRegenerated && article.id) {
     try {
       const supabase = publicClient();
-      const vocabJson = finalVocab.map((v) => ({
+      const vocabJson = finalVocab.map((v: any) => ({
         word: v.word,
         part_of_speech: v.partOfSpeech || null,
         meaning: v.meaning || null,
@@ -559,7 +560,7 @@ async function normalizeArticle(article: Article): Promise<Article> {
     } catch {}
   }
 
-  return normalized;
+  return normalized as Article;
 }
 
 export const listArticles = createServerFn({ method: "GET" })
@@ -773,7 +774,7 @@ export const getBriefingToday = createServerFn({ method: "GET" }).handler(async 
   // Always return a populated briefing, even when none has been generated yet.
   // We assemble it on the fly from the latest published articles so the section is
   // never empty for the reader.
-  const pickItems = (rows: ArticleSummary[]) =>
+  const pickItems = (rows: { slug: string; title: string }[]) =>
     rows.map((r) => ({ slug: r.slug, title: r.title }));
 
   const buildFromArticles = async (): Promise<Briefing> => {
@@ -836,6 +837,7 @@ export const getBriefingToday = createServerFn({ method: "GET" }).handler(async 
 });
 
 export const postReflection = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -846,39 +848,43 @@ export const postReflection = createServerFn({ method: "POST" })
       })
       .parse(d),
   )
-  .handler(async ({ data }) => {
-    const supabase = publicClient();
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
     const { data: id, error } = await supabase.rpc("insert_comment", {
       p_article_id: data.articleId,
       p_body: data.body,
       p_prompt_type: data.promptType ?? "perspective",
-      p_parent_id: data.parentId ?? null,
-      p_user_id: null,
+      p_parent_id: (data.parentId ?? null) as unknown as string,
+      p_user_id: userId,
     });
     if (error) throw new Error(error.message);
     return { id };
   });
 
 export const bumpLike = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z.object({ commentId: z.string().uuid(), userId: z.string().uuid().nullable().optional() }).parse(d),
   )
-  .handler(async ({ data }) => {
-    const supabase = publicClient();
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
     const { data: result, error } = await supabase.rpc("toggle_comment_like", {
       p_comment_id: data.commentId,
-      p_user_id: data.userId ?? null,
+      p_user_id: userId,
     });
     if (error) throw new Error(error.message);
     return result as { like_count: number; liked: boolean };
   });
 
 export const editComment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z.object({ commentId: z.string().uuid(), body: z.string().trim().min(1).max(4000) }).parse(d),
   )
-  .handler(async ({ data }) => {
-    const supabase = publicClient();
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: owner } = await supabase.from("comments").select("user_id").eq("id", data.commentId).maybeSingle();
+    if (owner?.user_id !== userId) throw new Error("You can only edit your own comments");
     const { error } = await supabase.rpc("edit_comment_by_id", {
       p_comment_id: data.commentId,
       p_body: data.body,
@@ -888,23 +894,27 @@ export const editComment = createServerFn({ method: "POST" })
   });
 
 export const getLikedComments = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z.object({ articleId: z.string().uuid(), userId: z.string().uuid().nullable().optional() }).parse(d),
   )
-  .handler(async ({ data }) => {
-    const supabase = publicClient();
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
     const { data: result, error } = await supabase.rpc("get_comment_likes_for_user", {
       p_article_id: data.articleId,
-      p_user_id: data.userId ?? null,
+      p_user_id: userId,
     });
     if (error) throw new Error(error.message);
     return (result ?? []) as string[];
   });
 
 export const deleteCommentAnon = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ commentId: z.string().uuid() }).parse(d))
-  .handler(async ({ data }) => {
-    const supabase = publicClient();
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: owner } = await supabase.from("comments").select("user_id").eq("id", data.commentId).maybeSingle();
+    if (owner?.user_id !== userId) throw new Error("You can only delete your own comments");
     const { error } = await supabase.rpc("delete_comment_by_id", {
       p_comment_id: data.commentId,
     });

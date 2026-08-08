@@ -63,7 +63,6 @@ export function SmartImage({
           height={height}
           loading="eager"
           decoding="sync"
-          // @ts-expect-error fetchPriority is valid HTML but not in React types
           fetchPriority="high"
           onLoad={() => setLoaded(true)}
           onError={() => setError(true)}

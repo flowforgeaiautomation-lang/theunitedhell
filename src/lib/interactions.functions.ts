@@ -91,7 +91,7 @@ export const postComment = createServerFn({ method: "POST" })
       p_article_id: data.articleId,
       p_body: data.body,
       p_prompt_type: data.promptType ?? "perspective",
-      p_parent_id: data.parentId ?? null,
+      p_parent_id: (data.parentId ?? null) as unknown as string,
       p_user_id: userId,
     });
     if (error) throw new Error(error.message);

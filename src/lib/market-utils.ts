@@ -159,7 +159,7 @@ export function formatConvertedPrice(quote: MarketPrice, displayCurrency: Curren
   if (nativeCur === displayCurrency) return null;
 
   const sym = CURRENCY_SYMBOLS[displayCurrency];
-  const converted = convertUsdToCurrency(price, displayCurrency);
+  const converted = convertUsdToCurrency(quote.price ?? 0, displayCurrency);
   return `≈ ${sym}${converted.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 

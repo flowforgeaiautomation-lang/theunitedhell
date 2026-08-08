@@ -218,7 +218,7 @@ function EpaperPage() {
               <List className="h-4 w-4" />
               <span className="text-xs font-medium hidden sm:inline">Contents</span>
             </button>
-            <Link to="/" className="p-2 hover:bg-muted rounded-sm transition" aria-label="Home">
+            <Link search={{ category: undefined }} to="/" className="p-2 hover:bg-muted rounded-sm transition" aria-label="Home">
               <Home className="h-4 w-4" />
             </Link>
           </div>
@@ -375,7 +375,7 @@ function EpaperPage() {
             {epaper.dateDisplay} · Edition #{epaper.editionNumber} · {epaper.totalArticles} stories · {totalPages} pages
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-4 text-xs text-muted-foreground">
-            <Link to="/" className="hover:text-foreground transition">Home</Link>
+            <Link search={{ category: undefined }} to="/" className="hover:text-foreground transition">Home</Link>
             <Link to="/briefing" className="hover:text-foreground transition">Daily Briefing</Link>
             <Link to="/markets" search={{ asset: undefined }} className="hover:text-foreground transition">Markets</Link>
             <Link to="/trending" className="hover:text-foreground transition">Trending</Link>
@@ -653,10 +653,10 @@ function DailyWidgets({ epaper }: { epaper: EpaperData }) {
                   {m.available && m.price !== null ? (
                     <>
                       <span>{m.price.toLocaleString("en-US", { maximumFractionDigits: 2 })}</span>
-                      <span className={m.change !== null && m.change >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
-                        {m.change_percent !== null ? `${m.change >= 0 ? "+" : ""}${m.change_percent.toFixed(2)}%` : ""}
+                      <span className={(m.change ?? 0) !== null && (m.change ?? 0) >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
+                        {m.change_percent !== null ? `${(m.change ?? 0) >= 0 ? "+" : ""}${m.change_percent.toFixed(2)}%` : ""}
                       </span>
-                      {m.change !== null && m.change >= 0 ? <TrendingUp className="h-3 w-3 text-green-600 dark:text-green-400" /> : <TrendingDown className="h-3 w-3 text-red-600 dark:text-red-400" />}
+                      {(m.change ?? 0) !== null && (m.change ?? 0) >= 0 ? <TrendingUp className="h-3 w-3 text-green-600 dark:text-green-400" /> : <TrendingDown className="h-3 w-3 text-red-600 dark:text-red-400" />}
                     </>
                   ) : (
                     <span className="text-muted-foreground">—</span>
@@ -726,7 +726,7 @@ function categoryToDesk(category: string): string {
     movies: "Entertainment Desk", football: "Sports Desk", cricket: "Sports Desk",
     books: "Books Desk", psychology: "Psychology Desk", physics: "Science Desk",
     "electric-vehicles": "Auto Desk", sustainability: "Climate Desk", robotics: "AI Desk",
-    sport: "Sports Desk", business: "Business Desk",
+    sport: "Sports Desk",
   };
   return deskMap[category] || "Editorial Desk";
 }

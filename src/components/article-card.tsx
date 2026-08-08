@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import type { ArticleSummary } from "@lib/types";
+import type { ArticleSummary } from "@/lib/types";
 import { categoryLabel } from "@/lib/categories";
 import { fallbackCoverUrl } from "@/lib/article-images";
 import { SmartImage } from "@/components/SmartImage";

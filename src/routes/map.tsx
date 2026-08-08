@@ -28,7 +28,7 @@ export const Route = createFileRoute("/map")({
     ],
   }),
   loader: async ({ context }) => {
-    try { await context.queryClient.prefetchQuery(statsQ.queryFn()); } catch {}
+    try { await context.queryClient.prefetchQuery(statsQ); } catch {}
   },
   component: MapPage,
   errorComponent: ({ error }) => <div className="container-edit py-20"><p className="dek">{error.message}</p></div>,

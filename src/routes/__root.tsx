@@ -179,7 +179,7 @@ function RootComponent() {
     const matches = router.state.matches;
     for (let i = matches.length - 1; i >= 0; i--) {
       const match = matches[i];
-      const route = match.route;
+      const route = (match as unknown as { route?: { options?: { head?: () => any } } }).route;
       if (route?.options?.head) {
         try {
           const head = route.options.head();
