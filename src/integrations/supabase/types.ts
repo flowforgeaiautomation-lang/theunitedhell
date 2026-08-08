@@ -389,6 +389,96 @@ export type Database = {
           },
         ]
       }
+      coupons: {
+        Row: {
+          auto_apply: boolean
+          code: string
+          created_at: string
+          description: string | null
+          discount_type: string
+          discount_value: number
+          eligible_only_new_users: boolean
+          id: string
+          is_active: boolean
+          max_uses: number | null
+          max_uses_per_user: number
+          stripe_coupon_id: string | null
+          used_count: number
+          valid_until: string | null
+        }
+        Insert: {
+          auto_apply?: boolean
+          code: string
+          created_at?: string
+          description?: string | null
+          discount_type?: string
+          discount_value?: number
+          eligible_only_new_users?: boolean
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          max_uses_per_user?: number
+          stripe_coupon_id?: string | null
+          used_count?: number
+          valid_until?: string | null
+        }
+        Update: {
+          auto_apply?: boolean
+          code?: string
+          created_at?: string
+          description?: string | null
+          discount_type?: string
+          discount_value?: number
+          eligible_only_new_users?: boolean
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          max_uses_per_user?: number
+          stripe_coupon_id?: string | null
+          used_count?: number
+          valid_until?: string | null
+        }
+        Relationships: []
+      }
+      invoices: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          currency: string
+          id: string
+          invoice_number: string | null
+          pdf_url: string | null
+          period_end: string | null
+          period_start: string | null
+          plan_code: string | null
+          user_id: string
+        }
+        Insert: {
+          amount_cents?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          invoice_number?: string | null
+          pdf_url?: string | null
+          period_end?: string | null
+          period_start?: string | null
+          plan_code?: string | null
+          user_id: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          invoice_number?: string | null
+          pdf_url?: string | null
+          period_end?: string | null
+          period_start?: string | null
+          plan_code?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       market_prices: {
         Row: {
           available: boolean
@@ -624,6 +714,81 @@ export type Database = {
           },
         ]
       }
+      subscription_plans: {
+        Row: {
+          code: string
+          created_at: string
+          currency: string
+          description: string | null
+          interval: string
+          is_active: boolean
+          name: string
+          price_cents: number
+          stripe_price_id: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          currency?: string
+          description?: string | null
+          interval?: string
+          is_active?: boolean
+          name: string
+          price_cents?: number
+          stripe_price_id?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          currency?: string
+          description?: string | null
+          interval?: string
+          is_active?: boolean
+          name?: string
+          price_cents?: number
+          stripe_price_id?: string | null
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          amount_cents: number
+          coupon_code: string | null
+          created_at: string
+          currency: string
+          discount_cents: number
+          id: string
+          plan_code: string | null
+          status: string
+          stripe_checkout_session_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount_cents?: number
+          coupon_code?: string | null
+          created_at?: string
+          currency?: string
+          discount_cents?: number
+          id?: string
+          plan_code?: string | null
+          status?: string
+          stripe_checkout_session_id?: string | null
+          user_id: string
+        }
+        Update: {
+          amount_cents?: number
+          coupon_code?: string | null
+          created_at?: string
+          currency?: string
+          discount_cents?: number
+          id?: string
+          plan_code?: string | null
+          status?: string
+          stripe_checkout_session_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       translation_queue: {
         Row: {
           article_slug: string
@@ -654,6 +819,86 @@ export type Database = {
           last_error?: string | null
           status?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      user_coupons: {
+        Row: {
+          code: string
+          coupon_id: string | null
+          created_at: string
+          id: string
+          status: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          code: string
+          coupon_id?: string | null
+          created_at?: string
+          id?: string
+          status?: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          code?: string
+          coupon_id?: string | null
+          created_at?: string
+          id?: string
+          status?: string
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_coupons_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_subscriptions: {
+        Row: {
+          canceled_at: string | null
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          id: string
+          plan_code: string
+          status: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          canceled_at?: string | null
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          plan_code: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          canceled_at?: string | null
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          plan_code?: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -710,7 +955,69 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      count_articles_missing_video: { Args: never; Returns: number }
+      delete_comment_by_id: {
+        Args: { p_comment_id: string }
+        Returns: undefined
+      }
+      edit_comment_by_id: {
+        Args: { p_body: string; p_comment_id: string }
+        Returns: undefined
+      }
+      get_articles_missing_video: {
+        Args: { p_limit: number }
+        Returns: {
+          category: string
+          cover_image_url: string
+          cover_video_url: string
+          id: string
+          title: string
+        }[]
+      }
+      get_comment_likes_for_user: {
+        Args: { p_article_id: string; p_user_id: string }
+        Returns: string[]
+      }
+      increment_vocab_search: { Args: { w: string }; Returns: undefined }
+      insert_comment: {
+        Args: {
+          p_article_id: string
+          p_body: string
+          p_parent_id: string
+          p_prompt_type: string
+          p_user_id: string
+        }
+        Returns: string
+      }
+      list_comments_by_article: {
+        Args: { p_article_id: string; p_sort: string }
+        Returns: {
+          article_id: string
+          avatar_url: string
+          body: string
+          created_at: string
+          display_name: string
+          id: string
+          is_edited: boolean
+          like_count: number
+          parent_id: string
+          prompt_type: string
+          reply_count: number
+          status: string
+          updated_at: string
+          user_id: string
+          username: string
+        }[]
+      }
+      toggle_comment_like: {
+        Args: { p_comment_id: string; p_user_id: string }
+        Returns: Json
+      }
+      update_cover_video_url: {
+        Args: { p_article_id: string; p_video_url: string }
+        Returns: undefined
+      }
+      update_trending_scores: { Args: never; Returns: undefined }
     }
     Enums: {
       [_ in never]: never
