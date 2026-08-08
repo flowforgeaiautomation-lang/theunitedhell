@@ -40,6 +40,86 @@ export type Database = {
           },
         ]
       }
+      article_quizzes: {
+        Row: {
+          article_id: string
+          correct_answer: string | null
+          created_at: string
+          explanation: string | null
+          id: string
+          options: Json | null
+          question: string
+          question_type: string
+        }
+        Insert: {
+          article_id: string
+          correct_answer?: string | null
+          created_at?: string
+          explanation?: string | null
+          id?: string
+          options?: Json | null
+          question: string
+          question_type: string
+        }
+        Update: {
+          article_id?: string
+          correct_answer?: string | null
+          created_at?: string
+          explanation?: string | null
+          id?: string
+          options?: Json | null
+          question?: string
+          question_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "article_quizzes_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "articles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      article_translations: {
+        Row: {
+          article_slug: string
+          created_at: string
+          id: string
+          language: string
+          status: string
+          translated_body: string | null
+          translated_dek: string | null
+          translated_story: Json | null
+          translated_title: string | null
+          updated_at: string
+        }
+        Insert: {
+          article_slug: string
+          created_at?: string
+          id?: string
+          language: string
+          status?: string
+          translated_body?: string | null
+          translated_dek?: string | null
+          translated_story?: Json | null
+          translated_title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          article_slug?: string
+          created_at?: string
+          id?: string
+          language?: string
+          status?: string
+          translated_body?: string | null
+          translated_dek?: string | null
+          translated_story?: Json | null
+          translated_title?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       articles: {
         Row: {
           body: string | null
@@ -50,6 +130,7 @@ export type Database = {
           country_code: string | null
           cover_image_prompt: string | null
           cover_image_url: string | null
+          cover_video_url: string | null
           created_at: string
           created_by: string | null
           dek: string | null
@@ -66,6 +147,7 @@ export type Database = {
           story: Json
           subcategory: string | null
           title: string
+          trending_score: number
           trust_score: number
           updated_at: string
           view_count: number
@@ -79,6 +161,7 @@ export type Database = {
           country_code?: string | null
           cover_image_prompt?: string | null
           cover_image_url?: string | null
+          cover_video_url?: string | null
           created_at?: string
           created_by?: string | null
           dek?: string | null
@@ -95,6 +178,7 @@ export type Database = {
           story?: Json
           subcategory?: string | null
           title: string
+          trending_score?: number
           trust_score?: number
           updated_at?: string
           view_count?: number
@@ -108,6 +192,7 @@ export type Database = {
           country_code?: string | null
           cover_image_prompt?: string | null
           cover_image_url?: string | null
+          cover_video_url?: string | null
           created_at?: string
           created_by?: string | null
           dek?: string | null
@@ -124,6 +209,7 @@ export type Database = {
           story?: Json
           subcategory?: string | null
           title?: string
+          trending_score?: number
           trust_score?: number
           updated_at?: string
           view_count?: number
@@ -249,10 +335,13 @@ export type Database = {
           body: string
           created_at: string
           id: string
+          is_edited: boolean
           is_hidden: boolean
           like_count: number
           parent_id: string | null
           prompt_type: string | null
+          status: string
+          updated_at: string
           user_id: string
         }
         Insert: {
@@ -260,10 +349,13 @@ export type Database = {
           body: string
           created_at?: string
           id?: string
+          is_edited?: boolean
           is_hidden?: boolean
           like_count?: number
           parent_id?: string | null
           prompt_type?: string | null
+          status?: string
+          updated_at?: string
           user_id: string
         }
         Update: {
@@ -271,10 +363,13 @@ export type Database = {
           body?: string
           created_at?: string
           id?: string
+          is_edited?: boolean
           is_hidden?: boolean
           like_count?: number
           parent_id?: string | null
           prompt_type?: string | null
+          status?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: [
@@ -294,6 +389,42 @@ export type Database = {
           },
         ]
       }
+      market_prices: {
+        Row: {
+          available: boolean
+          category: string | null
+          change: number | null
+          change_percent: number | null
+          name: string
+          price: number | null
+          region: string | null
+          symbol: string
+          updated_at: string
+        }
+        Insert: {
+          available?: boolean
+          category?: string | null
+          change?: number | null
+          change_percent?: number | null
+          name: string
+          price?: number | null
+          region?: string | null
+          symbol: string
+          updated_at?: string
+        }
+        Update: {
+          available?: boolean
+          category?: string | null
+          change?: number | null
+          change_percent?: number | null
+          name?: string
+          price?: number | null
+          region?: string | null
+          symbol?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -302,6 +433,7 @@ export type Database = {
           display_name: string | null
           id: string
           interests: string[] | null
+          is_admin: boolean
           onboarded: boolean
           updated_at: string
           username: string | null
@@ -313,6 +445,7 @@ export type Database = {
           display_name?: string | null
           id: string
           interests?: string[] | null
+          is_admin?: boolean
           onboarded?: boolean
           updated_at?: string
           username?: string | null
@@ -324,6 +457,7 @@ export type Database = {
           display_name?: string | null
           id?: string
           interests?: string[] | null
+          is_admin?: boolean
           onboarded?: boolean
           updated_at?: string
           username?: string | null
@@ -355,6 +489,221 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      reading_notes: {
+        Row: {
+          article_slug: string
+          color: string | null
+          created_at: string
+          id: string
+          note: string | null
+          selected_text: string
+          user_id: string
+        }
+        Insert: {
+          article_slug: string
+          color?: string | null
+          created_at?: string
+          id?: string
+          note?: string | null
+          selected_text: string
+          user_id?: string
+        }
+        Update: {
+          article_slug?: string
+          color?: string | null
+          created_at?: string
+          id?: string
+          note?: string | null
+          selected_text?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      reading_preferences: {
+        Row: {
+          prefs: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          prefs?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          prefs?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      reading_progress: {
+        Row: {
+          article_slug: string
+          read_seconds: number
+          scroll_percent: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          article_slug: string
+          read_seconds?: number
+          scroll_percent?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          article_slug?: string
+          read_seconds?: number
+          scroll_percent?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      saved_words: {
+        Row: {
+          antonyms: string[] | null
+          article_id: string | null
+          context_in_article: string | null
+          created_at: string
+          difficulty: string
+          example: string | null
+          id: string
+          meaning: string | null
+          part_of_speech: string | null
+          pronunciation: string | null
+          simple_explanation: string | null
+          synonyms: string[] | null
+          user_id: string
+          word: string
+          word_origin: string | null
+        }
+        Insert: {
+          antonyms?: string[] | null
+          article_id?: string | null
+          context_in_article?: string | null
+          created_at?: string
+          difficulty?: string
+          example?: string | null
+          id?: string
+          meaning?: string | null
+          part_of_speech?: string | null
+          pronunciation?: string | null
+          simple_explanation?: string | null
+          synonyms?: string[] | null
+          user_id: string
+          word: string
+          word_origin?: string | null
+        }
+        Update: {
+          antonyms?: string[] | null
+          article_id?: string | null
+          context_in_article?: string | null
+          created_at?: string
+          difficulty?: string
+          example?: string | null
+          id?: string
+          meaning?: string | null
+          part_of_speech?: string | null
+          pronunciation?: string | null
+          simple_explanation?: string | null
+          synonyms?: string[] | null
+          user_id?: string
+          word?: string
+          word_origin?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_words_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "articles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      translation_queue: {
+        Row: {
+          article_slug: string
+          attempts: number
+          created_at: string
+          id: string
+          language: string
+          last_error: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          article_slug: string
+          attempts?: number
+          created_at?: string
+          id?: string
+          language: string
+          last_error?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          article_slug?: string
+          attempts?: number
+          created_at?: string
+          id?: string
+          language?: string
+          last_error?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      vocabulary_cache: {
+        Row: {
+          antonyms: string[] | null
+          created_at: string
+          example: string | null
+          last_searched_at: string | null
+          meaning: string | null
+          part_of_speech: string | null
+          pronunciation: string | null
+          search_count: number
+          simple_explanation: string | null
+          source: string | null
+          synonyms: string[] | null
+          updated_at: string
+          word: string
+        }
+        Insert: {
+          antonyms?: string[] | null
+          created_at?: string
+          example?: string | null
+          last_searched_at?: string | null
+          meaning?: string | null
+          part_of_speech?: string | null
+          pronunciation?: string | null
+          search_count?: number
+          simple_explanation?: string | null
+          source?: string | null
+          synonyms?: string[] | null
+          updated_at?: string
+          word: string
+        }
+        Update: {
+          antonyms?: string[] | null
+          created_at?: string
+          example?: string | null
+          last_searched_at?: string | null
+          meaning?: string | null
+          part_of_speech?: string | null
+          pronunciation?: string | null
+          search_count?: number
+          simple_explanation?: string | null
+          source?: string | null
+          synonyms?: string[] | null
+          updated_at?: string
+          word?: string
+        }
+        Relationships: []
       }
     }
     Views: {
