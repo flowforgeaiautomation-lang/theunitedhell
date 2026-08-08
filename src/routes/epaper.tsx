@@ -218,7 +218,7 @@ function EpaperPage() {
               <List className="h-4 w-4" />
               <span className="text-xs font-medium hidden sm:inline">Contents</span>
             </button>
-            <Link to="/" className="p-2 hover:bg-muted rounded-sm transition" aria-label="Home">
+            <Link search={{ category: undefined }} to="/" className="p-2 hover:bg-muted rounded-sm transition" aria-label="Home">
               <Home className="h-4 w-4" />
             </Link>
           </div>
@@ -375,7 +375,7 @@ function EpaperPage() {
             {epaper.dateDisplay} · Edition #{epaper.editionNumber} · {epaper.totalArticles} stories · {totalPages} pages
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-4 text-xs text-muted-foreground">
-            <Link to="/" className="hover:text-foreground transition">Home</Link>
+            <Link search={{ category: undefined }} to="/" className="hover:text-foreground transition">Home</Link>
             <Link to="/briefing" className="hover:text-foreground transition">Daily Briefing</Link>
             <Link to="/markets" search={{ asset: undefined }} className="hover:text-foreground transition">Markets</Link>
             <Link to="/trending" className="hover:text-foreground transition">Trending</Link>

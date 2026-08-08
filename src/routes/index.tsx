@@ -239,8 +239,7 @@ function Home() {
               ? "Latest from all sections"
               : `Latest from ${COUNTRY_LABELS[country] ?? country}`}
         </div>
-        <Link
-          to="/search"
+        <Link search={{ q: "" }} to="/search"
           preload="intent"
           className="inline-flex items-center gap-2 border border-foreground px-3 py-1.5 text-xs uppercase tracking-widest hover:bg-foreground hover:text-background transition"
         >

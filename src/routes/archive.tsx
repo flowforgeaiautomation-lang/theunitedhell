@@ -98,7 +98,7 @@ function ArchivePage() {
           <p className="text-xs uppercase tracking-wider text-muted-foreground">Beyond Headlines. Beyond Discovery.</p>
           <div className="mt-4 flex flex-wrap justify-center gap-4 text-xs text-muted-foreground">
             <Link to="/editions/epaper" className="hover:text-foreground transition">Today's Edition</Link>
-            <Link to="/" className="hover:text-foreground transition">Home</Link>
+            <Link search={{ category: undefined }} to="/" className="hover:text-foreground transition">Home</Link>
             <Link to="/briefing" className="hover:text-foreground transition">Daily Briefing</Link>
           </div>
         </div>

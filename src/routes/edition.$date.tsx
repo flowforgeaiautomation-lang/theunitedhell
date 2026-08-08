@@ -140,7 +140,7 @@ function EditionDatePage() {
             <button onClick={() => setShowToc(true)} className="p-2 hover:bg-muted rounded-sm transition flex items-center gap-1.5" aria-label="Table of Contents">
               <List className="h-4 w-4" /><span className="text-xs font-medium hidden sm:inline">Contents</span>
             </button>
-            <Link to="/" className="p-2 hover:bg-muted rounded-sm transition" aria-label="Home"><Home className="h-4 w-4" /></Link>
+            <Link search={{ category: undefined }} to="/" className="p-2 hover:bg-muted rounded-sm transition" aria-label="Home"><Home className="h-4 w-4" /></Link>
           </div>
           <div className="text-center flex-1 min-w-0">
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground truncate block">
@@ -213,7 +213,7 @@ function EditionDatePage() {
           <div className="mt-6 flex flex-wrap justify-center gap-4 text-xs text-muted-foreground">
             <Link to="/editions/epaper" className="hover:text-foreground transition">Today's Edition</Link>
             <Link to="/archive" className="hover:text-foreground transition">Archive</Link>
-            <Link to="/" className="hover:text-foreground transition">Home</Link>
+            <Link search={{ category: undefined }} to="/" className="hover:text-foreground transition">Home</Link>
           </div>
         </div>
       </footer>
