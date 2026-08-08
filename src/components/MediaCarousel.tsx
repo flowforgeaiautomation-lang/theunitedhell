@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { SmartImage } from "./SmartImage";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-type MediaItem = {
+export type MediaItem = {
   type: "image";
   src: string;
   alt: string;

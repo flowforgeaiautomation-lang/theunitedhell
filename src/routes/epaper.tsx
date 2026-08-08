@@ -653,10 +653,10 @@ function DailyWidgets({ epaper }: { epaper: EpaperData }) {
                   {m.available && m.price !== null ? (
                     <>
                       <span>{m.price.toLocaleString("en-US", { maximumFractionDigits: 2 })}</span>
-                      <span className={m.change !== null && m.change >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
-                        {m.change_percent !== null ? `${m.change >= 0 ? "+" : ""}${m.change_percent.toFixed(2)}%` : ""}
+                      <span className={(m.change ?? 0) !== null && (m.change ?? 0) >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
+                        {m.change_percent !== null ? `${(m.change ?? 0) >= 0 ? "+" : ""}${m.change_percent.toFixed(2)}%` : ""}
                       </span>
-                      {m.change !== null && m.change >= 0 ? <TrendingUp className="h-3 w-3 text-green-600 dark:text-green-400" /> : <TrendingDown className="h-3 w-3 text-red-600 dark:text-red-400" />}
+                      {(m.change ?? 0) !== null && (m.change ?? 0) >= 0 ? <TrendingUp className="h-3 w-3 text-green-600 dark:text-green-400" /> : <TrendingDown className="h-3 w-3 text-red-600 dark:text-red-400" />}
                     </>
                   ) : (
                     <span className="text-muted-foreground">—</span>

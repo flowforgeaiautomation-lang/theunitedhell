@@ -359,7 +359,7 @@ function ArticlePage() {
         articleSlug={article.slug}
         articleContentRef={articleContentRef}
         articleTitle={article.title}
-        articleSections={story.sections?.map((s: any, i: number) => ({ id: `section-${i}`, label: s.heading || s.title || `Section ${i + 1}` })) || []}
+        articleSections={(story as any).sections?.map((s: any, i: number) => ({ id: `section-${i}`, label: s.heading || s.title || `Section ${i + 1}` })) || []}
       />
       <ArticleAudioPlayer articleContentRef={articleContentRef} articleTitle={article.title} />
 
@@ -747,7 +747,7 @@ function KnowledgeCheckReflection({ articleId, story, title }: { articleId: stri
       const optimistic: CommentRow = {
         id: tempId,
         article_id: articleId,
-        user_id: null,
+        user_id: "",
         parent_id: null,
         prompt_type: "perspective",
         body: text,
@@ -886,7 +886,7 @@ function Discussion({ articleId }: { articleId: string }) {
       const optimistic: CommentRow = {
         id: tempId,
         article_id: articleId,
-        user_id: null,
+        user_id: "",
         parent_id: input.parentId ?? null,
         prompt_type: input.promptType,
         body: input.body,

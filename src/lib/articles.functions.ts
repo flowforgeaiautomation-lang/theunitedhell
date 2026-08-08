@@ -559,7 +559,7 @@ async function normalizeArticle(article: Article): Promise<Article> {
     } catch {}
   }
 
-  return normalized;
+  return normalized as Article;
 }
 
 export const listArticles = createServerFn({ method: "GET" })
@@ -773,7 +773,7 @@ export const getBriefingToday = createServerFn({ method: "GET" }).handler(async 
   // Always return a populated briefing, even when none has been generated yet.
   // We assemble it on the fly from the latest published articles so the section is
   // never empty for the reader.
-  const pickItems = (rows: ArticleSummary[]) =>
+  const pickItems = (rows: { slug: string; title: string }[]) =>
     rows.map((r) => ({ slug: r.slug, title: r.title }));
 
   const buildFromArticles = async (): Promise<Briefing> => {
