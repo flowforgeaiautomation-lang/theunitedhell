@@ -32,7 +32,7 @@ export const Route = createFileRoute("/briefing")({
     ],
   }),
   loader: async ({ context }) => {
-    try { await context.queryClient.prefetchQuery(briefingQ.queryFn()); } catch {}
+    try { await context.queryClient.prefetchQuery(briefingQ); } catch {}
   },
   component: BriefingPage,
   errorComponent: ({ error }) => (

@@ -463,8 +463,8 @@ async function normalizeArticle(article: Article): Promise<Article> {
     );
     if (fallback.length) {
       // Merge with existing AI vocab, avoiding duplicates
-      const existing = new Set(finalVocab.map((v) => v.word?.toLowerCase()));
-      const merged = [...finalVocab, ...fallback.filter((v) => !existing.has(v.word?.toLowerCase()))].slice(0, 10);
+      const existing = new Set(finalVocab.map((v: { word?: string }) => v.word?.toLowerCase()));
+      const merged = [...finalVocab, ...fallback.filter((v: { word?: string }) => !existing.has(v.word?.toLowerCase()))].slice(0, 10);
       if (merged.length >= 5) {
         finalVocab = merged;
         vocabWasRegenerated = true;
@@ -478,8 +478,8 @@ async function normalizeArticle(article: Article): Promise<Article> {
       const allArticleText = [article.title, article.dek, summary, mainStory, decClean((currentStory as any).background), decClean((currentStory as any).expert_analysis), decClean((currentStory as any).why_it_matters), decClean((currentStory as any).historical_context), decClean((currentStory as any).future_outlook), ...(currentStory.key_developments || []), ...(currentStory.quick_insights || []), ...(currentStory.reader_takeaways || [])].filter(Boolean).join(" ");
       const moreFallback = await generateFallbackVocab(allArticleText, finalVocab);
       if (moreFallback.length) {
-        const existing = new Set(finalVocab.map((v) => v.word?.toLowerCase()));
-        const merged = [...finalVocab, ...moreFallback.filter((v) => !existing.has(v.word?.toLowerCase()))].slice(0, 10);
+        const existing = new Set(finalVocab.map((v: { word?: string }) => v.word?.toLowerCase()));
+        const merged = [...finalVocab, ...moreFallback.filter((v: { word?: string }) => !existing.has(v.word?.toLowerCase()))].slice(0, 10);
         finalVocab = merged;
         vocabWasRegenerated = true;
       }
@@ -541,7 +541,7 @@ async function normalizeArticle(article: Article): Promise<Article> {
   if (vocabWasRegenerated && article.id) {
     try {
       const supabase = publicClient();
-      const vocabJson = finalVocab.map((v) => ({
+      const vocabJson = finalVocab.map((v: any) => ({
         word: v.word,
         part_of_speech: v.partOfSpeech || null,
         meaning: v.meaning || null,
@@ -852,8 +852,8 @@ export const postReflection = createServerFn({ method: "POST" })
       p_article_id: data.articleId,
       p_body: data.body,
       p_prompt_type: data.promptType ?? "perspective",
-      p_parent_id: data.parentId ?? null,
-      p_user_id: null,
+      p_parent_id: (data.parentId ?? null) as unknown as string,
+      p_user_id: null as unknown as string,
     });
     if (error) throw new Error(error.message);
     return { id };
@@ -867,7 +867,7 @@ export const bumpLike = createServerFn({ method: "POST" })
     const supabase = publicClient();
     const { data: result, error } = await supabase.rpc("toggle_comment_like", {
       p_comment_id: data.commentId,
-      p_user_id: data.userId ?? null,
+      p_user_id: (data.userId ?? null) as unknown as string,
     });
     if (error) throw new Error(error.message);
     return result as { like_count: number; liked: boolean };
@@ -895,7 +895,7 @@ export const getLikedComments = createServerFn({ method: "GET" })
     const supabase = publicClient();
     const { data: result, error } = await supabase.rpc("get_comment_likes_for_user", {
       p_article_id: data.articleId,
-      p_user_id: data.userId ?? null,
+      p_user_id: (data.userId ?? null) as unknown as string,
     });
     if (error) throw new Error(error.message);
     return (result ?? []) as string[];

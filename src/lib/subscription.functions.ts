@@ -444,8 +444,8 @@ export const adminGetRevenue = createServerFn({ method: "GET" })
     const monthlyRevenue = succeeded
       .filter((r: { created_at: string }) => new Date(r.created_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000))
       .reduce((s: number, r: { amount_cents: number }) => s + r.amount_cents, 0);
-    const activeSubs = succeeded.filter((r: { plan_code: string }) => r.plan_code === "monthly").length;
-    const yearlySubs = succeeded.filter((r: { plan_code: string }) => r.plan_code === "yearly").length;
+    const activeSubs = succeeded.filter((r: { plan_code: string | null }) => r.plan_code === "monthly").length;
+    const yearlySubs = succeeded.filter((r: { plan_code: string | null }) => r.plan_code === "yearly").length;
 
     return {
       totalRevenueCents: totalRevenue,
