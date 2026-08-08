@@ -726,7 +726,7 @@ function categoryToDesk(category: string): string {
     movies: "Entertainment Desk", football: "Sports Desk", cricket: "Sports Desk",
     books: "Books Desk", psychology: "Psychology Desk", physics: "Science Desk",
     "electric-vehicles": "Auto Desk", sustainability: "Climate Desk", robotics: "AI Desk",
-    sport: "Sports Desk", business: "Business Desk",
+    sport: "Sports Desk",
   };
   return deskMap[category] || "Editorial Desk";
 }
