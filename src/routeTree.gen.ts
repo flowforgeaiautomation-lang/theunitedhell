@@ -9,111 +9,42 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
-import { Route as ArchiveRouteImport } from './routes/archive'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as BriefingRouteImport } from './routes/briefing'
-import { Route as DiscoverRouteImport } from './routes/discover'
-import { Route as EditionsRouteImport } from './routes/editions'
-import { Route as EpaperRouteImport } from './routes/epaper'
-import { Route as InformationRouteImport } from './routes/information'
-import { Route as MapRouteImport } from './routes/map'
-import { Route as MarketsRouteImport } from './routes/markets'
-import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as SearchRouteImport } from './routes/search'
-import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
-import { Route as TodayRouteImport } from './routes/today'
-import { Route as TrendingRouteImport } from './routes/trending'
 import { Route as WorldRouteImport } from './routes/world'
-import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
-import { Route as AuthenticatedBookmarksRouteImport } from './routes/_authenticated/bookmarks'
-import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
-import { Route as AuthenticatedPremiumAdminRouteImport } from './routes/_authenticated/premium-admin'
-import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
-import { Route as ArticleSlugRouteImport } from './routes/article.$slug'
-import { Route as EditionDateRouteImport } from './routes/edition.$date'
-import { Route as EditionsSlugRouteImport } from './routes/editions.$slug'
+import { Route as TrendingRouteImport } from './routes/trending'
+import { Route as TodayRouteImport } from './routes/today'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as SearchRouteImport } from './routes/search'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as MarketsRouteImport } from './routes/markets'
+import { Route as MapRouteImport } from './routes/map'
+import { Route as InformationRouteImport } from './routes/information'
+import { Route as EpaperRouteImport } from './routes/epaper'
+import { Route as EditionsRouteImport } from './routes/editions'
+import { Route as DiscoverRouteImport } from './routes/discover'
+import { Route as BriefingRouteImport } from './routes/briefing'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as ArchiveRouteImport } from './routes/archive'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as EditionsEpaperRouteImport } from './routes/editions.epaper'
-import { Route as ApiPublicHooksBackfillQuizzesRouteImport } from './routes/api/public/hooks/backfill-quizzes'
-import { Route as ApiPublicHooksBackfillVideosRouteImport } from './routes/api/public/hooks/backfill-videos'
-import { Route as ApiPublicHooksBackfillVocabRouteImport } from './routes/api/public/hooks/backfill-vocab'
-import { Route as ApiPublicHooksDebugEnvRouteImport } from './routes/api/public/hooks/debug-env'
-import { Route as ApiPublicHooksIngestRouteImport } from './routes/api/public/hooks/ingest'
+import { Route as EditionsSlugRouteImport } from './routes/editions.$slug'
+import { Route as EditionDateRouteImport } from './routes/edition.$date'
+import { Route as ArticleSlugRouteImport } from './routes/article.$slug'
+import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
+import { Route as AuthenticatedPremiumAdminRouteImport } from './routes/_authenticated/premium-admin'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedBookmarksRouteImport } from './routes/_authenticated/bookmarks'
+import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as ApiPublicHooksReprocessRouteImport } from './routes/api/public/hooks/reprocess'
+import { Route as ApiPublicHooksIngestRouteImport } from './routes/api/public/hooks/ingest'
+import { Route as ApiPublicHooksDebugEnvRouteImport } from './routes/api/public/hooks/debug-env'
+import { Route as ApiPublicHooksBackfillVocabRouteImport } from './routes/api/public/hooks/backfill-vocab'
+import { Route as ApiPublicHooksBackfillVideosRouteImport } from './routes/api/public/hooks/backfill-videos'
+import { Route as ApiPublicHooksBackfillQuizzesRouteImport } from './routes/api/public/hooks/backfill-quizzes'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
-  id: '/_authenticated',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ArchiveRoute = ArchiveRouteImport.update({
-  id: '/archive',
-  path: '/archive',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthRoute = AuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BriefingRoute = BriefingRouteImport.update({
-  id: '/briefing',
-  path: '/briefing',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DiscoverRoute = DiscoverRouteImport.update({
-  id: '/discover',
-  path: '/discover',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EditionsRoute = EditionsRouteImport.update({
-  id: '/editions',
-  path: '/editions',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EpaperRoute = EpaperRouteImport.update({
-  id: '/epaper',
-  path: '/epaper',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const InformationRoute = InformationRouteImport.update({
-  id: '/information',
-  path: '/information',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MapRoute = MapRouteImport.update({
-  id: '/map',
-  path: '/map',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MarketsRoute = MarketsRouteImport.update({
-  id: '/markets',
-  path: '/markets',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ResetPasswordRoute = ResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SearchRoute = SearchRouteImport.update({
-  id: '/search',
-  path: '/search',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
-  id: '/sitemap.xml',
-  path: '/sitemap.xml',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TodayRoute = TodayRouteImport.update({
-  id: '/today',
-  path: '/today',
+const WorldRoute = WorldRouteImport.update({
+  id: '/world',
+  path: '/world',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TrendingRoute = TrendingRouteImport.update({
@@ -121,24 +52,103 @@ const TrendingRoute = TrendingRouteImport.update({
   path: '/trending',
   getParentRoute: () => rootRouteImport,
 } as any)
-const WorldRoute = WorldRouteImport.update({
-  id: '/world',
-  path: '/world',
+const TodayRoute = TodayRouteImport.update({
+  id: '/today',
+  path: '/today',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
-  getParentRoute: () => AuthenticatedRouteRoute,
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedBookmarksRoute = AuthenticatedBookmarksRouteImport.update({
-  id: '/bookmarks',
-  path: '/bookmarks',
-  getParentRoute: () => AuthenticatedRouteRoute,
+const SearchRoute = SearchRouteImport.update({
+  id: '/search',
+  path: '/search',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MarketsRoute = MarketsRouteImport.update({
+  id: '/markets',
+  path: '/markets',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MapRoute = MapRouteImport.update({
+  id: '/map',
+  path: '/map',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InformationRoute = InformationRouteImport.update({
+  id: '/information',
+  path: '/information',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EpaperRoute = EpaperRouteImport.update({
+  id: '/epaper',
+  path: '/epaper',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EditionsRoute = EditionsRouteImport.update({
+  id: '/editions',
+  path: '/editions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DiscoverRoute = DiscoverRouteImport.update({
+  id: '/discover',
+  path: '/discover',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BriefingRoute = BriefingRouteImport.update({
+  id: '/briefing',
+  path: '/briefing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ArchiveRoute = ArchiveRouteImport.update({
+  id: '/archive',
+  path: '/archive',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EditionsEpaperRoute = EditionsEpaperRouteImport.update({
+  id: '/epaper',
+  path: '/epaper',
+  getParentRoute: () => EditionsRoute,
+} as any)
+const EditionsSlugRoute = EditionsSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => EditionsRoute,
+} as any)
+const EditionDateRoute = EditionDateRouteImport.update({
+  id: '/edition/$date',
+  path: '/edition/$date',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ArticleSlugRoute = ArticleSlugRouteImport.update({
+  id: '/article/$slug',
+  path: '/article/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedPremiumAdminRoute =
@@ -147,35 +157,40 @@ const AuthenticatedPremiumAdminRoute =
     path: '/premium-admin',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
-  id: '/profile',
-  path: '/profile',
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const ArticleSlugRoute = ArticleSlugRouteImport.update({
-  id: '/article/$slug',
-  path: '/article/$slug',
+const AuthenticatedBookmarksRoute = AuthenticatedBookmarksRouteImport.update({
+  id: '/bookmarks',
+  path: '/bookmarks',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const ApiPublicHooksReprocessRoute = ApiPublicHooksReprocessRouteImport.update({
+  id: '/api/public/hooks/reprocess',
+  path: '/api/public/hooks/reprocess',
   getParentRoute: () => rootRouteImport,
 } as any)
-const EditionDateRoute = EditionDateRouteImport.update({
-  id: '/edition/$date',
-  path: '/edition/$date',
+const ApiPublicHooksIngestRoute = ApiPublicHooksIngestRouteImport.update({
+  id: '/api/public/hooks/ingest',
+  path: '/api/public/hooks/ingest',
   getParentRoute: () => rootRouteImport,
 } as any)
-const EditionsSlugRoute = EditionsSlugRouteImport.update({
-  id: '/$slug',
-  path: '/$slug',
-  getParentRoute: () => EditionsRoute,
+const ApiPublicHooksDebugEnvRoute = ApiPublicHooksDebugEnvRouteImport.update({
+  id: '/api/public/hooks/debug-env',
+  path: '/api/public/hooks/debug-env',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const EditionsEpaperRoute = EditionsEpaperRouteImport.update({
-  id: '/epaper',
-  path: '/epaper',
-  getParentRoute: () => EditionsRoute,
-} as any)
-const ApiPublicHooksBackfillQuizzesRoute =
-  ApiPublicHooksBackfillQuizzesRouteImport.update({
-    id: '/api/public/hooks/backfill-quizzes',
-    path: '/api/public/hooks/backfill-quizzes',
+const ApiPublicHooksBackfillVocabRoute =
+  ApiPublicHooksBackfillVocabRouteImport.update({
+    id: '/api/public/hooks/backfill-vocab',
+    path: '/api/public/hooks/backfill-vocab',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicHooksBackfillVideosRoute =
@@ -184,27 +199,12 @@ const ApiPublicHooksBackfillVideosRoute =
     path: '/api/public/hooks/backfill-videos',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicHooksBackfillVocabRoute =
-  ApiPublicHooksBackfillVocabRouteImport.update({
-    id: '/api/public/hooks/backfill-vocab',
-    path: '/api/public/hooks/backfill-vocab',
+const ApiPublicHooksBackfillQuizzesRoute =
+  ApiPublicHooksBackfillQuizzesRouteImport.update({
+    id: '/api/public/hooks/backfill-quizzes',
+    path: '/api/public/hooks/backfill-quizzes',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicHooksDebugEnvRoute = ApiPublicHooksDebugEnvRouteImport.update({
-  id: '/api/public/hooks/debug-env',
-  path: '/api/public/hooks/debug-env',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicHooksIngestRoute = ApiPublicHooksIngestRouteImport.update({
-  id: '/api/public/hooks/ingest',
-  path: '/api/public/hooks/ingest',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicHooksReprocessRoute = ApiPublicHooksReprocessRouteImport.update({
-  id: '/api/public/hooks/reprocess',
-  path: '/api/public/hooks/reprocess',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -440,109 +440,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated': {
-      id: '/_authenticated'
-      path: ''
-      fullPath: '/'
-      preLoaderRoute: typeof AuthenticatedRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/archive': {
-      id: '/archive'
-      path: '/archive'
-      fullPath: '/archive'
-      preLoaderRoute: typeof ArchiveRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/briefing': {
-      id: '/briefing'
-      path: '/briefing'
-      fullPath: '/briefing'
-      preLoaderRoute: typeof BriefingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/discover': {
-      id: '/discover'
-      path: '/discover'
-      fullPath: '/discover'
-      preLoaderRoute: typeof DiscoverRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/editions': {
-      id: '/editions'
-      path: '/editions'
-      fullPath: '/editions'
-      preLoaderRoute: typeof EditionsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/epaper': {
-      id: '/epaper'
-      path: '/epaper'
-      fullPath: '/epaper'
-      preLoaderRoute: typeof EpaperRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/information': {
-      id: '/information'
-      path: '/information'
-      fullPath: '/information'
-      preLoaderRoute: typeof InformationRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/map': {
-      id: '/map'
-      path: '/map'
-      fullPath: '/map'
-      preLoaderRoute: typeof MapRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/markets': {
-      id: '/markets'
-      path: '/markets'
-      fullPath: '/markets'
-      preLoaderRoute: typeof MarketsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reset-password': {
-      id: '/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof ResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/search': {
-      id: '/search'
-      path: '/search'
-      fullPath: '/search'
-      preLoaderRoute: typeof SearchRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sitemap.xml': {
-      id: '/sitemap.xml'
-      path: '/sitemap.xml'
-      fullPath: '/sitemap.xml'
-      preLoaderRoute: typeof SitemapDotxmlRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/today': {
-      id: '/today'
-      path: '/today'
-      fullPath: '/today'
-      preLoaderRoute: typeof TodayRouteImport
+    '/world': {
+      id: '/world'
+      path: '/world'
+      fullPath: '/world'
+      preLoaderRoute: typeof WorldRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/trending': {
@@ -552,32 +454,144 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TrendingRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/world': {
-      id: '/world'
-      path: '/world'
-      fullPath: '/world'
-      preLoaderRoute: typeof WorldRouteImport
+    '/today': {
+      id: '/today'
+      path: '/today'
+      fullPath: '/today'
+      preLoaderRoute: typeof TodayRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/admin': {
-      id: '/_authenticated/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AuthenticatedAdminRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/bookmarks': {
-      id: '/_authenticated/bookmarks'
-      path: '/bookmarks'
-      fullPath: '/bookmarks'
-      preLoaderRoute: typeof AuthenticatedBookmarksRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+    '/search': {
+      id: '/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof SearchRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/dashboard': {
-      id: '/_authenticated/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/markets': {
+      id: '/markets'
+      path: '/markets'
+      fullPath: '/markets'
+      preLoaderRoute: typeof MarketsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/map': {
+      id: '/map'
+      path: '/map'
+      fullPath: '/map'
+      preLoaderRoute: typeof MapRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/information': {
+      id: '/information'
+      path: '/information'
+      fullPath: '/information'
+      preLoaderRoute: typeof InformationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/epaper': {
+      id: '/epaper'
+      path: '/epaper'
+      fullPath: '/epaper'
+      preLoaderRoute: typeof EpaperRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/editions': {
+      id: '/editions'
+      path: '/editions'
+      fullPath: '/editions'
+      preLoaderRoute: typeof EditionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/discover': {
+      id: '/discover'
+      path: '/discover'
+      fullPath: '/discover'
+      preLoaderRoute: typeof DiscoverRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/briefing': {
+      id: '/briefing'
+      path: '/briefing'
+      fullPath: '/briefing'
+      preLoaderRoute: typeof BriefingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/archive': {
+      id: '/archive'
+      path: '/archive'
+      fullPath: '/archive'
+      preLoaderRoute: typeof ArchiveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/editions/epaper': {
+      id: '/editions/epaper'
+      path: '/epaper'
+      fullPath: '/editions/epaper'
+      preLoaderRoute: typeof EditionsEpaperRouteImport
+      parentRoute: typeof EditionsRoute
+    }
+    '/editions/$slug': {
+      id: '/editions/$slug'
+      path: '/$slug'
+      fullPath: '/editions/$slug'
+      preLoaderRoute: typeof EditionsSlugRouteImport
+      parentRoute: typeof EditionsRoute
+    }
+    '/edition/$date': {
+      id: '/edition/$date'
+      path: '/edition/$date'
+      fullPath: '/edition/$date'
+      preLoaderRoute: typeof EditionDateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/article/$slug': {
+      id: '/article/$slug'
+      path: '/article/$slug'
+      fullPath: '/article/$slug'
+      preLoaderRoute: typeof ArticleSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/profile': {
+      id: '/_authenticated/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof AuthenticatedProfileRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/premium-admin': {
@@ -587,67 +601,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPremiumAdminRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/profile': {
-      id: '/_authenticated/profile'
-      path: '/profile'
-      fullPath: '/profile'
-      preLoaderRoute: typeof AuthenticatedProfileRouteImport
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/article/$slug': {
-      id: '/article/$slug'
-      path: '/article/$slug'
-      fullPath: '/article/$slug'
-      preLoaderRoute: typeof ArticleSlugRouteImport
-      parentRoute: typeof rootRouteImport
+    '/_authenticated/bookmarks': {
+      id: '/_authenticated/bookmarks'
+      path: '/bookmarks'
+      fullPath: '/bookmarks'
+      preLoaderRoute: typeof AuthenticatedBookmarksRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/edition/$date': {
-      id: '/edition/$date'
-      path: '/edition/$date'
-      fullPath: '/edition/$date'
-      preLoaderRoute: typeof EditionDateRouteImport
-      parentRoute: typeof rootRouteImport
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/editions/$slug': {
-      id: '/editions/$slug'
-      path: '/$slug'
-      fullPath: '/editions/$slug'
-      preLoaderRoute: typeof EditionsSlugRouteImport
-      parentRoute: typeof EditionsRoute
-    }
-    '/editions/epaper': {
-      id: '/editions/epaper'
-      path: '/epaper'
-      fullPath: '/editions/epaper'
-      preLoaderRoute: typeof EditionsEpaperRouteImport
-      parentRoute: typeof EditionsRoute
-    }
-    '/api/public/hooks/backfill-quizzes': {
-      id: '/api/public/hooks/backfill-quizzes'
-      path: '/api/public/hooks/backfill-quizzes'
-      fullPath: '/api/public/hooks/backfill-quizzes'
-      preLoaderRoute: typeof ApiPublicHooksBackfillQuizzesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/hooks/backfill-videos': {
-      id: '/api/public/hooks/backfill-videos'
-      path: '/api/public/hooks/backfill-videos'
-      fullPath: '/api/public/hooks/backfill-videos'
-      preLoaderRoute: typeof ApiPublicHooksBackfillVideosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/hooks/backfill-vocab': {
-      id: '/api/public/hooks/backfill-vocab'
-      path: '/api/public/hooks/backfill-vocab'
-      fullPath: '/api/public/hooks/backfill-vocab'
-      preLoaderRoute: typeof ApiPublicHooksBackfillVocabRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/hooks/debug-env': {
-      id: '/api/public/hooks/debug-env'
-      path: '/api/public/hooks/debug-env'
-      fullPath: '/api/public/hooks/debug-env'
-      preLoaderRoute: typeof ApiPublicHooksDebugEnvRouteImport
+    '/api/public/hooks/reprocess': {
+      id: '/api/public/hooks/reprocess'
+      path: '/api/public/hooks/reprocess'
+      fullPath: '/api/public/hooks/reprocess'
+      preLoaderRoute: typeof ApiPublicHooksReprocessRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/hooks/ingest': {
@@ -657,11 +636,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksIngestRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/hooks/reprocess': {
-      id: '/api/public/hooks/reprocess'
-      path: '/api/public/hooks/reprocess'
-      fullPath: '/api/public/hooks/reprocess'
-      preLoaderRoute: typeof ApiPublicHooksReprocessRouteImport
+    '/api/public/hooks/debug-env': {
+      id: '/api/public/hooks/debug-env'
+      path: '/api/public/hooks/debug-env'
+      fullPath: '/api/public/hooks/debug-env'
+      preLoaderRoute: typeof ApiPublicHooksDebugEnvRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/backfill-vocab': {
+      id: '/api/public/hooks/backfill-vocab'
+      path: '/api/public/hooks/backfill-vocab'
+      fullPath: '/api/public/hooks/backfill-vocab'
+      preLoaderRoute: typeof ApiPublicHooksBackfillVocabRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/backfill-videos': {
+      id: '/api/public/hooks/backfill-videos'
+      path: '/api/public/hooks/backfill-videos'
+      fullPath: '/api/public/hooks/backfill-videos'
+      preLoaderRoute: typeof ApiPublicHooksBackfillVideosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/backfill-quizzes': {
+      id: '/api/public/hooks/backfill-quizzes'
+      path: '/api/public/hooks/backfill-quizzes'
+      fullPath: '/api/public/hooks/backfill-quizzes'
+      preLoaderRoute: typeof ApiPublicHooksBackfillQuizzesRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
